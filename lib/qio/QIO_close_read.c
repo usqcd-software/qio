@@ -1,9 +1,14 @@
 /* QIO_close_read.c */
 
-#include <stdlib.h>
 #include <qio.h>
 #include <xml_string.h>
 #include <lrl.h>
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+#ifdef HAVE_MALLOC_H
+#include <malloc.h>
+#endif
 
 int QIO_close_read(QIO_Reader *in){
   int status = 0;
