@@ -102,13 +102,13 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   }
 
   /* Will have to free these with QMP_free_memory */
-  sendbuf_qmp_mem_t = (QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_COMMS);
+  sendbuf_qmp_mem_t = (QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_DEFAULT);
   if( sendbuf_qmp_mem_t == (QMP_mem_t *)NULL ) { 
     fprintf(stderr, "Unable to allocate sendbuf in QMP_route\n");
     return QMP_NOMEM_ERR;
   }
 
-  recvbuf_qmp_mem_t =(QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_COMMS);
+  recvbuf_qmp_mem_t =(QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_DEFAULT);
   if( recvbuf_qmp_mem_t == (QMP_mem_t *)NULL ) { 
     fprintf(stderr ,"Unable to allocate recvbuf in QMP_route\n");
     return QMP_NOMEM_ERR;
