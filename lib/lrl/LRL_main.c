@@ -2,6 +2,8 @@
 
 #include <lrl.h>
 #include <stdio.h>
+#include <malloc.h>
+#include <stdlib.h>
 
 /** 
  * Open a file for reading 
@@ -10,7 +12,7 @@
  *
  * \return null if failure
  */
-LRL_FileReader *LRL_open_read_file(char *filename)
+LRL_FileReader *LRL_open_read_file(const char *filename)
 {
   LRL_FileReader *fr;
 
@@ -23,9 +25,9 @@ LRL_FileReader *LRL_open_read_file(char *filename)
   if (fr->file == NULL)
     return NULL;
 
-  fr->dr = dimeCreateReader(fr);
+  fr->dr = dimeCreateReader(fr->file);
   if (fr->dr == (DimeReader *)NULL)
-    return NULL
+    return NULL;
 
   return fr;
 }
@@ -38,7 +40,7 @@ LRL_FileReader *LRL_open_read_file(char *filename)
  *
  * \return null if failure
  */
-LRL_FileWriter *LRL_open_write_file(char *filename, int mode)
+LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
 {
   LRL_FileWriter *fr;
 
@@ -63,25 +65,38 @@ LRL_FileWriter *LRL_open_write_file(char *filename, int mode)
  * Open a record for reading
  *
  * \param fr         LRL file reader  ( Read )
- * \param rec_size   record size ( Read )
+ * \param rec_size   record size ( Modify )
  * \param tag        tag for the record header ( Read )
  *
  * \return null if failure
  */
-LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t rec_size, 
+LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size, 
 				       DIME_tag tag)
 {
   LRL_RecordReader *rr;
+  int status;
 
-  if(fr == NULL)return NULL;
+  if (fr == NULL)
+    return NULL;
 
   rr = (LRL_RecordReader *)malloc(sizeof(LRL_RecordReader));
-  if(rr == NULL)return NULL;
+  if (rr == NULL)
+    return NULL;
   rr->fr = fr;
   
-  /* Read and get byte size of record */
-  if(fread(rec_size, 1, sizeof(size_t), fr->file) != sizeof(size_t))
-    return NULL;  
+  /* Check if last record */
+  if (rr->fr->dr->is_last != 0 )
+  {
+    free(rr);
+    return NULL;
+  }
+   
+  /* Get next record header */
+  status = dimeReaderNextRecord(rr->fr->dr);
+  if (status != DIME_SUCCESS)
+    return NULL;
+
+  *rec_size = rr->fr->dr->bytes_total;
 
   return rr;
 }
@@ -91,12 +106,12 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t rec_size,
  * Open a record for writing 
  *
  * \param fr         LRL file writer  ( Read )
- * \param rec_size   record size ( Read )
+ * \param rec_size   record size ( Modify )
  * \param tag        tag for the record header ( Read )
  *
  * \return null if failure
  */
-LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t rec_size, 
+LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size, 
 					DIME_tag tag)
 {
   LRL_RecordWriter *rr;
@@ -116,11 +131,11 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t rec_size,
 		       TYPE_MEDIA,
 		       "application/text", 
 		       "http://www.foobar.com",
-		       rec_size);
+		       *rec_size);
 
   status = dimeWriteRecordHeader(h, 
 				 0, /* Not last record */
-				 fr->dg);
+				 rr->fr->dg);
 
   if (status < 0)
   { 
@@ -148,10 +163,13 @@ size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, size_t nbytes)
   int status;
   size_t nbyt = nbytes;
 
-  status = dimeWriteRecordData(buf, &nbyt, rr->fr->dg);
+  if (rr == NULL)
+    return 0;
 
-  if( status < 0 ) { 
-     fprintf(stderr, "Oh dear some horrible error has occurred. status is: %d\n", status);
+  status = dimeWriteRecordData(buf, &nbyt, rr->fr->dg);
+  if( status != DIME_SUCCESS ) 
+  { 
+    fprintf(stderr, "LRL_write_bytes: some error has occurred. status is: %d\n", status);
     exit(EXIT_FAILURE);
   }
 
@@ -170,7 +188,20 @@ size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, size_t nbytes)
  */
 size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes)
 {
-  return fread(buf, 1, nbytes, rr->fr->file);
+  int status;
+  size_t nbyt = nbytes;
+
+  if (rr == NULL)
+    return 0;
+
+  status = dimeReaderReadData((void *)buf, &nbyt, rr->fr->dr);
+  if( status != DIME_SUCCESS ) 
+  { 
+    fprintf(stderr, "LRL_read_bytes: some error has occurred. status is: %d\n", status);
+    exit(EXIT_FAILURE);
+  }
+
+  return nbyt;
 }
 
 int LRL_close_read_record(LRL_RecordReader *rr)
@@ -197,7 +228,7 @@ int LRL_close_read_file(LRL_FileReader *fr)
   if (fr == NULL)
     return 0;
 
-  dimeDestroyReader(fr->dg);
+  dimeDestroyReader(fr->dr);
   fclose(fr->file);
   free(fr);
 
