@@ -1,4 +1,4 @@
-/* $Id: DML_scalar.c,v 1.7 2004-09-03 04:36:58 edwards Exp $ */
+/* $Id: DML_scalar.c,v 1.8 2004-09-03 05:30:22 edwards Exp $ */
 /* Scalar versions of QMP-dependent utilities for DML */
 
 #include <lrl.h>
@@ -30,7 +30,9 @@ int DML_get_bytes(char *buf, size_t size, int fromnode){
 
 void DML_broadcast_bytes(char *buf, size_t size, int this_node, int from_node) {}
 
-int DML_clear_to_send(char *scratch_buf, size_t size, int new_node) {
+int DML_clear_to_send(char *scratch_buf, size_t size, 
+		      int my_io_node, int new_node)
+{
   printf("ERROR: called DML_clear_to_send() in DML_vanilla.c\n");
   exit(1);
   return 1;
@@ -42,7 +44,7 @@ int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) {
   return 1;
 }
 
-void DML_global_xor(u_int32 *x){}
+void DML_global_xor(uint32_t *x){}
 
 void DML_sync(void){}
 
