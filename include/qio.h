@@ -15,7 +15,10 @@
 #define QIO_SINGLEFILE DML_SINGLEFILE 
 #define QIO_MULTIFILE  DML_MULTIFILE  
 
-enum {QIO_CREATE, QIO_TRUNCATE, QIO_APPEND};
+/* enum {QIO_CREATE, QIO_TRUNCATE, QIO_APPEND}; */
+#define QIO_CREATE     0
+#define QIO_TRUNCATE   1
+#define QIO_APPEND     2
 
 /* Does the architecture support parallel reads and writes? */
 /* Should be obtained from system call or a config.h */

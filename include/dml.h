@@ -5,9 +5,16 @@
 
 #define DML_MASTER_NODE 0
 
-enum {DML_SERIAL, DML_PARALLEL};
-enum {DML_LEX_ORDER, DML_NAT_ORDER};
-enum {DML_SINGLEFILE, DML_MULTIFILE};
+#define DML_SERIAL       0
+#define DML_PARALLEL     1
+#define DML_LEX_ORDER    0
+#define DML_NAT_ORDER    1
+#define DML_SINGLEFILE   0
+#define DML_MULTIFILE    1
+
+/* enum {DML_SERIAL, DML_PARALLEL}; */
+/* enum {DML_LEX_ORDER, DML_NAT_ORDER}; */
+/* enum {DML_SINGLEFILE, DML_MULTIFILE}; */
 
 #ifdef __cplusplus
 extern "C"
