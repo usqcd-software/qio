@@ -219,6 +219,7 @@ int QIO_read_record_data(QIO_Reader *in,
   /* Copy most recent combined checksum into reader */
   memcpy(&(in->last_checksum), &checksum, sizeof(DML_Checksum));
 
+  /* Everyone calls this. It changes the state machine */
   checksum_info_expect = QIO_read_checksum(in);
   if(this_node == in->layout->master_io_node)
     {
@@ -227,7 +228,12 @@ int QIO_read_record_data(QIO_Reader *in,
 				    checksum_info_expect, &checksum);
       if(status != QIO_SUCCESS)return status;
     }
-  QIO_destroy_checksum_info(checksum_info_expect);
+
+  /* Checksum info expect may be NULL on non master node.
+     This is not an error. Freeing it is */
+  if( checksum_info_expect != NULL ) { 
+    QIO_destroy_checksum_info(checksum_info_expect);
+  }
 
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d): done with QIO_read_record_data\n",

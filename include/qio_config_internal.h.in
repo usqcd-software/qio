@@ -60,6 +60,9 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* Maximum DML buffer size in bytes */
+#undef QIO_DML_BUF_BYTES
+
 /* Enable parallel file-system read */
 #undef QIO_USE_PARALLEL_READ
 

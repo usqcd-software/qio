@@ -4,6 +4,7 @@
 #include <lrl.h>
 #include <qio_stdint.h>
 #include <stdlib.h>
+#include "qio_config.h"
 
 /* File fragmentation */
 #define DML_SINGLEFILE 0
@@ -26,7 +27,11 @@
 
 
 /* Limits size of read and write buffers (bytes) 2^18 for now */
-#define DML_BUF_BYTES 262144
+#ifndef QIO_DML_BUF_BYTES
+#define DML_BUF_BYTES  262144
+#else
+#define DML_BUF_BYTES  QIO_DML_BUF_BYTES
+#endif
 
 #ifdef __cplusplus
 extern "C"

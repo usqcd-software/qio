@@ -855,6 +855,8 @@ Optional Features:
   --enable-parallel-arch=<arch>
                           Build QIO for parallel architecture <arch>
   --enable-qmp-route      Enable usage of QMP_route if it exists default is on
+   --enable-dml-bufsize=X
+                          Set the DML buffer size to X bytes
    --enable-slow-route    When not using QMP_route, use the slow version of
                           DML route
   --disable-dependency-tracking  speeds up one-time build
@@ -1805,6 +1807,28 @@ if test "${with_qmp+set}" = set; then
 
 fi;
 
+# Check whether --enable-dml-bufsize or --disable-dml-bufsize was given.
+if test "${enable_dml_bufsize+set}" = set; then
+  enableval="$enable_dml_bufsize"
+   { echo "$as_me:$LINENO: Setting DML_BUF_BYTES to ${enable_dml_bufsize}" >&5
+echo "$as_me: Setting DML_BUF_BYTES to ${enable_dml_bufsize}" >&6;}
+
+cat >>confdefs.h <<\_ACEOF
+#define QIO_DML_BUF_BYTES ${enable_dml_bufsize}
+_ACEOF
+
+
+else
+   { echo "$as_me:$LINENO: Setting DML_BUF_BYTES to 262144 bytes (256K) " >&5
+echo "$as_me: Setting DML_BUF_BYTES to 262144 bytes (256K) " >&6;}
+
+cat >>confdefs.h <<\_ACEOF
+#define QIO_DML_BUF_BYTES  262144
+_ACEOF
+
+
+
+fi;
 # Check whether --enable-slow-route or --disable-slow-route was given.
 if test "${enable_slow_route+set}" = set; then
   enableval="$enable_slow_route"
@@ -1853,8 +1877,8 @@ case ${LOCAL_PARALLEL_ARCH} in
   scalar)
     ARCHDEF_SUBSTITUTION=ARCH_SCALAR
 
-    { echo "$as_me:$LINENO:  Scalar Build! Not checking for QMP " >&5
-echo "$as_me:  Scalar Build! Not checking for QMP " >&6;}
+    { echo "$as_me:$LINENO: Scalar Build! Not checking for QMP " >&5
+echo "$as_me: Scalar Build! Not checking for QMP " >&6;}
 
 
 
@@ -1862,8 +1886,8 @@ echo "$as_me:  Scalar Build! Not checking for QMP " >&6;}
   parscalar)
     ARCHDEF_SUBSTITUTION=ARCH_PARSCALAR
 
-    { echo "$as_me:$LINENO:  Parscalar build! Checking for QMP " >&5
-echo "$as_me:  Parscalar build! Checking for QMP " >&6;}
+    { echo "$as_me:$LINENO: Parscalar build! Checking for QMP " >&5
+echo "$as_me: Parscalar build! Checking for QMP " >&6;}
 
     if test "X${QMP_HOME}X" = "XX" ; then
       # Extract the first word of "qmp-config", so it can be a program name with args.

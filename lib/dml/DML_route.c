@@ -25,8 +25,8 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 QMP_status_t DML_grid_route(void* buffer, size_t count,
 			    size_t src, size_t dest)
 {
-  size_t* l_src_coords;      /* Coordinates of the source */
-  size_t* l_dst_coords;      /* Coordinates of the destination */
+  int* l_src_coords;      /* Coordinates of the source */
+  int* l_dst_coords;      /* Coordinates of the destination */
   int* l_disp_vec;           /* Displacement vector dst_coords - src_coords */
   
   QMP_msgmem_t sendbufmm, recvbufmm; /* Message memory handles */
@@ -39,7 +39,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   void *recvbuf;                 
 
   int i,j;                   /* Loop Counters. Use for directions too */
-  size_t me;                    /* My node */
+  int me;                    /* My node */
 
   int n_hops;                      /* Number of hops */
   int  direction_sign;       /* Direction of hops */
@@ -50,7 +50,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   QMP_status_t err;                /* Error status */
   
   /* The number of dimensions in our "grid" */
-  size_t ndim;
+  int ndim;
 
   size_t bufsize;
 
@@ -76,14 +76,14 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 
   /* Must free these later I think */
   /* Allocate space for the coordinates */
-  l_src_coords =(size_t *)QMP_get_logical_coordinates_from(src);
-  if( l_src_coords == (size_t *)NULL ) { 
+  l_src_coords =(int *)QMP_get_logical_coordinates_from(src);
+  if( l_src_coords == (int *)NULL ) { 
     fprintf(stderr, "QMP_route: QMP_get_logical_coordinates_from failed\n");
     return QMP_NOMEM_ERR;
   }
 
-  l_dst_coords = (size_t *)QMP_get_logical_coordinates_from(dest);
-  if( l_dst_coords == (size_t *)NULL ) { 
+  l_dst_coords = (int *)QMP_get_logical_coordinates_from(dest);
+  if( l_dst_coords == (int *)NULL ) { 
     fprintf(stderr, "QMP_route: QMP_get_logical_coordinates_from failed\n");
     return QMP_NOMEM_ERR;
   }
@@ -101,9 +101,9 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   }
 
   /* Don't need these anymore */
-  /* QMP_get_logical_coordinates_from ought to have used malloc to get these */
-  /* free(l_src_coords);
-     free(l_dst_coords); */
+  /* Intent (if not yet word) of standard is that I must free these */  
+  free(l_src_coords);
+  free(l_dst_coords);
 
   /* Pad the buffers so that their lengths are always divisible by 8 */
   /* This is a funky QCDOC-ism -- maybe */

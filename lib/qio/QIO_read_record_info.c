@@ -64,7 +64,8 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
   }    
 
   /* Copy record info on all calls */
-  *record_info = in->record_info;
+  /*  *record_info = in->record_info; */
+  memcpy(record_info, &(in->record_info), sizeof(QIO_RecordInfo));
 
   return QIO_SUCCESS;
 }
@@ -148,9 +149,12 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 		      in->layout->master_io_node);
   
   /* Receiving nodes resize their strings */
-  if(this_node != in->layout->master_io_node){
-    QIO_string_realloc(in->xml_record,length);
-  }
+  /* if(this_node != in->layout->master_io_node){ */
+
+  /* QIO_string_realloc is supposedly non-destructive. Can do it on
+     all nodes */
+  QIO_string_realloc(in->xml_record,length);
+    /* } */
   DML_broadcast_bytes(QIO_string_ptr(in->xml_record),length,
 		      this_node, in->layout->master_io_node);
   

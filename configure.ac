@@ -46,6 +46,19 @@ AC_ARG_WITH(qmp,
   [QMP_HOME="${with_qmp}"]
 )
 
+dnl Enable changing DML buffersize
+AC_ARG_ENABLE(dml-bufsize, 
+   AC_HELP_STRING(
+     [ --enable-dml-bufsize=X ],
+     [ Set the DML buffer size to X bytes ]
+   ),
+  [ AC_MSG_NOTICE([Setting DML_BUF_BYTES to ${enable_dml_bufsize}])
+    AC_DEFINE([QIO_DML_BUF_BYTES], [${enable_dml_bufsize}], [ Maximum DML Buffer Size in bytes ]) 
+  ],
+  [ AC_MSG_NOTICE([Setting DML_BUF_BYTES to 262144 bytes (256K) ]) 
+    AC_DEFINE([QIO_DML_BUF_BYTES], [ 262144 ], [ Maximum DML buffer size in bytes ])
+  ]
+)	 
 dnl Safe QMP route workaround
 AC_ARG_ENABLE(slow-route,
    AC_HELP_STRING(
@@ -85,14 +98,14 @@ dnl Now check appropriate cases
 case ${LOCAL_PARALLEL_ARCH} in
   scalar)
     AC_SUBST(ARCHDEF_SUBSTITUTION, ARCH_SCALAR)
-    AC_MSG_NOTICE([ Scalar Build! Not checking for QMP ])
+    AC_MSG_NOTICE([Scalar Build! Not checking for QMP ])
     AC_SUBST(QMP_CFLAGS)
     AC_SUBST(QMP_LDFLAGS)
     AC_SUBST(QMP_LIBS)
     ;;
   parscalar)
     AC_SUBST(ARCHDEF_SUBSTITUTION, ARCH_PARSCALAR)
-    AC_MSG_NOTICE([ Parscalar build! Checking for QMP ])
+    AC_MSG_NOTICE([Parscalar build! Checking for QMP ])
 
     if test "X${QMP_HOME}X" = "XX" ; then
       AC_PATH_PROG([QMP_CONFIG], [qmp-config], [])

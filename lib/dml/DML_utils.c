@@ -1025,11 +1025,13 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
   else
     max_buf_sites = 1;
 
-  inbuf = DML_allocate_buf(size,max_buf_sites,this_node);
+ 
+   inbuf = DML_allocate_buf(size,max_buf_sites,this_node);
   if(!inbuf){
     printf("%s(%d) can't malloc inbuf\n",myname,this_node);
     return 0;
   }
+ 
 
   /* Allocate coordinate counter */
   coords = DML_allocate_coords(latdim, myname, this_node);
@@ -1070,28 +1072,28 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 				    max_buf_sites, isite, 
 				    max_send_sites, &nbytes,
 				    myname, this_node, &err);
+      
       if(err < 0){free(inbuf);free(coords);return 0;}
       /* Location of new datum on I/O node */
       buf = inbuf + size*buf_extract;
     }
 
     /* Send result to destination node. Avoid I/O node sending to itself. */
-    if (dest_node != my_io_node)
-      {
+    if (dest_node != my_io_node) {
 #if 1
-	DML_route_bytes(buf,size,my_io_node,dest_node);
+      DML_route_bytes(buf,size,my_io_node,dest_node);
 #else
-	/* If destination elsewhere, send it */
-	if(this_node == my_io_node){
-	  DML_send_bytes(buf, size, dest_node);
-	}
-
-	/* Other nodes receive from the master node */
-	if(this_node == dest_node){
-	  DML_get_bytes(buf, size, my_io_node);
-	}
-#endif
+      /* If destination elsewhere, send it */
+      if(this_node == my_io_node){
+	DML_send_bytes(buf, size, dest_node);
       }
+      
+	/* Other nodes receive from the master node */
+      if(this_node == dest_node){
+	DML_get_bytes(buf, size, my_io_node);
+      }
+#endif
+    }
     
     /* Process data before inserting */
     if(this_node == dest_node){
