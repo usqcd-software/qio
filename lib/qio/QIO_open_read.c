@@ -15,11 +15,21 @@ QIO_Reader *QIO_open_read(XML_MetaData *xml_file, const char *filename, int serp
   LRL_RecordReader *lrl_record_in;
   XML_MetaData *xml_file_private;
   DML_Layout *dml_layout;
+  int *latsize;
+  int latdim = layout->latdim;
   int this_node = layout->this_node;
+  int i;
+
+  /* Make a local copy of layout lattize */
+  latsize = (int *)malloc(sizeof(int)*latdim);
+  for(i=0; i < latdim; ++i)
+    latsize[i] = layout->latsize[i];
 
   /* Construct the layout data from the QIO_Layout structure*/
   dml_layout = (DML_Layout *)malloc(sizeof(QIO_Layout));
-  if(layout == NULL)return NULL;
+  if (layout == NULL)
+    return NULL;
+
   dml_layout->node_number = layout->node_number;
   dml_layout->latsize     = layout->latsize;
   dml_layout->latdim      = layout->latdim;
@@ -34,6 +44,7 @@ QIO_Reader *QIO_open_read(XML_MetaData *xml_file, const char *filename, int serp
   }
   qio_in->lrl_file_in = NULL;
   qio_in->serpar = serpar;
+  qio_in->volfmt = QIO_SINGLEFILE;
   qio_in->layout = dml_layout;
 
   /* If parallel, all nodes open the file.  Otherwise, only master does.*/

@@ -12,18 +12,29 @@ char file_private_output[] = "XML with QIO version no and lattice size";
 
 QIO_Writer *QIO_open_write(XML_MetaData *xml_file, const char *filename, 
 			   int serpar, int siteorder, int mode,
-			   QIO_Layout *layout){
+			   QIO_Layout *layout)
+{
   QIO_Writer *qio_out;
   LRL_FileWriter *lrl_file_out;
   XML_MetaData *xml_file_private;
   DML_Layout *dml_layout;
+  int *latsize;
+  int latdim = layout->latdim;
   int this_node = layout->this_node;
+  int i;
+
+  /* Make a local copy of layout lattize */
+  latsize = (int *)malloc(sizeof(int)*latdim);
+  for(i=0; i < latdim; ++i)
+    latsize[i] = layout->latsize[i];
 
   /* Construct the layout data from the QIO_Layout structure*/
   dml_layout = (DML_Layout *)malloc(sizeof(QIO_Layout));
-  if(layout == NULL)return NULL;
+  if (layout == NULL)
+    return NULL;
+
   dml_layout->node_number = layout->node_number;
-  dml_layout->latsize     = layout->latsize;
+  dml_layout->latsize     = latsize;
   dml_layout->latdim      = layout->latdim;
   dml_layout->volume      = layout->volume;
   dml_layout->this_node   = layout->this_node;
@@ -35,6 +46,7 @@ QIO_Writer *QIO_open_write(XML_MetaData *xml_file, const char *filename,
   qio_out->serpar = serpar;
   qio_out->siteorder = siteorder;
   qio_out->layout = dml_layout;
+  qio_out->volfmt = QIO_SINGLEFILE;
 
   /* If parallel, all nodes open the file.  Otherwise, only master does.*/
   if((PARALLEL_WRITE && serpar == QIO_PARALLEL)
