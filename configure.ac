@@ -84,6 +84,11 @@ case ${LOCAL_PARALLEL_ARCH} in
 
     if test "X${QMP_CONFIG}X" != "XX" ; then
       AC_MSG_NOTICE([Found QMP configuration program ${QMP_CONFIG}])
+      # use the QMP CC unless it is explicitly set by the user
+      if ! set | grep -q '^CC=' ; then
+        AC_SUBST(CC,  "`${QMP_CONFIG} --cc`")
+        AC_MSG_NOTICE([QMP compiler: ${CC}])
+      fi
       AC_SUBST(QMP_CFLAGS,  "`${QMP_CONFIG} --cflags`")
       AC_MSG_NOTICE([QMP compile flags: ${QMP_CFLAGS}])
       AC_SUBST(QMP_LDFLAGS, "`${QMP_CONFIG} --ldflags`")
@@ -100,6 +105,10 @@ case ${LOCAL_PARALLEL_ARCH} in
     AC_MSG_ERROR([ Unknown value for --enable-parallel-arch ])
     ;;
 esac
+
+# Checks for programs.
+AC_PROG_CC
+AC_PROG_RANLIB
 
 dnl
 dnl verify we can compile and link against QMP, if needed
@@ -130,15 +139,10 @@ case ${LOCAL_PARALLEL_ARCH} in
     ;;
 esac
 
-
 AC_SUBST(QDP_CFLAGS)
 AC_SUBST(QDP_LDFLAGS)
 AC_SUBST(QLA_CFLAGS)
 AC_SUBST(QLA_LDFLAGS)
-
-# Checks for programs.
-AC_PROG_CC
-AC_PROG_RANLIB
 
 #
 # Fricken autoconf does some odd things with these AC include 
@@ -188,6 +192,8 @@ fi
 AM_CONDITIONAL(ARCH_SCALAR,    [test "X${LOCAL_PARALLEL_ARCH}X" = "XscalarX"])
 AM_CONDITIONAL(ARCH_PARSCALAR, [test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX"])
 
+# export CC and CFLAGS so that the other_libs will use the same
+export CC CFLAGS
 # Configure subdir packages
 AC_CONFIG_SUBDIRS(other_libs/c-lime)
 

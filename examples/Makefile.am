@@ -12,5 +12,5 @@ check_PROGRAMS = qio-test          \
                  qio-test6         \
                  qio-test7
 
-EXTRA_DIST = qio_test.c qio-test2.c qio-test3.c qio-test4.c qio-test5.c qio-test6.c qio-test7.c Makefile.am
+EXTRA_DIST = qio-test.c qio-test2.c qio-test3.c qio-test4.c qio-test5.c qio-test6.c qio-test7.c Makefile.am
 
