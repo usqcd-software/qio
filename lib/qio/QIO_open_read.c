@@ -53,7 +53,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
     latsize[i] = layout->latsize[i];
 
   /* Construct the layout data from the QIO_Layout structure*/
-  dml_layout = (DML_Layout *)malloc(sizeof(QIO_Layout));
+  dml_layout = (DML_Layout *)malloc(sizeof(DML_Layout));
   if (layout == NULL)
     return NULL;
 
