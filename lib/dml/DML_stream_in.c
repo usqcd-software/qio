@@ -9,7 +9,7 @@
 size_t DML_stream_in(LRL_RecordReader *lrl_record_in, 
 	     void (*put)(char *buf, size_t index, size_t count, void *arg),
 	     size_t size, int word_size, void *arg, DML_Layout *layout,
-	     int serpar, int siteorder, size_t sitelist[],
+	     int serpar, int siteorder, DML_SiteRank sitelist[],
 	     int volfmt, DML_Checksum *checksum){
   
   /* Multifile format. Site order specified by sitelist */
