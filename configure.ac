@@ -26,6 +26,13 @@ AC_ARG_ENABLE(parallel-arch,
   AC_SUBST(PARALLEL_ARCH, [parscalar])
 )
 
+dnl --enable-qmp-route
+AC_ARG_ENABLE(qmp-route,
+  AC_HELP_STRING([--enable-qmp-route],
+     [Enable usage of QMP_route if it exists default is on]),
+  [ ac_qmp_route=$enableval],
+  [ ac_qmp_route="yes"] 
+)
 
 dnl
 dnl --with-qmp=
@@ -187,6 +194,12 @@ if test ${ac_parallel_io} -eq 1; then
   AC_MSG_NOTICE([Parallel file-system extensions enabled]);
 fi
 
+if test "X${ac_qmp_route}X" == "XyesX"; then
+  AC_MSG_NOTICE([Enabling use of QMP route if it exists])
+  AC_DEFINE_UNQUOTED(QIO_USE_QMP_ROUTE, [1], [Enable QMP_route if it exists])
+else
+  AC_MSG_NOTICE([Disabling use of QMP route - even if it exists])
+fi
 
 # Now have all the options... Do some configuration 
 AM_CONDITIONAL(ARCH_SCALAR,    [test "X${LOCAL_PARALLEL_ARCH}X" = "XscalarX"])

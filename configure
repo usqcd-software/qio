@@ -312,7 +312,7 @@ ac_includes_default="\
 #endif"
 
 ac_subdirs_all="$ac_subdirs_all other_libs/c-lime"
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO AMTAR install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot PARALLEL_ARCH LOCAL_PARALLEL_ARCH ARCHDEF_SUBSTITUTION QMP_CFLAGS QMP_LDFLAGS QMP_LIBS QMP_CONFIG CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE RANLIB ac_ct_RANLIB QDP_CFLAGS QDP_LDFLAGS QLA_CFLAGS QLA_LDFLAGS CPP EGREP ARCH_SCALAR_TRUE ARCH_SCALAR_FALSE ARCH_PARSCALAR_TRUE ARCH_PARSCALAR_FALSE DISTCHECK_CONFIGURE_FLAGS subdirs LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO AMTAR install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM AWK SET_MAKE am__leading_dot PARALLEL_ARCH LOCAL_PARALLEL_ARCH ARCHDEF_SUBSTITUTION QMP_CFLAGS QMP_LDFLAGS QMP_LIBS QMP_CONFIG CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE RANLIB ac_ct_RANLIB QDP_CFLAGS QDP_LDFLAGS QLA_CFLAGS QLA_LDFLAGS CPP EGREP ARCH_SCALAR_TRUE ARCH_SCALAR_FALSE ARCH_PARSCALAR_TRUE ARCH_PARSCALAR_FALSE DISTCHECK_CONFIGURE_FLAGS subdirs LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -854,8 +854,9 @@ Optional Features:
                           parallel fseek
   --enable-parallel-arch=<arch>
                           Build QIO for parallel architecture <arch>
-  --disable-dependency-tracking  speeds up one-time build
-  --enable-dependency-tracking   do not reject slow dependency extractors
+  --enable-qmp-route      Enable usage of QMP_route if it exists default is on
+  --disable-dependency-tracking Speeds up one-time builds
+  --enable-dependency-tracking  Do not reject slow dependency extractors
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1347,7 +1348,7 @@ ac_configure="$SHELL $ac_aux_dir/configure" # This should be Cygnus configure.
           ac_config_headers="$ac_config_headers include/qio_config_internal.h"
 
 
-am__api_version="1.8"
+am__api_version="1.7"
 # Find a good install program.  We prefer a C program (faster),
 # so one script is as good as another.  But avoid the broken or
 # incompatible versions:
@@ -1485,6 +1486,7 @@ _ACEOF
 program_transform_name=`echo $program_transform_name | sed -f conftest.sed`
 rm conftest.sed
 
+
 # expand $ac_aux_dir to an absolute path
 am_aux_dir=`cd $ac_aux_dir && pwd`
 
@@ -1496,31 +1498,6 @@ else
   am_missing_run=
   { echo "$as_me:$LINENO: WARNING: \`missing' script is too old or missing" >&5
 echo "$as_me: WARNING: \`missing' script is too old or missing" >&2;}
-fi
-
-if mkdir -p --version . >/dev/null 2>&1 && test ! -d ./--version; then
-  # Keeping the `.' argument allows $(mkdir_p) to be used without
-  # argument.  Indeed, we sometimes output rules like
-  #   $(mkdir_p) $(somedir)
-  # where $(somedir) is conditionally defined.
-  # (`test -n '$(somedir)' && $(mkdir_p) $(somedir)' is a more
-  # expensive solution, as it forces Make to start a sub-shell.)
-  mkdir_p='mkdir -p -- .'
-else
-  # On NextStep and OpenStep, the `mkdir' command does not
-  # recognize any option.  It will interpret all options as
-  # directories to create, and then abort because `.' already
-  # exists.
-  for d in ./-p ./--version;
-  do
-    test -d $d && rmdir $d
-  done
-  # $(mkinstalldirs) is defined by Automake if mkinstalldirs exists.
-  if test -f "$ac_aux_dir/mkinstalldirs"; then
-    mkdir_p='$(mkinstalldirs)'
-  else
-    mkdir_p='$(install_sh) -d'
-  fi
 fi
 
 for ac_prog in gawk mawk nawk awk
@@ -1601,7 +1578,7 @@ else
 fi
 rmdir .tst 2>/dev/null
 
-# test to see if srcdir already configured
+ # test to see if srcdir already configured
 if test "`cd $srcdir && pwd`" != "`pwd`" &&
    test -f $srcdir/config.status; then
   { { echo "$as_me:$LINENO: error: source directory already configured; run \"make distclean\" there first" >&5
@@ -1769,6 +1746,14 @@ else
 
 fi;
 
+# Check whether --enable-qmp-route or --disable-qmp-route was given.
+if test "${enable_qmp_route+set}" = set; then
+  enableval="$enable_qmp_route"
+   ac_qmp_route=$enableval
+else
+   ac_qmp_route="yes"
+
+fi;
 
 
 # Check whether --with-qmp or --without-qmp was given.
@@ -2980,9 +2965,7 @@ else
     : > sub/conftest.c
     for i in 1 2 3 4 5 6; do
       echo '#include "conftst'$i'.h"' >> sub/conftest.c
-      # Using `: > sub/conftst$i.h' creates only sub/conftst1.h with
-      # Solaris 8's {/usr,}/bin/sh.
-      touch sub/conftst$i.h
+      : > sub/conftst$i.h
     done
     echo "${am__include} ${am__quote}sub/conftest.Po${am__quote}" > confmf
 
@@ -4038,6 +4021,18 @@ _ACEOF
 echo "$as_me: Parallel file-system extensions enabled" >&6;};
 fi
 
+if test "X${ac_qmp_route}X" == "XyesX"; then
+  { echo "$as_me:$LINENO: Enabling use of QMP route if it exists" >&5
+echo "$as_me: Enabling use of QMP route if it exists" >&6;}
+
+cat >>confdefs.h <<_ACEOF
+#define QIO_USE_QMP_ROUTE 1
+_ACEOF
+
+else
+  { echo "$as_me:$LINENO: Disabling use of QMP route - even if it exists" >&5
+echo "$as_me: Disabling use of QMP route - even if it exists" >&6;}
+fi
 
 # Now have all the options... Do some configuration
 
@@ -4764,7 +4759,6 @@ s,@install_sh@,$install_sh,;t t
 s,@STRIP@,$STRIP,;t t
 s,@ac_ct_STRIP@,$ac_ct_STRIP,;t t
 s,@INSTALL_STRIP_PROGRAM@,$INSTALL_STRIP_PROGRAM,;t t
-s,@mkdir_p@,$mkdir_p,;t t
 s,@AWK@,$AWK,;t t
 s,@SET_MAKE@,$SET_MAKE,;t t
 s,@am__leading_dot@,$am__leading_dot,;t t
@@ -5426,14 +5420,14 @@ echo X"$mf" |
   grep '^DEP_FILES *= *[^ #]' < "$mf" > /dev/null || continue
   # Extract the definition of DEP_FILES from the Makefile without
   # running `make'.
-  DEPDIR=`sed -n 's/^DEPDIR = //p' < "$mf"`
+  DEPDIR=`sed -n -e '/^DEPDIR = / s///p' < "$mf"`
   test -z "$DEPDIR" && continue
   # When using ansi2knr, U may be empty or an underscore; expand it
-  U=`sed -n 's/^U = //p' < "$mf"`
+  U=`sed -n -e '/^U = / s///p' < "$mf"`
   test -d "$dirpart/$DEPDIR" || mkdir "$dirpart/$DEPDIR"
   # We invoke sed twice because it is the simplest approach to
   # changing $(DEPDIR) to its actual value in the expansion.
-  for file in `sed -n '
+  for file in `sed -n -e '
     /^DEP_FILES = .*\\\\$/ {
       s/^DEP_FILES = //
       :loop

@@ -6,8 +6,16 @@
 #include <stdarg.h>
 #include <string.h>
 
-#if 1
+#if ( defined(HAVE_QMP_ROUTE) && defined(QIO_USE_QMP_ROUTE) )
+#warning "Using native QMP_route since it is available and enabled"
 
+/* Use native version of QMP_route since it is available */
+QMP_status_t DML_grid_route(void* buffer, size_t count,
+			    size_t src, size_t dest)
+{
+  return QMP_route(buffer, count, src, dest);
+}
+#else
 #warning Using DML GRID ROUTE
 
 /* Private implementation of route method */
@@ -249,16 +257,4 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 
   return(QMP_SUCCESS);
 }
-
-#else
-
-#warning "Using native QMP_route since it is available"
-
-/* Use native version of QMP_route since it is available */
-QMP_status_t DML_grid_route(void* buffer, size_t count,
-			    size_t src, size_t dest)
-{
-  return QMP_route(buffer, count, src, dest);
-}
-
 #endif
