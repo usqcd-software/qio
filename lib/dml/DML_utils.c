@@ -390,13 +390,7 @@ size_t DML_serial_out(LRL_RecordWriter *lrl_record_out,
     new_node = layout->node_number(coords);
 
     if(new_node != current_node){
-#if defined(DML_NEED_A_CTS)
-      /* See if we can avoid for now */
-      if(this_node == DML_MASTER_NODE && new_node != DML_MASTER_NODE)
-	DML_send_bytes(buf,4,new_node); /* junk message */
-      if(this_node == new_node && new_node != DML_MASTER_NODE)
-	DML_get_bytes(buf,4,DML_MASTER_NODE);
-#endif
+      DML_clear_to_send(buf,4,new_node);
       current_node = new_node;
     }
     

@@ -24,6 +24,11 @@ int DML_get_bytes(char *buf, size_t size, int fromnode){
   exit(1);
 }
 
+int DML_clear_to_send(char *scratch_buf, size_t size, int new_node) {
+  printf("ERROR: called DML_clear_to_send() in DML_vanilla.c\n");
+  exit(1);
+}
+
 int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) {
   printf("ERROR: called DML_route_bytes() in DML_vanilla.c\n");
   exit(1);

@@ -36,6 +36,7 @@ int DML_send_bytes(char *buf, size_t size, int tonode){
   QMP_wait(mh);
   QMP_free_msghandle(mh);
   QMP_free_msgmem(mm);
+  return 0;
 }
 
 int DML_get_bytes(char *buf, size_t size, int fromnode){
@@ -48,21 +49,46 @@ int DML_get_bytes(char *buf, size_t size, int fromnode){
   QMP_wait(mh);
   QMP_free_msghandle(mh);
   QMP_free_msgmem(mm);
+  return 0;
 }
 
-#if defined(HAVE_QMP_ROUTE)
-int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) {
-  return QMP_route(buf, size, fromnode, tonode);
-}
-#else
-/* Use BJ's rollaround route defined in DML_route.c */
-extern QMP_status_t DML_route(void* buffer, QMP_u32_t count,
-                       QMP_u32_t src, QMP_u32_t dest);
 
-int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) {
-  return DML_route(buf, size, fromnode, tonode);
+int DML_clear_to_send(char *scratch_buf, size_t size, int new_node) 
+{
+  if (QMP_get_msg_passing_type() != QMP_GRID)
+  {
+    int this_node = QMP_get_node_number();
+
+    if(this_node == DML_MASTER_NODE && new_node != DML_MASTER_NODE)
+      DML_send_bytes(scratch_buf,size,new_node); /* junk message */
+
+    if(this_node == new_node && new_node != DML_MASTER_NODE)
+      DML_get_bytes(scratch_buf,size,DML_MASTER_NODE);
+  }
+
+  return 0;
 }
-#endif
+
+
+int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) 
+{
+  if (QMP_get_msg_passing_type() == QMP_GRID)
+  {
+    DML_grid_route(buf, size, fromnode, tonode);
+  }
+  else
+  {
+    int this_node = QMP_get_node_number();
+
+    if (this_node == tonode)
+      DML_get_bytes(buf,size,fromnode);
+
+    if (this_node == fromnode)
+      DML_send_bytes(buf,size,tonode);
+  }
+
+  return 0;
+}
 
 void DML_global_xor(u_int32 *x){
   long work = (long)*x;

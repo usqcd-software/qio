@@ -6,13 +6,10 @@
 #include <stdarg.h>
 #include <string.h>
 
-#ifndef HAVE_QMP_ROUTE
-/* My own implementation of QMP_route */
-QMP_status_t DML_route(void* buffer, QMP_u32_t count,
-		       QMP_u32_t src, QMP_u32_t dest)
+/* Private implementation of route method */
+QMP_status_t DML_grid_route(void* buffer, QMP_u32_t count,
+			    QMP_u32_t src, QMP_u32_t dest)
 {
-
-
   QMP_u32_t* l_src_coords;      /* Coordinates of the source */
   QMP_u32_t* l_dst_coords;      /* Coordinates of the destination */
   int* l_disp_vec;              /* Displacement vector dst_coords - src_coords */
@@ -238,4 +235,3 @@ QMP_status_t DML_route(void* buffer, QMP_u32_t count,
 
   return(QMP_SUCCESS);
 }
-#endif
