@@ -93,15 +93,17 @@ int QIO_generic_read_record_data(QIO_Reader *in,
     printf("%s(%d): done reading field\n",myname,this_node);fflush(stdout);
   }
 
-  if(QIO_verbosity() >= QIO_VERB_REG){
-    printf("%s(%d): Read field. datatype %s globaltype %d \n                         precision %s colors %d spins %d count %d\n",
-	   myname,this_node,
-	   QIO_get_datatype(&(in->record_info)),
-	   QIO_get_globaldata(&(in->record_info)),
-	   QIO_get_precision(&(in->record_info)),
-	   QIO_get_colors(&(in->record_info)),
-	   QIO_get_spins(&(in->record_info)),
-	   QIO_get_datacount(&(in->record_info)));
+  if(this_node == in->layout->master_io_node){
+    if(QIO_verbosity() >= QIO_VERB_REG){
+      printf("%s(%d): Read field. datatype %s globaltype %d \n                         precision %s colors %d spins %d count %d\n",
+	     myname,this_node,
+	     QIO_get_datatype(&(in->record_info)),
+	     QIO_get_globaldata(&(in->record_info)),
+	     QIO_get_precision(&(in->record_info)),
+	     QIO_get_colors(&(in->record_info)),
+	     QIO_get_spins(&(in->record_info)),
+	     QIO_get_datacount(&(in->record_info)));
+    }
   }
       
   in->read_state = QIO_RECORD_CHECKSUM_NEXT;
