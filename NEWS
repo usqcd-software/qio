@@ -1,3 +1,8 @@
+03/19/2004 -- Robert Edwards
+
+	Version 0.9.4. Added back in tests for QMP_route to supplant
+        the native/correct DML_grid_route() IFF QMP_route is available.
+
 03/11/2004 -- Robert Edwards
 
 	Version 0.9.3. Bug fixes in multifile lime headers.
