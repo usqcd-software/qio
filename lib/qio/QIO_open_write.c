@@ -95,7 +95,7 @@ QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename,
 
   if(this_node == dml_layout->master_io_node){
     if(qio_out->volfmt == QIO_SINGLEFILE)
-      printf("%s(%d): Opened %s for writing in multifile mode\n",
+      printf("%s(%d): Opened %s for writing in singlefile mode\n",
 	     myname,this_node,filename);
     else if(qio_out->volfmt == QIO_MULTIFILE)
       printf("%s(%d): Opened %s for writing in multifile mode\n",
