@@ -4480,15 +4480,16 @@ done
 # Checks for library functions.
 ## AC_FUNC_MALLOC
 
-# Check for QMP route
-QMP_BKUP_CFLAGS="${CFLAGS}"
-QMP_BKUP_LDFLAGS="${LDFLAGS}"
-QMP_BKUP_LIBS="${LIBS}"
+# Check for QMP route on parscalar
+if test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX" ; then
+   QMP_BKUP_CFLAGS="${CFLAGS}"
+   QMP_BKUP_LDFLAGS="${LDFLAGS}"
+   QMP_BKUP_LIBS="${LIBS}"
 
 
-CFLAGS="${CFLAGS} ${QMP_CFLAGS}"
-LDFLAGS="${LDFLAGS} ${QMP_LDFLAGS}"
-LIBS="${LIBS} ${QMP_LIBS}"
+   CFLAGS="${CFLAGS} ${QMP_CFLAGS}"
+   LDFLAGS="${LDFLAGS} ${QMP_LDFLAGS}"
+   LIBS="${LIBS} ${QMP_LIBS}"
 
 for ac_func in QMP_route
 do
@@ -4573,17 +4574,21 @@ _ACEOF
 fi
 done
 
-CFLAGS="${QMP_BKUP_CFLAGS}"
-LDFLAGS="${QMP_BKUP_LDFLAGS}"
-LIBS="${LIBS}"
-ac_ext=c
+   CFLAGS="${QMP_BKUP_CFLAGS}"
+   LDFLAGS="${QMP_BKUP_LDFLAGS}"
+   LIBS="${LIBS}"
+   ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
+fi
 
-#
+# Parscalar build has an extra source file: DML_route.c
+# this is only compiled in parscalar mode
+# also it is only non empty if QMP_route has not been found
+
 # Now have all the options... Do some configuration
 #
 

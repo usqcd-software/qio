@@ -123,7 +123,7 @@ INCFLAGS = -I@top_srcdir@/include -I@top_srcdir@/other_libs/c-lime/include
 
 AM_CFLAGS = $(INCFLAGS) @QMP_CFLAGS@
 
-HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h lime.h config.h
+HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h lime.h config.h qio_config.h
 
 lib_LIBRARIES = libqio.a
 
@@ -145,11 +145,10 @@ DML_GENERIC = \
    dml/DML_crc32.c \
    dml/DML_stream_in.c \
    dml/DML_stream_out.c \
-   dml/DML_utils.c \
-   dml/DML_route.c
+   dml/DML_utils.c
 
 
-DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c
+DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c dml/DML_route.c
 DML_SCALAR = ${OBJECTS} dml/DML_scalar.c
 
 # LRL_SRCS = lrl/LRL_dummy.c
@@ -180,8 +179,8 @@ am__libqio_a_SOURCES_DIST = qio/QIO_close_read.c qio/QIO_close_write.c \
 	qio/QIO_open_write.c qio/QIO_read.c qio/QIO_read_record_data.c \
 	qio/QIO_read_record_info.c qio/QIO_utils.c qio/QIO_write.c \
 	dml/DML_crc32.c dml/DML_stream_in.c dml/DML_stream_out.c \
-	dml/DML_utils.c dml/DML_route.c lrl/LRL_main.c xml/XML_string.c \
-	dml/DML_parscalar.c dml/DML_scalar.c
+	dml/DML_utils.c lrl/LRL_main.c xml/XML_string.c \
+	dml/DML_parscalar.c dml/DML_route.c dml/DML_scalar.c
 am__objects_1 = QIO_close_read.$(OBJEXT) QIO_close_write.$(OBJEXT) \
 	QIO_info.$(OBJEXT) QIO_next_record.$(OBJEXT) \
 	QIO_open_read.$(OBJEXT) QIO_open_write.$(OBJEXT) \
@@ -189,19 +188,20 @@ am__objects_1 = QIO_close_read.$(OBJEXT) QIO_close_write.$(OBJEXT) \
 	QIO_read_record_info.$(OBJEXT) QIO_utils.$(OBJEXT) \
 	QIO_write.$(OBJEXT)
 am__objects_2 = DML_crc32.$(OBJEXT) DML_stream_in.$(OBJEXT) \
-	DML_stream_out.$(OBJEXT) DML_utils.$(OBJEXT) \
-	DML_route.$(OBJEXT)
+	DML_stream_out.$(OBJEXT) DML_utils.$(OBJEXT)
 am__objects_3 = LRL_main.$(OBJEXT)
 am__objects_4 = XML_string.$(OBJEXT)
 am__objects_5 = $(am__objects_1) $(am__objects_2) $(am__objects_3) \
 	$(am__objects_4)
-am__objects_7 = $(am__objects_6) DML_parscalar.$(OBJEXT)
+am__objects_7 = $(am__objects_6) DML_parscalar.$(OBJEXT) \
+	DML_route.$(OBJEXT)
 am__objects_8 = $(am__objects_6) DML_scalar.$(OBJEXT)
 @ARCH_PARSCALAR_TRUE@am_libqio_a_OBJECTS = $(am__objects_5) \
 @ARCH_PARSCALAR_TRUE@	$(am__objects_7)
 @ARCH_SCALAR_TRUE@am_libqio_a_OBJECTS = $(am__objects_5) \
 @ARCH_SCALAR_TRUE@	$(am__objects_8)
-am__EXTRA_libqio_a_SOURCES_DIST = dml/DML_scalar.c dml/DML_parscalar.c
+am__EXTRA_libqio_a_SOURCES_DIST = dml/DML_scalar.c dml/DML_parscalar.c \
+	dml/DML_route.c
 am__objects_9 =
 nodist_libqio_a_OBJECTS = $(am__objects_9)
 libqio_a_OBJECTS = $(am_libqio_a_OBJECTS) $(nodist_libqio_a_OBJECTS)
@@ -663,28 +663,6 @@ DML_utils.obj: dml/DML_utils.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_utils.obj `if test -f 'dml/DML_utils.c'; then $(CYGPATH_W) 'dml/DML_utils.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_utils.c'; fi`
 
-DML_route.o: dml/DML_route.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_route.o -MD -MP -MF "$(DEPDIR)/DML_route.Tpo" \
-@am__fastdepCC_TRUE@	  -c -o DML_route.o `test -f 'dml/DML_route.c' || echo '$(srcdir)/'`dml/DML_route.c; \
-@am__fastdepCC_TRUE@	then mv "$(DEPDIR)/DML_route.Tpo" "$(DEPDIR)/DML_route.Po"; \
-@am__fastdepCC_TRUE@	else rm -f "$(DEPDIR)/DML_route.Tpo"; exit 1; \
-@am__fastdepCC_TRUE@	fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_route.c' object='DML_route.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/DML_route.Po' tmpdepfile='$(DEPDIR)/DML_route.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_route.o `test -f 'dml/DML_route.c' || echo '$(srcdir)/'`dml/DML_route.c
-
-DML_route.obj: dml/DML_route.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_route.obj -MD -MP -MF "$(DEPDIR)/DML_route.Tpo" \
-@am__fastdepCC_TRUE@	  -c -o DML_route.obj `if test -f 'dml/DML_route.c'; then $(CYGPATH_W) 'dml/DML_route.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_route.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv "$(DEPDIR)/DML_route.Tpo" "$(DEPDIR)/DML_route.Po"; \
-@am__fastdepCC_TRUE@	else rm -f "$(DEPDIR)/DML_route.Tpo"; exit 1; \
-@am__fastdepCC_TRUE@	fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_route.c' object='DML_route.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/DML_route.Po' tmpdepfile='$(DEPDIR)/DML_route.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_route.obj `if test -f 'dml/DML_route.c'; then $(CYGPATH_W) 'dml/DML_route.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_route.c'; fi`
-
 LRL_main.o: lrl/LRL_main.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT LRL_main.o -MD -MP -MF "$(DEPDIR)/LRL_main.Tpo" \
 @am__fastdepCC_TRUE@	  -c -o LRL_main.o `test -f 'lrl/LRL_main.c' || echo '$(srcdir)/'`lrl/LRL_main.c; \
@@ -750,6 +728,28 @@ DML_parscalar.obj: dml/DML_parscalar.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/DML_parscalar.Po' tmpdepfile='$(DEPDIR)/DML_parscalar.TPo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_parscalar.obj `if test -f 'dml/DML_parscalar.c'; then $(CYGPATH_W) 'dml/DML_parscalar.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_parscalar.c'; fi`
+
+DML_route.o: dml/DML_route.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_route.o -MD -MP -MF "$(DEPDIR)/DML_route.Tpo" \
+@am__fastdepCC_TRUE@	  -c -o DML_route.o `test -f 'dml/DML_route.c' || echo '$(srcdir)/'`dml/DML_route.c; \
+@am__fastdepCC_TRUE@	then mv "$(DEPDIR)/DML_route.Tpo" "$(DEPDIR)/DML_route.Po"; \
+@am__fastdepCC_TRUE@	else rm -f "$(DEPDIR)/DML_route.Tpo"; exit 1; \
+@am__fastdepCC_TRUE@	fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_route.c' object='DML_route.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/DML_route.Po' tmpdepfile='$(DEPDIR)/DML_route.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_route.o `test -f 'dml/DML_route.c' || echo '$(srcdir)/'`dml/DML_route.c
+
+DML_route.obj: dml/DML_route.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_route.obj -MD -MP -MF "$(DEPDIR)/DML_route.Tpo" \
+@am__fastdepCC_TRUE@	  -c -o DML_route.obj `if test -f 'dml/DML_route.c'; then $(CYGPATH_W) 'dml/DML_route.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_route.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv "$(DEPDIR)/DML_route.Tpo" "$(DEPDIR)/DML_route.Po"; \
+@am__fastdepCC_TRUE@	else rm -f "$(DEPDIR)/DML_route.Tpo"; exit 1; \
+@am__fastdepCC_TRUE@	fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_route.c' object='DML_route.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/DML_route.Po' tmpdepfile='$(DEPDIR)/DML_route.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_route.obj `if test -f 'dml/DML_route.c'; then $(CYGPATH_W) 'dml/DML_route.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_route.c'; fi`
 
 DML_scalar.o: dml/DML_scalar.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_scalar.o -MD -MP -MF "$(DEPDIR)/DML_scalar.Tpo" \

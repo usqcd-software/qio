@@ -6,7 +6,7 @@ VPATH = @top_srcdir@/lib
 VPATH += @top_srcdir@/include
 VPATH += @top_srcdir@/other_libs/c-lime/include
 
-HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h lime.h config.h
+HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h lime.h config.h qio_config.h
 
 lib_LIBRARIES = libqio.a
 
@@ -27,10 +27,9 @@ DML_GENERIC = \
    dml/DML_crc32.c \
    dml/DML_stream_in.c \
    dml/DML_stream_out.c \
-   dml/DML_utils.c \
-   dml/DML_route.c
+   dml/DML_utils.c
 
-DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c
+DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c dml/DML_route.c
 DML_SCALAR = ${OBJECTS} dml/DML_scalar.c
 
 # LRL_SRCS = lrl/LRL_dummy.c
