@@ -9,7 +9,7 @@
 
 
 int DML_stream_out(LRL_RecordWriter *lrl_record_out, 
-		   void (*get)(char *buf, int coords[], void *arg),
+		   void (*get)(char *buf, const int coords[], void *arg),
 		   size_t size, void *arg, DML_Layout *layout,
 		   int serpar, int siteorder, int volfmt, 
 		   DML_Checksum *checksum){

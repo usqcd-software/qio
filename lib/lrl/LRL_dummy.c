@@ -5,7 +5,7 @@
 #include <lrl.h>
 #include <stdio.h>
 
-LRL_FileReader *LRL_open_read_file(char *filename){
+LRL_FileReader *LRL_open_read_file(const char *filename){
   LRL_FileReader *fr;
 
   fr = (LRL_FileReader *)malloc(sizeof(LRL_FileReader));
@@ -18,7 +18,7 @@ LRL_FileReader *LRL_open_read_file(char *filename){
   return fr;
 }
 
-LRL_FileWriter *LRL_open_write_file(char *filename, int mode){
+LRL_FileWriter *LRL_open_write_file(const char *filename, int mode){
   LRL_FileWriter *fr;
 
   fr = (LRL_FileWriter *)malloc(sizeof(LRL_FileWriter));

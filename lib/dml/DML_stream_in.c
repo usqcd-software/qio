@@ -7,7 +7,7 @@
 #include <dml.h>
 
 int DML_stream_in(LRL_RecordReader *lrl_record_in, 
-		  void (*put)(char *buf, int coords[], void *arg),
+		  void (*put)(char *buf, const int coords[], void *arg),
 		  size_t size, void *arg, DML_Layout *layout,
 		  int serpar, int siteorder, size_t sitelist[],
 		  int volfmt, DML_Checksum *checksum){

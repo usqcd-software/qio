@@ -41,7 +41,7 @@ void DML_lex_coords(int coords[], int latdim, int latsize[], int rcv_coords){
 /* Serial write */
 
 int DML_serial_out(LRL_RecordWriter *lrl_record_out, 
-		   void (*get)(char *buf, int coords[], void *arg),
+		   void (*get)(char *buf, const int coords[], void *arg),
 		   size_t size, void *arg, DML_Layout *layout,
 		   DML_Checksum *checksum){
 
@@ -117,28 +117,28 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
 }
 
 int DML_multidump_out(LRL_RecordWriter *lrl_record_out, 
-		      void (*get)(char *buf, int coords[], void *arg),
+		      void (*get)(char *buf, const int coords[], void *arg),
 		      size_t size, void *arg, DML_Layout *layout, 
 		      DML_Checksum *checksum){
   return 0;
 }
 
 int DML_parallel_out(LRL_RecordWriter *lrl_record_out, 
-		     void (*get)(char *buf, int coords[], void *arg),
+		     void (*get)(char *buf, const int coords[], void *arg),
 		     size_t size, void *arg, DML_Layout *layout, 
 		     DML_Checksum *checksum){
   return 0;
 }
 
 int DML_checkpoint_out(LRL_RecordWriter *lrl_record_out, 
-		       void (*get)(char *buf, int coords[], void *arg),
+		       void (*get)(char *buf, const int coords[], void *arg),
 		       size_t size, void *arg, DML_Layout *layout, 
 		       DML_Checksum *checksum){
   return 0;
 }
 
 int DML_multidump_in(LRL_RecordReader *lrl_record_in, size_t sitelist[],
-		     void (*put)(char *buf, int coords[], void *arg),
+		     void (*put)(char *buf, const int coords[], void *arg),
 		     size_t size, void *arg, DML_Layout *layout, 
 		     DML_Checksum *checksum){
   return 0;
@@ -147,7 +147,7 @@ int DML_multidump_in(LRL_RecordReader *lrl_record_in, size_t sitelist[],
 
 int DML_serial_in(LRL_RecordReader *lrl_record_in, int siteorder, 
 		  size_t sitelist[],
-		  void (*put)(char *buf, int coords[], void *arg),
+		  void (*put)(char *buf, const int coords[], void *arg),
 		  size_t size, void *arg, DML_Layout* layout,
 		  DML_Checksum *checksum){
   char *buf;
@@ -221,7 +221,7 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in, int siteorder,
 
 int DML_parallel_in(LRL_RecordReader *lrl_record_in, int siteorder, 
 		    size_t sitelist[],
-		    void (*put)(char *buf, int coords[], void *arg),
+		    void (*put)(char *buf, const int coords[], void *arg),
 		    size_t size, void *arg, DML_Layout *layout,
 		    DML_Checksum *checksum){
   return 0;

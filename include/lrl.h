@@ -33,8 +33,8 @@ typedef struct {
   LRL_FileReader *fr;
 } LRL_RecordReader;
 
-LRL_FileReader *LRL_open_read_file(char *filename);
-LRL_FileWriter *LRL_open_write_file(char *filename, int mode);
+LRL_FileReader *LRL_open_read_file(const char *filename);
+LRL_FileWriter *LRL_open_write_file(const char *filename, int mode);
 LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size, 
 				       DIME_tag tag);
 LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size, 
