@@ -52,7 +52,9 @@ AC_ARG_ENABLE(slow-route,
      [ --enable-slow-route ],
      [ When not using QMP_route, use the slow version of DML route ]
    ),
-   [ AC_DEFINE([QIO_USE_SLOW_ROUTE],[], [Enable Balints Slow DML route]) ],
+   [ AC_MSG_NOTICE([Enabling Slow DML_route from Balint])
+     AC_DEFINE([QIO_USE_SLOW_ROUTE],[], [Enable Balints Slow DML route]) ],
+   [ AC_MSG_NOTICE([Using Fast Route from James]) ]
 )
 
 dnl

@@ -1808,10 +1808,16 @@ fi;
 # Check whether --enable-slow-route or --disable-slow-route was given.
 if test "${enable_slow_route+set}" = set; then
   enableval="$enable_slow_route"
+   { echo "$as_me:$LINENO: Enabling Slow DML_route from Balint" >&5
+echo "$as_me: Enabling Slow DML_route from Balint" >&6;}
 
 cat >>confdefs.h <<\_ACEOF
 #define QIO_USE_SLOW_ROUTE
 _ACEOF
+
+else
+   { echo "$as_me:$LINENO: Using Fast Route from James" >&5
+echo "$as_me: Using Fast Route from James" >&6;}
 
 fi;
 
