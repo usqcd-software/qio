@@ -8,6 +8,13 @@
 #include <stdio.h>
 #include <malloc.h>
 
+#undef PARALLEL_WRITE
+#if defined(QIO_USE_PARALLEL_WRITE)
+#define PARALLEL_WRITE 1
+#else
+#define PARALLEL_WRITE 0
+#endif
+
 /* Opens a file for writing */
 /* Writes the private file XML record */
 /* Writes the site list if multifile format */
@@ -68,7 +75,7 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
      or if writing in multifile, all nodes open the file.  Otherwise,
      only master does. */
 
-  if((QIO_USE_PARALLEL_WRITE && serpar == QIO_PARALLEL)
+  if((PARALLEL_WRITE && serpar == QIO_PARALLEL)
      || volfmt == QIO_MULTIFILE
      || this_node == QIO_MASTER_NODE){
     /* Modify filename for multifile writes */

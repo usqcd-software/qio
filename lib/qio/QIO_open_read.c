@@ -12,6 +12,14 @@
 
 #undef DEBUG
 
+
+#undef PARALLEL_READ
+#if defined(QIO_USE_PARALLEL_READ)
+#define PARALLEL_READ 1
+#else
+#define PARALLEL_READ 0
+#endif
+
 /* Opens a file for reading */
 /* Discovers whether the file is single or multifile format */
 /* Reads, interprets, and broadcasts the private file XML record */
@@ -138,7 +146,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
     qio_in->siteorder = QIO_LEX_ORDER;
     /* If parallel read is possible and requested, the remaining nodes
        open the same file */
-    if((QIO_USE_PARALLEL_READ && qio_in->serpar == QIO_PARALLEL) && 
+    if((PARALLEL_READ && qio_in->serpar == QIO_PARALLEL) && 
        this_node != QIO_MASTER_NODE){ 
       lrl_file_in = LRL_open_read_file(filename);
       qio_in->lrl_file_in = lrl_file_in; 
