@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 1.1.4, detar@physics.utah.edu)
+AC_INIT(qio, 1.1.5, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
@@ -225,4 +225,5 @@ AC_CONFIG_FILES(lib/Makefile)
 AC_CONFIG_FILES(bin/Makefile)
 AC_CONFIG_FILES(bin/qio-config)
 AC_CONFIG_FILES(examples/Makefile)
+AC_CONFIG_FILES(doc/Makefile)
 AC_OUTPUT
