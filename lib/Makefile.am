@@ -6,7 +6,7 @@ VPATH = @top_srcdir@/lib
 VPATH += @top_srcdir@/include
 VPATH += @top_srcdir@/other_libs/c-lime/include
 
-HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h lime.h config.h qio_config.h
+HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h lime.h qio_config.h
 
 lib_LIBRARIES = libqio.a
 
