@@ -5,7 +5,6 @@
 #include <lrl.h>
 #include <dml.h>
 
-#define QIO_MAX_STRING_LEN  256
 #define QIO_MASTER_NODE DML_MASTER_NODE
 
 #define QIO_SERIAL     DML_SERIAL     
