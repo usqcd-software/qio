@@ -14,7 +14,7 @@
 
 @SET_MAKE@
 
-SOURCES = $(libqio_a_SOURCES) $(EXTRA_libqio_a_SOURCES) $(nodist_libqio_a_SOURCES)
+SOURCES = $(libqio_a_SOURCES) $(nodist_libqio_a_SOURCES)
 
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
@@ -52,13 +52,6 @@ AR = ar
 ARFLAGS = cru
 libqio_a_AR = $(AR) $(ARFLAGS)
 libqio_a_LIBADD =
-am__libqio_a_SOURCES_DIST = qio/QIO_close_read.c qio/QIO_close_write.c \
-	qio/QIO_info.c qio/QIO_next_record.c qio/QIO_open_read.c \
-	qio/QIO_open_write.c qio/QIO_read.c qio/QIO_read_record_data.c \
-	qio/QIO_read_record_info.c qio/QIO_string.c qio/QIO_utils.c \
-	qio/QIO_write.c dml/DML_crc32.c dml/DML_stream_in.c \
-	dml/DML_stream_out.c dml/DML_utils.c lrl/LRL_main.c \
-	dml/DML_parscalar.c dml/DML_route.c dml/DML_scalar.c
 am__objects_1 = QIO_close_read.$(OBJEXT) QIO_close_write.$(OBJEXT) \
 	QIO_info.$(OBJEXT) QIO_next_record.$(OBJEXT) \
 	QIO_open_read.$(OBJEXT) QIO_open_write.$(OBJEXT) \
@@ -66,27 +59,20 @@ am__objects_1 = QIO_close_read.$(OBJEXT) QIO_close_write.$(OBJEXT) \
 	QIO_read_record_info.$(OBJEXT) QIO_string.$(OBJEXT) \
 	QIO_utils.$(OBJEXT) QIO_write.$(OBJEXT)
 am__objects_2 = DML_crc32.$(OBJEXT) DML_stream_in.$(OBJEXT) \
-	DML_stream_out.$(OBJEXT) DML_utils.$(OBJEXT)
+	DML_stream_out.$(OBJEXT) DML_utils.$(OBJEXT) \
+	DML_parscalar.$(OBJEXT) DML_route.$(OBJEXT)
 am__objects_3 = LRL_main.$(OBJEXT)
 am__objects_4 = $(am__objects_1) $(am__objects_2) $(am__objects_3)
-am__objects_5 = DML_parscalar.$(OBJEXT) DML_route.$(OBJEXT)
-am__objects_6 = DML_scalar.$(OBJEXT)
-@ARCH_PARSCALAR_FALSE@@ARCH_SCALAR_TRUE@am_libqio_a_OBJECTS =  \
-@ARCH_PARSCALAR_FALSE@@ARCH_SCALAR_TRUE@	$(am__objects_4) \
-@ARCH_PARSCALAR_FALSE@@ARCH_SCALAR_TRUE@	$(am__objects_6)
-@ARCH_PARSCALAR_TRUE@am_libqio_a_OBJECTS = $(am__objects_4) \
-@ARCH_PARSCALAR_TRUE@	$(am__objects_5)
-am__EXTRA_libqio_a_SOURCES_DIST = dml/DML_scalar.c dml/DML_parscalar.c \
-	dml/DML_route.c
-am__objects_7 =
-nodist_libqio_a_OBJECTS = $(am__objects_7)
+am_libqio_a_OBJECTS = $(am__objects_4)
+am__objects_5 =
+nodist_libqio_a_OBJECTS = $(am__objects_5)
 libqio_a_OBJECTS = $(am_libqio_a_OBJECTS) $(nodist_libqio_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/include
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
 @AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/DML_crc32.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/DML_parscalar.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/DML_route.Po ./$(DEPDIR)/DML_scalar.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/DML_route.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/DML_stream_in.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/DML_stream_out.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/DML_utils.Po ./$(DEPDIR)/LRL_main.Po \
@@ -105,10 +91,8 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(libqio_a_SOURCES) $(EXTRA_libqio_a_SOURCES) \
-	$(nodist_libqio_a_SOURCES)
-DIST_SOURCES = $(am__libqio_a_SOURCES_DIST) \
-	$(am__EXTRA_libqio_a_SOURCES_DIST)
+SOURCES = $(libqio_a_SOURCES) $(nodist_libqio_a_SOURCES)
+DIST_SOURCES = $(libqio_a_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -117,11 +101,6 @@ ACLOCAL = @ACLOCAL@
 AMDEP_FALSE = @AMDEP_FALSE@
 AMDEP_TRUE = @AMDEP_TRUE@
 AMTAR = @AMTAR@
-ARCHDEF_SUBSTITUTION = @ARCHDEF_SUBSTITUTION@
-ARCH_PARSCALAR_FALSE = @ARCH_PARSCALAR_FALSE@
-ARCH_PARSCALAR_TRUE = @ARCH_PARSCALAR_TRUE@
-ARCH_SCALAR_FALSE = @ARCH_SCALAR_FALSE@
-ARCH_SCALAR_TRUE = @ARCH_SCALAR_TRUE@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -148,7 +127,6 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
-LOCAL_PARALLEL_ARCH = @LOCAL_PARALLEL_ARCH@
 LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 OBJEXT = @OBJEXT@
@@ -158,7 +136,6 @@ PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_VERSION = @PACKAGE_VERSION@
-PARALLEL_ARCH = @PARALLEL_ARCH@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 QDP_CFLAGS = @QDP_CFLAGS@
 QDP_LDFLAGS = @QDP_LDFLAGS@
@@ -224,18 +201,15 @@ DML_GENERIC = \
    dml/DML_crc32.c \
    dml/DML_stream_in.c \
    dml/DML_stream_out.c \
-   dml/DML_utils.c
+   dml/DML_utils.c \
+   dml/DML_parscalar.c \
+   dml/DML_route.c
 
-DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c dml/DML_route.c
-DML_SCALAR = ${OBJECTS} dml/DML_scalar.c
 
 # LRL_SRCS = lrl/LRL_dummy.c
 LRL_SRCS = lrl/LRL_main.c
 GENERIC_SRCS = $(QIO_SRCS) $(DML_GENERIC) $(LRL_SRCS)
-@ARCH_PARSCALAR_TRUE@libqio_a_SOURCES = $(GENERIC_SRCS) $(DML_PARSCALAR)
-@ARCH_SCALAR_TRUE@libqio_a_SOURCES = $(GENERIC_SRCS) $(DML_SCALAR)
-@ARCH_PARSCALAR_TRUE@EXTRA_libqio_a_SOURCES = $(DML_SCALAR)
-@ARCH_SCALAR_TRUE@EXTRA_libqio_a_SOURCES = $(DML_PARSCALAR)
+libqio_a_SOURCES = $(GENERIC_SRCS)
 
 # Need this header as part of libqio_a_sources
 nodist_libqio_a_SOURCES = $(HDRS)
@@ -315,7 +289,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_crc32.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_parscalar.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_route.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_scalar.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_stream_in.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_stream_out.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_utils.Po@am__quote@
@@ -605,22 +578,6 @@ DML_utils.obj: dml/DML_utils.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_utils.obj `if test -f 'dml/DML_utils.c'; then $(CYGPATH_W) 'dml/DML_utils.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_utils.c'; fi`
 
-LRL_main.o: lrl/LRL_main.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT LRL_main.o -MD -MP -MF "$(DEPDIR)/LRL_main.Tpo" -c -o LRL_main.o `test -f 'lrl/LRL_main.c' || echo '$(srcdir)/'`lrl/LRL_main.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/LRL_main.Tpo" "$(DEPDIR)/LRL_main.Po"; else rm -f "$(DEPDIR)/LRL_main.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lrl/LRL_main.c' object='LRL_main.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/LRL_main.Po' tmpdepfile='$(DEPDIR)/LRL_main.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o LRL_main.o `test -f 'lrl/LRL_main.c' || echo '$(srcdir)/'`lrl/LRL_main.c
-
-LRL_main.obj: lrl/LRL_main.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT LRL_main.obj -MD -MP -MF "$(DEPDIR)/LRL_main.Tpo" -c -o LRL_main.obj `if test -f 'lrl/LRL_main.c'; then $(CYGPATH_W) 'lrl/LRL_main.c'; else $(CYGPATH_W) '$(srcdir)/lrl/LRL_main.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/LRL_main.Tpo" "$(DEPDIR)/LRL_main.Po"; else rm -f "$(DEPDIR)/LRL_main.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lrl/LRL_main.c' object='LRL_main.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/LRL_main.Po' tmpdepfile='$(DEPDIR)/LRL_main.TPo' @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o LRL_main.obj `if test -f 'lrl/LRL_main.c'; then $(CYGPATH_W) 'lrl/LRL_main.c'; else $(CYGPATH_W) '$(srcdir)/lrl/LRL_main.c'; fi`
-
 DML_parscalar.o: dml/DML_parscalar.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_parscalar.o -MD -MP -MF "$(DEPDIR)/DML_parscalar.Tpo" -c -o DML_parscalar.o `test -f 'dml/DML_parscalar.c' || echo '$(srcdir)/'`dml/DML_parscalar.c; \
 @am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/DML_parscalar.Tpo" "$(DEPDIR)/DML_parscalar.Po"; else rm -f "$(DEPDIR)/DML_parscalar.Tpo"; exit 1; fi
@@ -653,21 +610,21 @@ DML_route.obj: dml/DML_route.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_route.obj `if test -f 'dml/DML_route.c'; then $(CYGPATH_W) 'dml/DML_route.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_route.c'; fi`
 
-DML_scalar.o: dml/DML_scalar.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_scalar.o -MD -MP -MF "$(DEPDIR)/DML_scalar.Tpo" -c -o DML_scalar.o `test -f 'dml/DML_scalar.c' || echo '$(srcdir)/'`dml/DML_scalar.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/DML_scalar.Tpo" "$(DEPDIR)/DML_scalar.Po"; else rm -f "$(DEPDIR)/DML_scalar.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_scalar.c' object='DML_scalar.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/DML_scalar.Po' tmpdepfile='$(DEPDIR)/DML_scalar.TPo' @AMDEPBACKSLASH@
+LRL_main.o: lrl/LRL_main.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT LRL_main.o -MD -MP -MF "$(DEPDIR)/LRL_main.Tpo" -c -o LRL_main.o `test -f 'lrl/LRL_main.c' || echo '$(srcdir)/'`lrl/LRL_main.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/LRL_main.Tpo" "$(DEPDIR)/LRL_main.Po"; else rm -f "$(DEPDIR)/LRL_main.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lrl/LRL_main.c' object='LRL_main.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/LRL_main.Po' tmpdepfile='$(DEPDIR)/LRL_main.TPo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_scalar.o `test -f 'dml/DML_scalar.c' || echo '$(srcdir)/'`dml/DML_scalar.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o LRL_main.o `test -f 'lrl/LRL_main.c' || echo '$(srcdir)/'`lrl/LRL_main.c
 
-DML_scalar.obj: dml/DML_scalar.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_scalar.obj -MD -MP -MF "$(DEPDIR)/DML_scalar.Tpo" -c -o DML_scalar.obj `if test -f 'dml/DML_scalar.c'; then $(CYGPATH_W) 'dml/DML_scalar.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_scalar.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/DML_scalar.Tpo" "$(DEPDIR)/DML_scalar.Po"; else rm -f "$(DEPDIR)/DML_scalar.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_scalar.c' object='DML_scalar.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/DML_scalar.Po' tmpdepfile='$(DEPDIR)/DML_scalar.TPo' @AMDEPBACKSLASH@
+LRL_main.obj: lrl/LRL_main.c
+@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT LRL_main.obj -MD -MP -MF "$(DEPDIR)/LRL_main.Tpo" -c -o LRL_main.obj `if test -f 'lrl/LRL_main.c'; then $(CYGPATH_W) 'lrl/LRL_main.c'; else $(CYGPATH_W) '$(srcdir)/lrl/LRL_main.c'; fi`; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/LRL_main.Tpo" "$(DEPDIR)/LRL_main.Po"; else rm -f "$(DEPDIR)/LRL_main.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lrl/LRL_main.c' object='LRL_main.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	depfile='$(DEPDIR)/LRL_main.Po' tmpdepfile='$(DEPDIR)/LRL_main.TPo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_scalar.obj `if test -f 'dml/DML_scalar.c'; then $(CYGPATH_W) 'dml/DML_scalar.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_scalar.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o LRL_main.obj `if test -f 'lrl/LRL_main.c'; then $(CYGPATH_W) 'lrl/LRL_main.c'; else $(CYGPATH_W) '$(srcdir)/lrl/LRL_main.c'; fi`
 uninstall-info-am:
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
