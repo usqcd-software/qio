@@ -58,7 +58,7 @@ QIO_Writer *QIO_open_write(XML_string *xml_file, const char *filename,
   /* Create private file XML */
   /* This is a dummy for now, but we need to write at least
      QIO version number, lattice dimensions, and the volume format */
-  xml_file_private = XML_string_create(QIO_MAX_STRING_LEN);
+  xml_file_private = XML_string_create(strlen(file_private_output)+1);
   XML_string_set(xml_file_private, file_private_output);
   
   /* Master node writes the private file XML record */
