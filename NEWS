@@ -1,0 +1,4 @@
+11/01/2003 -- Robert Edwards
+
+	Version 0.8.1. Changed cpp BIG_ENDIAN to QIO_BIG_ENDIAN to avoid name 
+        collisions under linux.
