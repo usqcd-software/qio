@@ -230,7 +230,7 @@ char *QIO_set_filepath(QIO_Filesystem *fs,
   return newfilename;
 }
 
-int QIO_single_to_part( const char const filename[], QIO_Filesystem *fs,
+int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout)
 {
   QIO_Layout *scalar_layout, *ionode_layout;
@@ -464,7 +464,7 @@ int QIO_single_to_part( const char const filename[], QIO_Filesystem *fs,
   return QIO_SUCCESS;
 }
 
-int QIO_part_to_single( const char const filename[], QIO_Filesystem *fs,
+int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout)
 {
   QIO_Layout *scalar_layout, *ionode_layout;

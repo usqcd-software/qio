@@ -129,7 +129,7 @@ int QIO_verbosity();
 /* HostAPI */
 int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout);
-int QIO_part_to_single( const char const filename[], QIO_Filesystem *fs,
+int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout);
 
 /* MPP API */
