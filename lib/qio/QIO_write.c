@@ -29,7 +29,7 @@ int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
      out->latdim, out->latsize); */
   /* Insert site list into private XML */
 
-  xml_record_private = XML_string_create(QIO_MAX_STRING_LEN);
+  xml_record_private = XML_string_create(strlen(record_private_output)+1);
   XML_string_set(xml_record_private, record_private_output);
   
   /* Master node writes the private record XML record */
@@ -37,7 +37,7 @@ int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
   {
     if (QIO_write_string(out, xml_record_private))
       return 1;
-    printf("QIO_write: private record XML = %s\n",
+    printf("QIO_write: private record XML = XXX%sXXX\n",
 	   XML_string_ptr(xml_record_private));
   }
 
@@ -49,7 +49,7 @@ int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
   {
     if (QIO_write_string(out, xml_record))
       return 1;
-    printf("QIO_write: user record XML = %s\n",
+    printf("QIO_write: user record XML = XXX%sXXX\n",
 	   XML_string_ptr(xml_record));
   }
 
@@ -72,7 +72,7 @@ int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
   {
     /* Insert the checksum into a string */
     size_t some_checksum_here = 0;       /*** DUMMY FOR NOW ***/
-    xml_checksum = XML_string_create(QIO_MAX_STRING_LEN);
+    xml_checksum = XML_string_create(30);
     /* NOTE: should use   snprintf here - is it really portable ?? */
 /*    sprintf(XML_string_ptr(xml_checksum), "%d", some_checksum_here); */
     snprintf(XML_string_ptr(xml_checksum), XML_string_bytes(xml_checksum),
