@@ -631,7 +631,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	   DML_Layout *layout, DML_SiteList *sites, int volfmt,
 	   DML_Checksum *checksum)
 {
-  char *buf,*outbuf;
+  char *buf,*outbuf,*scratch_buf;
   int current_node, new_node;
   int *coords;
   int this_node = layout->this_node;
@@ -660,6 +660,13 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     printf("%s(%d) can't malloc outbuf\n",myname,this_node);
     return 0;
   }
+
+  scratch_buf = DML_allocate_buf(4,1,this_node);
+  if(!scratch_buf){
+    printf("%s(%d) can't malloc scratch_buf\n",myname,this_node);
+    return 0;
+  }
+  memset(scratch_buf,0,4);
 
   /* Allocate lattice coordinate */
   coords = DML_allocate_coords(latdim, myname, this_node);
@@ -700,7 +707,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 
     /* CTS only if changing data source node */
     if(new_node != current_node){
-      DML_clear_to_send(buf,4,my_io_node,new_node);
+      DML_clear_to_send(scratch_buf,4,my_io_node,new_node);
       current_node = new_node;
     }
 
@@ -714,8 +721,12 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     /* Send result to my I/O node. Avoid I/O node sending to itself. */
     if (current_node != my_io_node) 
     {
-#if 0
-      DML_route_bytes(rcvbuf,size,current_node,my_io_node);
+#if 1
+      /* Data from any other node is received in the I/O node write buffer */
+      if(this_node == my_io_node){
+	buf = outbuf + size*buf_sites;
+      }
+      DML_route_bytes(buf,size,current_node,my_io_node);
 #else
       /* Data from any other node is received in the I/O node write buffer */
       if(this_node == my_io_node){
@@ -752,6 +763,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   } while(DML_next_site_loop(&snd_coords, sites));
   
   free(coords);
+  free(scratch_buf);
   free(outbuf);
 
   /* Combine checksums over all nodes */
@@ -1069,7 +1081,7 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
     /* Send result to destination node. Avoid I/O node sending to itself. */
     if (dest_node != my_io_node)
       {
-#if 0
+#if 1
 	DML_route_bytes(buf,size,master_io_node,dest_node);
 #else
 	/* If destination elsewhere, send it */
