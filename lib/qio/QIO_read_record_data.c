@@ -3,7 +3,7 @@
 #include <qio.h>
 #include <lrl.h>
 #include <dml.h>
-#include <xml_string.h>
+#include <qio_string.h>
 #include <qioxml.h>
 #include <stdio.h>
 
@@ -16,19 +16,21 @@
 /* On failure calling program must signal abort to all nodes. */
 
 int QIO_read_record_data(QIO_Reader *in, 
-	     void (*put)(char *buf, size_t index, size_t count, void *arg),
+	     void (*put)(char *buf, size_t index, int count, void *arg),
 	     size_t datum_size, int word_size, void *arg){
 
 
   char myname[] = "QIO_read_record_data";
-  XML_String *xml_record_private,*xml_checksum;
+  QIO_String *xml_record_private,*xml_checksum;
   DML_Checksum checksum;
   QIO_ChecksumInfo *checksum_info_expect, *checksum_info_found;
   size_t check;
+  int count = QIO_get_datacount(&(in->record_info));
   int datum_size_info;
   int this_node = in->layout->this_node;
   int status;
   size_t buf_size = datum_size * in->layout->volume;
+  int globaldata = QIO_get_globaldata(&(in->record_info));
   LIME_type lime_type=NULL;
 
   /* It is an error to call for the data before the reading the info
@@ -39,14 +41,13 @@ int QIO_read_record_data(QIO_Reader *in,
   }
 
   /* Require consistency between the byte count specified in the
-     private record metadata and the byte count per site to be read */
+     private record metadata and the byte count to be read 
+     (per site for field data or total for global data) */
   if(datum_size != 
-     QIO_get_typesize(&(in->record_info)) *
-     QIO_get_datacount(&(in->record_info))){
-    printf("%s(%d): bytes per site mismatch %d != %d * %d\n",
+     QIO_get_typesize(&(in->record_info)) * count){
+    printf("%s(%d): byte count mismatch %d != %d * %d\n",
 	   myname,this_node,datum_size,
-	   QIO_get_typesize(&(in->record_info)),
-	   QIO_get_datacount(&(in->record_info)));
+	   QIO_get_typesize(&(in->record_info)), count);
     return QIO_ERR_BAD_SITE_BYTES;
   }
 
@@ -60,24 +61,23 @@ int QIO_read_record_data(QIO_Reader *in,
       return status;
     }
 #ifdef QIO_DEBUG
-    printf("%s(%d): BinX = %s\n",myname,this_node,XML_string_ptr(BinX));
+    printf("%s(%d): BinX = %s\n",myname,this_node,QIO_string_ptr(BinX));
 #endif
   }
 #endif
   
-  /* Verify byte count per site */
-  datum_size_info = QIO_get_typesize(&(in->record_info)) * 
-    QIO_get_datacount(&(in->record_info));
+  /* Verify byte count per site (for field) or total (for global) */
+  datum_size_info = QIO_get_typesize(&(in->record_info)) * count;
   if(datum_size != datum_size_info){
-    printf("%s(%d): byte count per site mismatch request %d != actual %d\n",
+    printf("%s(%d): byte count mismatch request %d != actual %d\n",
 	   myname, this_node, datum_size, datum_size_info);
     return QIO_ERR_BAD_SITE_BYTES;
   }
 
   /* Nodes read the field */
-  if((status=QIO_read_field(in, put, datum_size, word_size, arg, 
-			    &checksum, lime_type))!=QIO_SUCCESS){
-    printf("%s(%d): Error reading field\n",myname,this_node);
+  if((status=QIO_read_field(in, globaldata, put, count, datum_size, word_size, 
+			    arg, &checksum, lime_type))!=QIO_SUCCESS){
+    printf("%s(%d): Error reading field data\n",myname,this_node);
     return status;
   }
 
@@ -88,14 +88,14 @@ int QIO_read_record_data(QIO_Reader *in,
   /* Master node reads the checksum */
   status = QIO_SUCCESS;  /* Changed if checksum does not match */
   if(this_node == QIO_MASTER_NODE){
-    xml_checksum = XML_string_create(QIO_STRINGALLOC);
+    xml_checksum = QIO_string_create(QIO_STRINGALLOC);
     if((status=QIO_read_string(in, xml_checksum, lime_type))!=QIO_SUCCESS){
       printf("%s(%d): Error reading checksum\n",myname,this_node);
       return status;
     }
 #ifdef QIO_DEBUG
     printf("%s(%d): checksum = %s\n",myname,this_node,
-	   XML_string_ptr(xml_checksum));
+	   QIO_string_ptr(xml_checksum));
 #endif
     /* Extract checksum */
     checksum_info_expect = QIO_create_checksum_info(0,0);
@@ -104,7 +104,7 @@ int QIO_read_record_data(QIO_Reader *in,
       printf("%s(%d): bad checksum record\n",myname,this_node);
       return status;
     }
-    XML_string_destroy(xml_checksum);
+    QIO_string_destroy(xml_checksum);
     
     /* Compare checksums */
     checksum_info_found = QIO_create_checksum_info(checksum.suma, 

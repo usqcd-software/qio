@@ -3,7 +3,7 @@
 #include <qio.h>
 #include <lrl.h>
 #include <dml.h>
-#include <xml_string.h>
+#include <qio_string.h>
 #include <qioxml.h>
 #include <stdio.h>
 #ifdef HAVE_MALLOC_H
@@ -17,10 +17,10 @@
    contents */
 
 int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
-			 XML_String *xml_record){
+			 QIO_String *xml_record){
   /* Caller must allocate *xml_record and *record_info */
 
-  XML_String *xml_record_private;
+  QIO_String *xml_record_private;
   int this_node = in->layout->this_node;
   int length;
   int status;
@@ -31,24 +31,25 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
   if(in->read_state == QIO_RECORD_XML_NEXT){
 
     /* Allocate space for user record XML */
-    in->xml_record = XML_string_create(0);
+    in->xml_record = QIO_string_create(0);
     
     /* Master node reads and interprets the private record XML record */
     if(this_node == QIO_MASTER_NODE){
       /* Initialize private record XML - will be allocated by read_string */
-      xml_record_private = XML_string_create(0);
+      xml_record_private = QIO_string_create(0);
 
       /* Read private record XML */
       if((status=QIO_read_string(in, xml_record_private, lime_type ))
 	 != QIO_SUCCESS)return status;
 #ifdef QIO_DEBUG
       printf("%s(%d): private XML = %s\n",myname,this_node,
-	     XML_string_ptr(xml_record_private));
+	     QIO_string_ptr(xml_record_private));
 #endif
       /* Decode the private record XML */
       QIO_decode_record_info(&(in->record_info), xml_record_private);
-      printf("%s(%d) Datatype %s precision %s colors %d spins %d count %d\n",
+      printf("%s(%d) Global data %d Datatype %s precision %s colors %d spins %d count %d\n",
 	     myname,this_node,
+	     QIO_get_globaldata(&(in->record_info)),
 	     QIO_get_datatype(&(in->record_info)),
 	     QIO_get_precision(&(in->record_info)),
 	     QIO_get_colors(&(in->record_info)),
@@ -56,7 +57,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 	     QIO_get_datacount(&(in->record_info)));
 
       /* Free storage */
-      XML_string_destroy(xml_record_private);
+      QIO_string_destroy(xml_record_private);
 
       /* Check for private values that QIO needs */
       if(!in->record_info.typesize.occur ||
@@ -83,9 +84,9 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
       }
 #ifdef QIO_DEBUG
       printf("%s(%d): user XML = %s\n",myname,this_node,
-	     XML_string_ptr(in->xml_record));
+	     QIO_string_ptr(in->xml_record));
 #endif
-      length = XML_string_bytes(in->xml_record);
+      length = QIO_string_bytes(in->xml_record);
     }
 
     /* Broadcast the user xml record to all nodes */
@@ -94,9 +95,9 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 
     /* Receiving nodes resize their strings */
     if(this_node != QIO_MASTER_NODE){
-      XML_string_realloc(in->xml_record,length);
+      QIO_string_realloc(in->xml_record,length);
     }
-    DML_broadcast_bytes(XML_string_ptr(in->xml_record),length);
+    DML_broadcast_bytes(QIO_string_ptr(in->xml_record),length);
 
     /* Set state in case record is reread */
     in->read_state = QIO_RECORD_DATA_NEXT;
@@ -104,7 +105,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 
   /* Copy record info on all calls */
   *record_info = in->record_info;
-  XML_string_copy(xml_record,in->xml_record);
+  QIO_string_copy(xml_record,in->xml_record);
 
 #ifdef QIO_DEBUG
   printf("%s(%d): Finished\n",myname,this_node);

@@ -20,6 +20,11 @@
 #define DML_SINGLEFILE   0
 #define DML_MULTIFILE    1
 
+/* Data distribution */
+#define DML_FIELD      0
+#define DML_GLOBAL     1
+
+
 /* Limits size of read and write buffers (bytes) 2^18 for now */
 #define DML_BUF_BYTES 262144
 /* Limit the number of messages that may pile up on a given node */
@@ -53,16 +58,26 @@ typedef struct {
   int number_of_nodes;
 } DML_Layout;
 
-size_t DML_stream_out(LRL_RecordWriter *lrl_record_out, 
-	   void (*get)(char *buf, size_t index, size_t count, void *arg),
-	   size_t size, int word_size, void *arg, DML_Layout *layout,
-	   int serpar, int volfmt, DML_Checksum *checksum);
+size_t DML_stream_out(LRL_RecordWriter *lrl_record_out, int globaldata,
+	   void (*get)(char *buf, size_t index, int count, void *arg),
+           int count, size_t size, int word_size, void *arg, 
+	   DML_Layout *layout, int serpar, int volfmt, DML_Checksum *checksum);
 
-size_t DML_stream_in(LRL_RecordReader *lrl_record_in, 
-	     void (*put)(char *buf, size_t index, size_t count, void *arg),
-	     size_t size, int word_size, void *arg, DML_Layout *layout,
-	     int serpar, int siteorder, DML_SiteRank sitelist[],
-		     int volfmt, DML_Checksum *checksum);
+size_t DML_stream_global_out(LRL_RecordWriter *lrl_record_out, 
+			     void *buf, 
+			     size_t size, int word_size, DML_Layout *layout,
+			     DML_Checksum *checksum);
+
+size_t DML_stream_in(LRL_RecordReader *lrl_record_in, int globaldata,
+	     void (*put)(char *buf, size_t index, int count, void *arg),
+	     int count, size_t size, int word_size, void *arg, 
+             DML_Layout *layout, int serpar, int siteorder, 
+             DML_SiteRank sitelist[], int volfmt, DML_Checksum *checksum);
+
+size_t DML_stream_global_in(LRL_RecordWriter *lrl_record_in, 
+			    void *buf, 
+			    size_t size, int word_size, DML_Layout *layout,
+			    DML_Checksum *checksum);
 
 /* DML internal utilities */
 
@@ -97,31 +112,39 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, int size,
 			 size_t max_send_sites, 
 			 size_t *nbytes, char *myname, int this_node,
 			 int *err);
-int DML_serial_out(LRL_RecordWriter *lrl_record_out, 
-	   void (*get)(char *buf, size_t index, size_t count, void *arg),
-	   size_t size, int word_size, void *arg, DML_Layout *layout,
-	   DML_Checksum *checksum);
-int DML_multifile_out(LRL_RecordWriter *lrl_record_out, 
-	      void (*get)(char *buf, size_t index, size_t count, void *arg),
-	      size_t size, int word_size, void *arg, 
+size_t DML_serial_out(LRL_RecordWriter *lrl_record_out, 
+	   void (*get)(char *buf, size_t index, int count, void *arg),
+	   int count, size_t size, int word_size, void *arg, 
+           DML_Layout *layout, DML_Checksum *checksum);
+size_t DML_global_out(LRL_RecordWriter *lrl_record_out, 
+	   void (*get)(char *buf, size_t index, int count, void *arg),
+	   int count, size_t size, int word_size, void *arg, 
+           DML_Layout *layout, DML_Checksum *checksum);
+size_t DML_multifile_out(LRL_RecordWriter *lrl_record_out, 
+	      void (*get)(char *buf, size_t index, int count, void *arg),
+	      int count, size_t size, int word_size, void *arg, 
 	      DML_Layout *layout, DML_Checksum *checksum);
-int DML_parallel_out(LRL_RecordWriter *lrl_record_out, 
-	     void (*get)(char *buf, size_t index, size_t count, void *arg),
-	     size_t size, int word_size, void *arg, 
+size_t DML_parallel_out(LRL_RecordWriter *lrl_record_out, 
+	     void (*get)(char *buf, size_t index, int count, void *arg),
+	     int count, size_t size, int word_size, void *arg, 
 	     DML_Layout *layout, DML_Checksum *checksum);
-int DML_multifile_in(LRL_RecordReader *lrl_record_in, 
+size_t DML_multifile_in(LRL_RecordReader *lrl_record_in, 
 	     DML_SiteRank sitelist[],
-	     void (*put)(char *buf, size_t index, size_t count, void *arg),
-	     size_t size, int word_size, void *arg, 
+	     void (*put)(char *buf, size_t index, int count, void *arg),
+	     int count, size_t size, int word_size, void *arg, 
 	     DML_Layout *layout, DML_Checksum *checksum);
-int DML_serial_in(LRL_RecordReader *lrl_record_in, 
-	  void (*put)(char *buf, size_t index, size_t count, void *arg),
-	  size_t size, int word_size, void *arg, DML_Layout* layout,
-	  DML_Checksum *checksum);
-int DML_parallel_in(LRL_RecordReader *lrl_record_in, 
-	    void (*put)(char *buf, size_t index, size_t count, void *arg),
-	    size_t size, int word_size, void *arg, DML_Layout *layout,
-	    DML_Checksum *checksum);
+size_t DML_serial_in(LRL_RecordReader *lrl_record_in, 
+	  void (*put)(char *buf, size_t index, int count, void *arg),
+	  int count, size_t size, int word_size, void *arg, 
+          DML_Layout* layout, DML_Checksum *checksum);
+size_t DML_global_in(LRL_RecordReader *lrl_record_in, 
+	  void (*put)(char *buf, size_t index, int count, void *arg),
+	  int count, size_t size, int word_size, void *arg, 
+	  DML_Layout* layout, DML_Checksum *checksum);
+size_t DML_parallel_in(LRL_RecordReader *lrl_record_in, 
+	    void (*put)(char *buf, size_t index, int count, void *arg),
+	    int count, size_t size, int word_size, void *arg, 
+	    DML_Layout *layout, DML_Checksum *checksum);
 
 void DML_broadcast_bytes(char *buf, size_t size);
 void DML_sum_size_t(size_t *ipt);

@@ -5,7 +5,7 @@
 #include <string.h>
 #include <qio.h>
 #include <qioxml.h>
-#include <xml_string.h>
+#include <qio_string.h>
 #include <type32.h>
 #include <sys/types.h>
 #include <time.h>
@@ -364,8 +364,8 @@ int QIO_check_hex32_occur(QIO_TagHex32Value *tag_value){
 }
 
 int QIO_decode_record_info(QIO_RecordInfo *record_info, 
-			XML_String *record_string){
-  char *parse_pt = XML_string_ptr(record_string);
+			QIO_String *record_string){
+  char *parse_pt = QIO_string_ptr(record_string);
   char *tmp_pt;
   char tag[QIO_MAXTAG];
   char tags_string[QIO_MAXVALUESTRING];
@@ -404,6 +404,7 @@ int QIO_decode_record_info(QIO_RecordInfo *record_info,
     
     QIO_decode_as_string(tag,value_string,&record_info->version);
     QIO_decode_as_string(tag,value_string,&record_info->date);
+    QIO_decode_as_int   (tag,value_string,&record_info->globaldata);
     QIO_decode_as_string(tag,value_string,&record_info->datatype);
     QIO_decode_as_string(tag,value_string,&record_info->precision);
     QIO_decode_as_int   (tag,value_string,&record_info->colors);
@@ -415,6 +416,7 @@ int QIO_decode_record_info(QIO_RecordInfo *record_info,
   /* Check for completeness */
   
   errors += QIO_check_string_occur(&record_info->version);
+  errors += QIO_check_int_occur   (&record_info->globaldata);
   errors += QIO_check_string_occur(&record_info->datatype);
   errors += QIO_check_string_occur(&record_info->precision);
   errors += QIO_check_int_occur   (&record_info->typesize);
@@ -423,7 +425,7 @@ int QIO_decode_record_info(QIO_RecordInfo *record_info,
   return errors;
 }
 
-void QIO_encode_record_info(XML_String *record_string, 
+void QIO_encode_record_info(QIO_String *record_string, 
 			  QIO_RecordInfo *record_info){
   char *buf;
   int remainder,n;
@@ -438,6 +440,7 @@ void QIO_encode_record_info(XML_String *record_string,
   *buf = '\0';
   buf = QIO_encode_as_string(buf,&record_info->version, &remainder);
   buf = QIO_encode_as_string(buf,&record_info->date, &remainder);
+  buf = QIO_encode_as_int   (buf,&record_info->globaldata, &remainder);
   buf = QIO_encode_as_string(buf,&record_info->datatype, &remainder);
   buf = QIO_encode_as_string(buf,&record_info->precision, &remainder);
   buf = QIO_encode_as_int   (buf,&record_info->colors, &remainder);
@@ -449,9 +452,9 @@ void QIO_encode_record_info(XML_String *record_string,
   QIO_insert_record_tag_string(&wrapper, recordinfo_tags);
 
   /* Now build final XML string */
-  XML_string_realloc(record_string, QIO_STRINGALLOC);
-  buf  = XML_string_ptr(record_string);
-  remainder = XML_string_bytes(record_string);
+  QIO_string_realloc(record_string, QIO_STRINGALLOC);
+  buf  = QIO_string_ptr(record_string);
+  remainder = QIO_string_bytes(record_string);
   
   /* Begin with xml info stuff */
   strncpy(buf,QIO_XMLINFO,remainder);
@@ -470,8 +473,8 @@ void QIO_encode_record_info(XML_String *record_string,
 
 
 int QIO_decode_file_info(QIO_FileInfo *file_info, 
-			  XML_String *file_string){
-  char *parse_pt = XML_string_ptr(file_string);
+			  QIO_String *file_string){
+  char *parse_pt = QIO_string_ptr(file_string);
   char *tmp_pt;
   char tag[QIO_MAXTAG];
   char tags_string[QIO_MAXVALUESTRING];
@@ -529,7 +532,7 @@ int QIO_decode_file_info(QIO_FileInfo *file_info,
   return errors;
 }
 
-void QIO_encode_file_info(XML_String *file_string, 
+void QIO_encode_file_info(QIO_String *file_string, 
 			  QIO_FileInfo *file_info){
   char *buf;
   int remainder,n;
@@ -552,9 +555,9 @@ void QIO_encode_file_info(XML_String *file_string,
   QIO_insert_file_tag_string(&wrapper, fileinfo_tags);
 
   /* Now build final XML string */
-  XML_string_realloc(file_string, QIO_STRINGALLOC);
-  buf  = XML_string_ptr(file_string);
-  remainder = XML_string_bytes(file_string);
+  QIO_string_realloc(file_string, QIO_STRINGALLOC);
+  buf  = QIO_string_ptr(file_string);
+  remainder = QIO_string_bytes(file_string);
 
   /* Begin with xml info stuff */
   strncpy(buf,QIO_XMLINFO,remainder);
@@ -572,8 +575,8 @@ void QIO_encode_file_info(XML_String *file_string,
 }
 
 int QIO_decode_checksum_info(QIO_ChecksumInfo *checksum, 
-			     XML_String *file_string){
-  char *parse_pt = XML_string_ptr(file_string);
+			     QIO_String *file_string){
+  char *parse_pt = QIO_string_ptr(file_string);
   char *tmp_pt;
   char tag[QIO_MAXTAG];
   char tags_string[QIO_MAXVALUESTRING];
@@ -623,7 +626,7 @@ int QIO_decode_checksum_info(QIO_ChecksumInfo *checksum,
   return errors;
 }
 
-void QIO_encode_checksum_info(XML_String *checksum_string, 
+void QIO_encode_checksum_info(QIO_String *checksum_string, 
 			      QIO_ChecksumInfo *checksum){
   char *buf;
   int remainder,n;
@@ -644,9 +647,9 @@ void QIO_encode_checksum_info(XML_String *checksum_string,
   QIO_insert_checksum_tag_string(&wrapper, checksuminfo_tags);
 
   /* Now build final XML string */
-  XML_string_realloc(checksum_string, QIO_STRINGALLOC);
-  buf  = XML_string_ptr(checksum_string);
-  remainder = XML_string_bytes(checksum_string);
+  QIO_string_realloc(checksum_string, QIO_STRINGALLOC);
+  buf  = QIO_string_ptr(checksum_string);
+  remainder = QIO_string_bytes(checksum_string);
 
   /* Begin with xml info stuff */
   strncpy(buf,QIO_XMLINFO,remainder);
@@ -748,6 +751,14 @@ int QIO_insert_record_date(QIO_RecordInfo *record_info, char *date_string){
   record_info->date.occur = 1;
   if(strlen(date_string) + 3 >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
   else return QIO_SUCCESS;
+}
+
+int QIO_insert_globaldata(QIO_RecordInfo *record_info, int globaldata){
+  record_info->globaldata.occur = 0;
+  if(!record_info)return QIO_BAD_ARG;
+  record_info->globaldata.value = globaldata;
+  record_info->globaldata.occur = 1;
+  return QIO_SUCCESS;
 }
 
 int QIO_insert_datatype(QIO_RecordInfo *record_info, char* datatype){
@@ -882,6 +893,10 @@ char *QIO_get_record_info_tag_string(QIO_RecordInfoWrapper *wrapper){
   return wrapper->recordinfo_tags.value;
 }
 
+int QIO_get_globaldata(QIO_RecordInfo *record_info){
+  return record_info->globaldata.value;
+}
+
 char *QIO_get_datatype(QIO_RecordInfo *record_info){
   return record_info->datatype.value;
 }
@@ -904,6 +919,10 @@ int QIO_get_typesize(QIO_RecordInfo *record_info){
 
 int QIO_get_datacount(QIO_RecordInfo *record_info){
   return record_info->datacount.value;
+}
+
+int QIO_defined_globaldata(QIO_RecordInfo *record_info){
+  return record_info->globaldata.occur;
 }
 
 int QIO_defined_datatype(QIO_RecordInfo *record_info){
@@ -1028,9 +1047,10 @@ int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
   return QIO_SUCCESS;
 }
 
-QIO_RecordInfo *QIO_create_record_info(char *datatype, char *precision, 
-					int colors, int spins, int typesize, 
-					int datacount){
+QIO_RecordInfo *QIO_create_record_info(int globaldata,
+				       char *datatype, char *precision, 
+				       int colors, int spins, int typesize, 
+				       int datacount){
   QIO_RecordInfo templ = QIO_RECORD_INFO_TEMPLATE;
   QIO_RecordInfo *record_info;
   time_t cu_time;
@@ -1042,6 +1062,7 @@ QIO_RecordInfo *QIO_create_record_info(char *datatype, char *precision,
   *record_info = templ;
   QIO_insert_record_version(record_info,QIO_RECORDFORMATVERSION);
   QIO_insert_record_date(record_info,asctime(gmtime(&cu_time)));
+  QIO_insert_globaldata(record_info,globaldata);
   QIO_insert_datatype(record_info,datatype);
   QIO_insert_precision(record_info,precision);
   QIO_insert_colors(record_info,colors);
@@ -1058,6 +1079,15 @@ void QIO_destroy_record_info(QIO_RecordInfo *record_info){
 /* Compare only fields that occur in the expected record info */
 int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
   char myname[] = "QIO_compare_record_info";
+
+  if(QIO_defined_globaldata(expect))
+    if(!QIO_defined_globaldata(found) &&
+       QIO_get_globaldata(found)  != QIO_get_globaldata(expect))
+      {
+	printf("%s:Globaldata flag mismatch expected %d found %d \n",myname,
+	       QIO_get_globaldata(expect),QIO_get_globaldata(found));
+	return QIO_ERR_REC_INFO;
+      }
 
   if(QIO_defined_datatype(expect))
     if(!QIO_defined_datatype(found) && 

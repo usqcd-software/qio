@@ -20,8 +20,8 @@ extern "C"
 #define MAX_LIME_TYPE_LEN 32
 typedef char* LIME_type;
 
-/* Dummy file XML string */
-#define XML_MAX 128
+/* Dummy file QIO string */
+#define QIO_MAX 128
 
 typedef struct {
   FILE *file;

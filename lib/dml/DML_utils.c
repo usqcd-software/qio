@@ -339,10 +339,10 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, int size,
 
 /* Todo: Should use buffers.  Site iteration can be done over siterank */
 
-int DML_serial_out(LRL_RecordWriter *lrl_record_out, 
-	   void (*get)(char *buf, size_t index, size_t count, void *arg),
-	   size_t size, int word_size, void *arg, DML_Layout *layout,
-	   DML_Checksum *checksum)
+size_t DML_serial_out(LRL_RecordWriter *lrl_record_out, 
+	   void (*get)(char *buf, size_t index, int count, void *arg),
+	   int count, size_t size, int word_size, void *arg, 
+           DML_Layout *layout, DML_Checksum *checksum)
 {
   char *buf;
   int current_node, new_node;
@@ -359,7 +359,7 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
   buf = (char *)malloc(size);
   if(!buf){
     printf("%s(%d) can't malloc buf\n",myname,this_node);
-    return 1;
+    return 0;
   }
 
   /* Initialize checksum */
@@ -375,7 +375,7 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
 
   /* Allocate coordinate counter */
   coords = DML_allocate_coords(latdim, myname, this_node);
-  if(!coords)return 0;
+  if(!coords){free(buf);return 0;}
   
   /* Initialize current source node */
   current_node = DML_MASTER_NODE;
@@ -402,7 +402,7 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
     
     /* Copy to the write buffer */
     if(this_node == current_node){
-      get(buf,layout->node_index(coords),1,arg);
+      get(buf,layout->node_index(coords),count,arg);
     }
 
     /* Send result to Master node. Avoid Master node sending to itself. */
@@ -434,7 +434,8 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
       DML_checksum_accum(checksum, snd_coords, buf, size);
       
       /* Write the datum */
-      if(LRL_write_bytes(lrl_record_out,buf,size) != size)return 0;
+      if(LRL_write_bytes(lrl_record_out,buf,size) != size){
+	free(buf); free(coords); return 0;}
       nbytes += size;
     }
     
@@ -442,9 +443,60 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
   } while(DML_lex_next(&dim, coords, latdim, latsize));
   
   free(coords);
+  free(buf);
+
   /* Return the number of bytes written by all nodes */
   DML_sum_size_t(&nbytes);
   return nbytes;
+}
+
+/* The master node fetches the global data in one call to "get"  and writes */
+
+size_t DML_global_out(LRL_RecordWriter *lrl_record_out, 
+	   void (*get)(char *buf, size_t index, int count, void *arg),
+	   int count, size_t size, int word_size, void *arg, 
+           DML_Layout *layout, DML_Checksum *checksum)
+{
+  char *buf;
+  int this_node = layout->this_node;
+  size_t nbytes = 0;
+  char myname[] = "DML_global_out";
+
+  /* Allocate buffer for datum */
+  buf = (char *)malloc(size);
+  if(!buf){
+    printf("%s(%d) can't malloc buf\n",myname,this_node);
+    return 0;
+  }
+
+  /* Initialize checksum */
+  DML_checksum_init(checksum);
+
+#ifdef DML_DEBUG
+  if (! DML_big_endian())
+    printf("%s(%d): byte reversing %d\n",myname,this_node,word_size);
+#endif
+
+  /* Master node writes all the data */
+  if(this_node == DML_MASTER_NODE)
+    {
+      /* Get all the data.  0 for the unused site index */
+      get(buf,0,count,arg);
+
+      /* Do byte reordering before checksum */
+      if (! DML_big_endian())
+	DML_byterevn(buf, size, word_size);
+	
+      /* Do checksum.  Straight crc32. */
+      DML_checksum_accum(checksum, 0, buf, size);
+      
+      /* Write all the data */
+      if(LRL_write_bytes(lrl_record_out,(char *)buf,size) != size){
+	free(buf); return 0;}
+    }
+
+  free(buf);
+  return size;
 }
 
 /* Each node writes its data to its own private file.  The order of
@@ -453,10 +505,11 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
 
 /* Returns the number of bytes written by this node alone */
 
-int DML_multifile_out(LRL_RecordWriter *lrl_record_out, 
-	      void (*get)(char *buf, size_t index, size_t count, void *arg),
-	      size_t size, int word_size, void *arg, 
-	      DML_Layout *layout, DML_Checksum *checksum){
+size_t DML_multifile_out(LRL_RecordWriter *lrl_record_out, 
+	      void (*get)(char *buf, size_t index, int count, void *arg),
+	      int count, size_t size, int word_size, void *arg, 
+	      DML_Layout *layout, DML_Checksum *checksum)
+{
   
   size_t max_buf_sites, buf_sites;
   size_t isite, max_dest_sites;
@@ -475,7 +528,7 @@ int DML_multifile_out(LRL_RecordWriter *lrl_record_out,
 
   /* Allocate coordinate */
   coords = DML_allocate_coords(layout->latdim,myname,this_node);
-  if(!coords)return 0;
+  if(!coords){free(buf); return 0;}
 
   /* Initialize checksum */
   DML_checksum_init(checksum);
@@ -496,7 +549,7 @@ int DML_multifile_out(LRL_RecordWriter *lrl_record_out,
 
     /* Fetch directly to the buffer */
     buf = lbuf + size*buf_sites;
-    get(buf, isite, 1, arg);
+    get(buf, isite, count, arg);
 
     /* Accumulate checksums as the values are inserted into the buffer */
     
@@ -510,7 +563,7 @@ int DML_multifile_out(LRL_RecordWriter *lrl_record_out,
 				   lbuf, buf_sites, max_buf_sites, 
 				   isite, max_dest_sites, &nbytes,
 				   myname, this_node, &err);
-    if(err < 0) return 0;
+    if(err < 0) {free(lbuf); free(coords); return 0;}
   } /* isite */
 
   free(lbuf);   free(coords);
@@ -529,11 +582,11 @@ int DML_multifile_out(LRL_RecordWriter *lrl_record_out,
    own chunk.  The order of data is lexicographic. */
 
 /* Returns the number of bytes written by all nodes */
-int DML_parallel_out(LRL_RecordWriter *lrl_record_out, 
-	     void (*get)(char *buf, size_t index, size_t count, void *arg),
-	     size_t size, int word_size, void *arg, 
-	     DML_Layout *layout, DML_Checksum *checksum){
-  
+size_t DML_parallel_out(LRL_RecordWriter *lrl_record_out, 
+	     void (*get)(char *buf, size_t index, int count, void *arg),
+	     int count, size_t size, int word_size, void *arg, 
+	     DML_Layout *layout, DML_Checksum *checksum)
+{  
   size_t sites_in_chunk, sites_in_last_chunk, max_sites, max_buf_sites;
   size_t isite, ksite, site_block, max_dest_sites;
   size_t buf_sites;
@@ -600,7 +653,7 @@ int DML_parallel_out(LRL_RecordWriter *lrl_record_out,
      structure */
   /* "size" bytes for datum followed by "int" bytes for rank */
   msg = DML_allocate_msg(size, myname, this_node);
-  if(!msg)return 0;
+  if(!msg){free(lbuf);free(coords);return 0;}
   sizeof_msg = DML_msg_sizeof(size);
 
   /* All nodes participate in this distribution sequence:
@@ -646,7 +699,7 @@ int DML_parallel_out(LRL_RecordWriter *lrl_record_out,
 	/* Node sendnode sends site value to destnode */
 	if(this_node==sendnode && destnode!=sendnode){
 	  /* Message consists of datum and site rank */
-	  get(DML_msg_datum(msg,size),layout->node_index(coords),1,arg);
+	  get(DML_msg_datum(msg,size),layout->node_index(coords),count,arg);
 	  *DML_msg_rank(msg,size) = rank;
 	  DML_send_bytes(msg,size,destnode);
 	}
@@ -656,7 +709,7 @@ int DML_parallel_out(LRL_RecordWriter *lrl_record_out,
 	    /* Just fetch directly to the buffer if data is local */
 	    buf_insert = buf_sites;
 	    buf = lbuf + size*buf_insert;
-	    get(buf, layout->node_index(coords), 1, arg);
+	    get(buf, layout->node_index(coords), count, arg);
 	    chk_rank = rank;  /* Remember for checksum calculation */
 	  }
 	  else {
@@ -688,7 +741,7 @@ int DML_parallel_out(LRL_RecordWriter *lrl_record_out,
 					 lbuf, buf_sites, max_buf_sites, 
 					 isite, max_dest_sites, &nbytes,
 					 myname, this_node, &err);
-	  if(err < 0) return 0;
+	  if(err < 0){free(lbuf);free(coords);free(msg);return 0;}
 	} /* else if(this_node==destnode) */
       } /* isite */
     } /* destnode */
@@ -712,12 +765,12 @@ int DML_parallel_out(LRL_RecordWriter *lrl_record_out,
 
 /* Returns the number of bytes read by this node alone */
 
-int DML_multifile_in(LRL_RecordReader *lrl_record_in, 
+size_t DML_multifile_in(LRL_RecordReader *lrl_record_in, 
 	     DML_SiteRank sitelist[],
-	     void (*put)(char *buf, size_t index, size_t count, void *arg),
-	     size_t size, int word_size, void *arg, 
-	     DML_Layout *layout, DML_Checksum *checksum){
-
+	     void (*put)(char *buf, size_t index, int count, void *arg),
+	     int count, size_t size, int word_size, void *arg, 
+	     DML_Layout *layout, DML_Checksum *checksum)
+{
   size_t buf_sites, buf_extract, max_buf_sites;
   size_t isite, max_send_sites;
   size_t nbytes = 0;
@@ -735,7 +788,7 @@ int DML_multifile_in(LRL_RecordReader *lrl_record_in,
 
   /* Allocate coordinate */
   coords = DML_allocate_coords(layout->latdim, myname, this_node);
-  if(!coords)return 0;
+  if(!coords){free(lbuf);return 0;}
 
   /* Initialize checksum */
   DML_checksum_init(checksum);
@@ -759,7 +812,7 @@ int DML_multifile_in(LRL_RecordReader *lrl_record_in,
 				  &buf_extract, buf_sites, max_buf_sites, 
 				  isite, max_send_sites, &nbytes, 
 				  myname, this_node, &err);
-    if(err < 0)return 0;
+    if(err < 0){free(lbuf);free(coords);return 0;}
     
     /* Copy data directly from the buffer */
     buf = lbuf + size*buf_extract;
@@ -771,7 +824,7 @@ int DML_multifile_in(LRL_RecordReader *lrl_record_in,
     if (! DML_big_endian())
       DML_byterevn(buf, size, word_size);
 
-    put(buf, isite, 1, arg);
+    put(buf, isite, count, arg);
     
     buf_extract++;
   } /* isite */
@@ -791,10 +844,11 @@ int DML_multifile_in(LRL_RecordReader *lrl_record_in,
 /* Returns the number of bytes read */
 /* Todo: Should use buffers.  Site iteration can be done over siterank */
 
-int DML_serial_in(LRL_RecordReader *lrl_record_in, 
-	  void (*put)(char *buf, size_t index, size_t count, void *arg),
-	  size_t size, int word_size, void *arg, DML_Layout* layout,
-	  DML_Checksum *checksum){
+size_t DML_serial_in(LRL_RecordReader *lrl_record_in, 
+	  void (*put)(char *buf, size_t index, int count, void *arg),
+	  int count, size_t size, int word_size, void *arg, 
+          DML_Layout* layout, DML_Checksum *checksum)
+{
   char *buf;
   int dest_node;
   DML_SiteRank rcv_rank, rcv_coords;
@@ -812,7 +866,7 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in,
 
   /* Allocate coordinate counter */
   coords = DML_allocate_coords(latdim, myname, this_node);
-  if(!coords)return 0;
+  if(!coords){free(buf); return 0;}
   
   /* Initialize checksum */
   DML_checksum_init(checksum);
@@ -838,7 +892,8 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in,
      
       if(this_node == DML_MASTER_NODE){
 	/* Master node gets the next value */
-	if(LRL_read_bytes(lrl_record_in, buf, size) != size)return 0;
+	if(LRL_read_bytes(lrl_record_in, buf, size) != size){
+	  free(buf); free(coords); return 0;}
 	nbytes += size;
       }
 
@@ -871,7 +926,7 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in,
 	  DML_byterevn(buf, size, word_size);
 
 	/* Store the data */
-	put(buf,layout->node_index(coords),1,arg);
+	put(buf,layout->node_index(coords),count,arg);
       }
     }
   /* Combine checksums over all nodes */
@@ -879,7 +934,52 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in,
 
   /* Return the number of bytes read by all nodes */
   DML_sum_size_t(&nbytes);
+
+  free(buf); free(coords);
   return nbytes;
+}
+
+/* The master node reads all the global data at once,
+   broadcasts to all nodes and calls "put" */
+
+size_t DML_global_in(LRL_RecordReader *lrl_record_in, 
+	  void (*put)(char *buf, size_t index, int count, void *arg),
+	  int count, size_t size, int word_size, void *arg, 
+	  DML_Layout* layout, DML_Checksum *checksum)
+{
+  char *buf;
+  int this_node = layout->this_node;
+  char myname[] = "DML_global_in";
+
+  /* Allocate buffer for datum */
+  buf = (char *)malloc(size);
+  if(buf == NULL)return 0;
+
+  /* Initialize checksum */
+  DML_checksum_init(checksum);
+
+  if(this_node == DML_MASTER_NODE)
+    {
+      /* Read all the data */
+      if(LRL_read_bytes(lrl_record_in, (char *)buf, size) != size){
+	free(buf); return 0;}
+
+      /* Do byte reordering before checksum */
+      if (! DML_big_endian())
+	DML_byterevn(buf, size, word_size);
+	
+      /* Do checksum.  Straight crc32. */
+      DML_checksum_accum(checksum, 0, buf, size);
+    }
+
+  /* Broadcast the result to node bufs */
+  DML_broadcast_bytes(buf, size);
+
+  /* All nodes store their data. Unused site index is 0. */
+  put(buf,0,count,arg);
+
+  free(buf);
+  return size;
 }
 
 /* The file is divided up into roughly equal chunks, one per node.
@@ -888,11 +988,11 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in,
 
 /* Returns the number of bytes read by all nodes */
 
-int DML_parallel_in(LRL_RecordReader *lrl_record_in, 
-	    void (*put)(char *buf, size_t index, size_t count, void *arg),
-	    size_t size, int word_size, void *arg, DML_Layout *layout,
-	    DML_Checksum *checksum){
-
+size_t DML_parallel_in(LRL_RecordReader *lrl_record_in, 
+	    void (*put)(char *buf, size_t index, int count, void *arg),
+	    int count, size_t size, int word_size, void *arg, 
+	    DML_Layout *layout, DML_Checksum *checksum)
+{
   size_t sites_in_chunk, sites_in_last_chunk, max_sites, max_buf_sites;
   size_t isite, ksite, site_block, max_send_sites;
   DML_SiteRank rank, rcv_rank, chk_rank;
@@ -950,13 +1050,13 @@ int DML_parallel_in(LRL_RecordReader *lrl_record_in,
 
   /* Allocate coordinate */
   coords = DML_allocate_coords(layout->latdim, myname, this_node);
-  if(!coords)return 0;
+  if(!coords){free(lbuf);return 0;}
 
   /* Allocate space for message - actually a dynamically allocated
      structure */
   /* "size" bytes for datum followed by "int" bytes for rank */
   msg = DML_allocate_msg(size, myname, this_node);
-  if(!msg)return 0;
+  if(!msg){free(lbuf);free(coords);return 0;}
   sizeof_msg = DML_msg_sizeof(size);
 
   buf_sites = 0;
@@ -1005,7 +1105,7 @@ int DML_parallel_in(LRL_RecordReader *lrl_record_in,
 					  max_buf_sites, isite, 
 					  max_send_sites, &nbytes,
 					  myname, this_node, &err);
-	    if(err < 0)return 0;
+	    if(err < 0){free(lbuf);free(coords);free(msg);return 0;}
 	    
 	    /* Sending node does byte reversal and accumulates checksums
 	       as the values are sent from its buffer */
@@ -1016,7 +1116,7 @@ int DML_parallel_in(LRL_RecordReader *lrl_record_in,
 
 	    if(destnode==sendnode){
 	      /* Just copy directly from the buffer if data is local */
-	      put(buf, layout->node_index(coords), 1, arg);
+	      put(buf, layout->node_index(coords), count, arg);
 	    }
 	    else {
 	      /* Send to destnode */
@@ -1036,7 +1136,8 @@ int DML_parallel_in(LRL_RecordReader *lrl_record_in,
 	      DML_lex_coords(coords, layout->latdim, layout->latsize, 
 			     rcv_rank);
 	      /* Store the data */
-	      put(DML_msg_datum(msg,size), layout->node_index(coords), 1, arg);
+	      put(DML_msg_datum(msg,size), layout->node_index(coords), 
+		  count, arg);
 	    }
 	  }
 	} /* sites in site_block */

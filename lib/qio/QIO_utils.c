@@ -3,7 +3,7 @@
 #include <qio.h>
 #include <lrl.h>
 #include <dml.h>
-#include <xml_string.h>
+#include <qio_string.h>
 #include <stdio.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -40,7 +40,7 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
 /* Write an XML record */
 
 int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
-		     XML_String *xml,
+		     QIO_String *xml,
 		     const LIME_type lime_type)
 {
   LRL_RecordWriter *lrl_record_out;
@@ -48,7 +48,7 @@ int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
   size_t check, rec_size;
   char myname[] = "QIO_write_string";
 
-  buf = XML_string_ptr(xml);
+  buf = QIO_string_ptr(xml);
   rec_size = strlen(buf)+1;  /* Include terminating null */
 
   lrl_record_out = LRL_open_write_record(out->lrl_file_out, 1, msg_begin,
@@ -118,9 +118,9 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 /* Write binary data for a lattice field */
 
 int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
-	    XML_String *xml_record, 
-	    void (*get)(char *buf, size_t index, size_t count, void *arg),
-	    size_t datum_size, int word_size, void *arg, 
+	    QIO_String *xml_record, int globaldata,
+	    void (*get)(char *buf, size_t index, int count, void *arg),
+	    int count, size_t datum_size, int word_size, void *arg, 
 	    DML_Checksum *checksum,
 	    const LIME_type lime_type){
   
@@ -132,24 +132,38 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   char myname[] = "QIO_write_field";
 
   /* Compute record size */
-  if(out->volfmt == QIO_SINGLEFILE)
-    rec_size = volume * datum_size;  /* Single file holds all the data */
-  else{ 
-    rec_size = out->layout->sites_on_node * datum_size; /* Multifile */
+  if(globaldata == QIO_GLOBAL){
+    rec_size = datum_size; /* Global data */
 #ifdef QIO_DEBUG
-    printf("%s(%d): sites = %d datum %d\n",myname,out->layout->this_node,
-	   out->layout->sites_on_node,datum_size);
+    printf("%s(%d): global data: size %d\n",myname,out->layout->this_node,
+	   datum_size);
 #endif
   }
-
+  else{
+    if(out->volfmt == QIO_SINGLEFILE){
+      rec_size = volume * datum_size;  /* Single file holds all the data */
+#ifdef QIO_DEBUG
+      printf("%s(%d): singlefile field data sites = %d datum %d\n",
+	     myname,out->layout->this_node,
+	     volume,datum_size);
+#endif
+    }
+    else{ 
+      rec_size = out->layout->sites_on_node * datum_size; /* Multifile */
+#ifdef QIO_DEBUG
+      printf("%s(%d): multifile field sites = %d datum %d\n",
+	     myname,out->layout->this_node,
+	     out->layout->sites_on_node,datum_size);
+#endif
+    }
+  }
+  
 #ifdef QIO_DEBUG
   printf("%s(%d): rec_size = %d\n",myname,out->layout->this_node,rec_size);
 #endif
 
-  /* If multiple nodes are writing to the same file, only
-     the master node should actually write the LIME header */
-  do_write = ( out->serpar == QIO_SERIAL ) || 
-    ( out->layout->this_node == QIO_MASTER_NODE );
+  /* In all cases the master node writes the record */
+  do_write = ( out->layout->this_node == QIO_MASTER_NODE );
 
   /* Open record */
 
@@ -158,8 +172,8 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 					 lime_type);
   /* Write bytes */
 
-  check = DML_stream_out(lrl_record_out, get, datum_size, word_size,
-			 arg, out->layout, out->serpar, 
+  check = DML_stream_out(lrl_record_out, globaldata, get, count, datum_size, 
+			 word_size, arg, out->layout, out->serpar, 
 			 out->volfmt, checksum);
 
   /* Close record when done and clean up*/
@@ -177,7 +191,7 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 
 /* Read an XML record */
 
-int QIO_read_string(QIO_Reader *in, XML_String *xml, LIME_type lime_type){
+int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type lime_type){
   char *buf;
   size_t buf_size;
   LRL_RecordReader *lrl_record_in;
@@ -189,16 +203,16 @@ int QIO_read_string(QIO_Reader *in, XML_String *xml, LIME_type lime_type){
   lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, lime_type);
   if(!lrl_record_in)return QIO_ERR_OPEN_READ;
 
-  buf_size = XML_string_bytes(xml);   /* The size allocated for the string */
-  buf      = XML_string_ptr(xml);
+  buf_size = QIO_string_bytes(xml);   /* The size allocated for the string */
+  buf      = QIO_string_ptr(xml);
 
   /* Realloc if necessary */
   if(rec_size+1 > buf_size){
-    XML_string_realloc(xml,rec_size+1);  /* The +1 will insure null terminating string */
+    QIO_string_realloc(xml,rec_size+1);  /* The +1 will insure null terminating string */
   }
 
-  buf_size = XML_string_bytes(xml);   /* Get this again */
-  buf      = XML_string_ptr(xml);
+  buf_size = QIO_string_bytes(xml);   /* Get this again */
+  buf      = QIO_string_ptr(xml);
 
   check = LRL_read_bytes(lrl_record_in, buf, rec_size);
   LRL_close_read_record(lrl_record_in);
@@ -268,9 +282,9 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
 
 /* Read binary data for a lattice field */
 
-int QIO_read_field(QIO_Reader *in, 
-	   void (*put)(char *buf, size_t index, size_t count, void *arg),
-	   size_t datum_size, int word_size, void *arg, 
+int QIO_read_field(QIO_Reader *in, int globaldata,
+	   void (*put)(char *buf, size_t index, int count, void *arg),
+	   int count, size_t datum_size, int word_size, void *arg, 
 	   DML_Checksum *checksum,
 	   LIME_type lime_type){
 
@@ -292,12 +306,16 @@ int QIO_read_field(QIO_Reader *in,
 					 &rec_size, lime_type);
     if(!lrl_record_in)return QIO_ERR_OPEN_READ;
     
-    /* Check that the record size matches the expected size of the QDP field 
-       contained in this file */
-    if(in->volfmt == QIO_SINGLEFILE)
-      buf_size = volume * datum_size;  /* Single file holds all the data */
-    else{ 
-      buf_size = in->layout->sites_on_node * datum_size; /* Multifile */
+    /* Check that the record size matches the expected size of the data */
+    if(globaldata == QIO_GLOBAL){
+      buf_size = datum_size; /* Global data */
+    }
+    else{  /* Field data */
+      if(in->volfmt == QIO_SINGLEFILE)
+	buf_size = volume * datum_size;  /* Single file holds all the data */
+      else{ 
+	buf_size = in->layout->sites_on_node * datum_size; /* Multifile */
+      }
     }
     
     if (rec_size != buf_size){
@@ -308,9 +326,10 @@ int QIO_read_field(QIO_Reader *in,
   }
 
   /* Nodes read and/or collect data.  Compute checksum */
-  check = DML_stream_in(lrl_record_in, put, datum_size, word_size, arg, 
-			in->layout, in->serpar, in->siteorder, in->sitelist, 
-			in->volfmt,  checksum);
+  check = DML_stream_in(lrl_record_in, globaldata, put, 
+			count, datum_size, word_size,
+			arg, in->layout, in->serpar, in->siteorder, 
+			in->sitelist, in->volfmt,  checksum);
 #ifdef QIO_DEBUG
   printf("%s(%d): done with DML_stream_in\n", myname,this_node);
 #endif

@@ -6,7 +6,7 @@ VPATH = @top_srcdir@/lib
 VPATH += @top_srcdir@/include
 VPATH += @top_srcdir@/other_libs/c-lime/include
 
-HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h lime.h qio_config.h
+HDRS = qio.h qioxml.h dml.h lrl.h qio_string.h lime.h qio_config.h
 
 lib_LIBRARIES = libqio.a
 
@@ -20,6 +20,7 @@ QIO_SRCS = \
    qio/QIO_read.c \
    qio/QIO_read_record_data.c \
    qio/QIO_read_record_info.c \
+   qio/QIO_string.c \
    qio/QIO_utils.c \
    qio/QIO_write.c
 
@@ -35,9 +36,7 @@ DML_SCALAR = ${OBJECTS} dml/DML_scalar.c
 # LRL_SRCS = lrl/LRL_dummy.c
 LRL_SRCS = lrl/LRL_main.c
 
-XML_SRCS = xml/XML_string.c
-
-GENERIC_SRCS = $(QIO_SRCS) $(DML_GENERIC) $(LRL_SRCS) $(XML_SRCS)
+GENERIC_SRCS = $(QIO_SRCS) $(DML_GENERIC) $(LRL_SRCS)
 
 if ARCH_SCALAR
   libqio_a_SOURCES = $(GENERIC_SRCS) $(DML_SCALAR)

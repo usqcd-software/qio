@@ -11,7 +11,7 @@
 #define QIO_QUESTXML "?xml"
 #define QIO_XMLINFO "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 
-#include <xml_string.h>
+#include <qio_string.h>
 #include <type32.h>
 
 #ifdef __cplusplus
@@ -72,6 +72,7 @@ typedef struct {
    ------------------------------------------------------------
    version    version      record format version number    1.0
    date       date         creation date in UT     Wed Oct 22 14:58:08 UTC 2003
+   globaldata globaldata   1 if global 0 if field          0 
    datatype   datatype     QLA type                        ColorMatrix 
    precision  precision	   I, F, D, or S (random no state) F
    colors     colors       number of colors	           3
@@ -82,19 +83,21 @@ typedef struct {
 */
 
 typedef struct {
-  QIO_TagCharValue version  ;
-  QIO_TagCharValue date     ;
-  QIO_TagCharValue datatype  ;
-  QIO_TagCharValue precision;
-  QIO_TagIntValue  colors   ;
-  QIO_TagIntValue  spins    ;
-  QIO_TagIntValue  typesize ;
-  QIO_TagIntValue  datacount;
+  QIO_TagCharValue version    ;
+  QIO_TagCharValue date       ;
+  QIO_TagIntValue  globaldata ;
+  QIO_TagCharValue datatype   ;
+  QIO_TagCharValue precision  ;
+  QIO_TagIntValue  colors     ;
+  QIO_TagIntValue  spins      ;
+  QIO_TagIntValue  typesize   ;
+  QIO_TagIntValue  datacount  ;
 } QIO_RecordInfo;
 
 #define QIO_RECORD_INFO_TEMPLATE { \
   {"version",   "", 0},         \
   {"date",      "", 0},         \
+  {"globaldata",0 , 0},         \
   {"datatype",  "", 0},         \
   {"precision", "", 0},         \
   {"colors",    0 , 0},         \
@@ -190,16 +193,16 @@ typedef struct {
 /*******************************************************************/
 
 int QIO_decode_file_info(QIO_FileInfo *file_info, 
-			 XML_String *file_string);
-void QIO_encode_file_info(XML_String *file_string, 
+			 QIO_String *file_string);
+void QIO_encode_file_info(QIO_String *file_string, 
 			   QIO_FileInfo *file_info);
 int QIO_decode_record_info(QIO_RecordInfo *record_info, 
-			    XML_String *record_string);
-void QIO_encode_record_info(XML_String *record_string, 
+			    QIO_String *record_string);
+void QIO_encode_record_info(QIO_String *record_string, 
 			      QIO_RecordInfo *record_info);
 int QIO_decode_checksum_info(QIO_ChecksumInfo *checksum, 
-			     XML_String *file_string);
-void QIO_encode_checksum_info(XML_String *file_string, 
+			     QIO_String *file_string);
+void QIO_encode_checksum_info(QIO_String *file_string, 
 			      QIO_ChecksumInfo *checksum);
 
 int QIO_insert_file_tag_string(QIO_FileInfoWrapper *wrapper, 
@@ -211,6 +214,7 @@ int QIO_insert_multifile(QIO_FileInfo *file_info, int multifile);
 int QIO_insert_record_tag_string(QIO_RecordInfoWrapper *wrapper, 
 				 char *recordinfo_tags);
 int QIO_insert_record_date(QIO_RecordInfo *record_info, char* date);
+int QIO_insert_globaldata(QIO_RecordInfo *record_info, int globaldata);
 int QIO_insert_datatype(QIO_RecordInfo *record_info, char* datatype);
 int QIO_insert_precision(QIO_RecordInfo *record_info, char* precision);
 int QIO_insert_colors(QIO_RecordInfo *record_info, int colors);
@@ -234,6 +238,7 @@ int QIO_defined_multifile(QIO_FileInfo *file_info);
 
 char *QIO_get_record_info_tag_string(QIO_RecordInfoWrapper *wrapper);
 char *QIO_get_record_date(QIO_RecordInfo *record_info);
+int QIO_get_globaldata(QIO_RecordInfo *record_info);
 char *QIO_get_datatype(QIO_RecordInfo *record_info);
 char *QIO_get_precision(QIO_RecordInfo *record_info);
 int QIO_get_colors(QIO_RecordInfo *record_info);
@@ -248,6 +253,7 @@ int QIO_defined_suma(QIO_ChecksumInfo *checksum_info);
 int QIO_defined_sumb(QIO_ChecksumInfo *checksum_info);
 
 int QIO_defined_record_date(QIO_RecordInfo *record_info);
+int QIO_defined_globaldata(QIO_RecordInfo *record_info);
 int QIO_defined_datatype(QIO_RecordInfo *record_info);
 int QIO_defined_precision(QIO_RecordInfo *record_info);
 int QIO_defined_colors(QIO_RecordInfo *record_info);
@@ -259,9 +265,10 @@ QIO_FileInfo *QIO_create_file_info(int spacetime, int *dims, int multifile);
 void QIO_destroy_file_info(QIO_FileInfo *file_info);
 int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
 			  char *myname, int this_node);
-QIO_RecordInfo *QIO_create_record_info(char *datatype, char *precision, 
-					int colors, int spins, int typesize, 
-					int datacount);
+QIO_RecordInfo *QIO_create_record_info(int globaldata,
+				       char *datatype, char *precision, 
+				       int colors, int spins, int typesize, 
+				       int datacount);
 void QIO_destroy_record_info(QIO_RecordInfo *record_info);
 int QIO_compare_record_info(QIO_RecordInfo *r, QIO_RecordInfo *s);
 

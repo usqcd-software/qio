@@ -3,19 +3,20 @@
 #include <qio.h>
 #include <lrl.h>
 #include <dml.h>
-#include <xml_string.h>
+#include <qio_string.h>
 #include <qioxml.h>
 #include <stdio.h>
 #include <string.h>
 
 #undef QIO_DEBUG
 
-/* Reads a lattice field from a record.  Includes XML and checksum */
+/* Reads a lattice field or global data from a record.  Includes XML
+   and checksum */
 /* Calls QIO_read_record_info and QIO_read_record_data */
 
 int QIO_read(QIO_Reader *in, QIO_RecordInfo *record_info,
-	     XML_String *xml_record, 
-	     void (*put)(char *buf, size_t index, size_t count, void *arg),
+	     QIO_String *xml_record, 
+	     void (*put)(char *buf, size_t index, int count, void *arg),
 	     size_t datum_size, int word_size, void *arg){
 
   /* Caller must allocate *record_info, *xml_record and *BinX.

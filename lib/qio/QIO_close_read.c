@@ -1,7 +1,7 @@
 /* QIO_close_read.c */
 
 #include <qio.h>
-#include <xml_string.h>
+#include <qio_string.h>
 #include <lrl.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -18,7 +18,7 @@ int QIO_close_read(QIO_Reader *in){
   if(in->layout)free(in->layout->latsize);
   free(in->layout);
   if(!in->sitelist)free(in->sitelist);
-  XML_string_destroy(in->xml_record);
+  QIO_string_destroy(in->xml_record);
   free(in);
   if(status != LRL_SUCCESS)return QIO_ERR_CLOSE;
   return QIO_SUCCESS;

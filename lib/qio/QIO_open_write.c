@@ -3,7 +3,7 @@
 #include <qio.h>
 #include <lrl.h>
 #include <dml.h>
-#include <xml_string.h>
+#include <qio_string.h>
 #include <qioxml.h>
 #include <stdio.h>
 #include <malloc.h>
@@ -22,13 +22,13 @@
 /* Writes the site list if multifile format */
 /* Writes the user file XML record */
 
-QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename, 
+QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename, 
 			   int serpar, int volfmt, int mode,
 			   QIO_Layout *layout)
 {
   QIO_Writer *qio_out;
   LRL_FileWriter *lrl_file_out;
-  XML_String *xml_file_private;
+  QIO_String *xml_file_private;
   DML_Layout *dml_layout;
   int *latsize;
   int latdim = layout->latdim;
@@ -101,7 +101,7 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
   }
 
   /* Encode the private file XML */
-  xml_file_private = XML_string_create(QIO_STRINGALLOC);
+  xml_file_private = QIO_string_create(QIO_STRINGALLOC);
   QIO_encode_file_info(xml_file_private, file_info);
   QIO_destroy_file_info(file_info);
   
@@ -120,13 +120,13 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
 #ifdef QIO_DEBUG
     /* Debug */
     printf("%s(%d): private file XML = %s\n",
-	   myname,this_node,XML_string_ptr(xml_file_private));
+	   myname,this_node,QIO_string_ptr(xml_file_private));
 #endif
     msg_begin = 0;
   }
 
   /* Free storage */
-  XML_string_destroy(xml_file_private);
+  QIO_string_destroy(xml_file_private);
 
   /* Next record is last in message for all but master node */
   if (this_node != QIO_MASTER_NODE)msg_end = 1;
@@ -150,7 +150,7 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
 #ifdef QIO_DEBUG
     /* Debug */
     printf("%s(%d): user file XML  = %s\n",
-	   myname,this_node, XML_string_ptr(xml_file));
+	   myname,this_node, QIO_string_ptr(xml_file));
 #endif
   }
 

@@ -3,7 +3,7 @@
 #include <qio.h>
 #include <lrl.h>
 #include <dml.h>
-#include <xml_string.h>
+#include <qio_string.h>
 #include <qioxml.h>
 #include <stdio.h>
 #ifdef HAVE_STDLIB_H
@@ -26,14 +26,14 @@
 /* Reads the site list if multifile format */
 /* Reads and broadcasts the user file XML record */
 
-QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename, 
+QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename, 
 			  int serpar, QIO_Layout *layout){
 
   /* Calling program must allocate *xml_file */
 
   QIO_Reader *qio_in;
   LRL_FileReader *lrl_file_in = NULL;
-  XML_String *xml_file_private;
+  QIO_String *xml_file_private;
   DML_Layout *dml_layout;
   QIO_FileInfo *file_info_expect, *file_info_found;
   int *latsize;
@@ -99,7 +99,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
 
   /* Master node reads and decodes the private file XML record */
   if(this_node == QIO_MASTER_NODE){
-    xml_file_private = XML_string_create(QIO_STRINGALLOC);
+    xml_file_private = QIO_string_create(QIO_STRINGALLOC);
     if((status = 
 	QIO_read_string(qio_in, xml_file_private, lime_type))
        !=QIO_SUCCESS){
@@ -109,10 +109,10 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
     }
 #ifdef QIO_DEBUG
     printf("%s(%d): private file XML = %s\n",myname,this_node,
-	   XML_string_ptr(xml_file_private));
+	   QIO_string_ptr(xml_file_private));
 #endif
     QIO_decode_file_info(file_info_found, xml_file_private);
-    XML_string_destroy(xml_file_private);
+    QIO_string_destroy(xml_file_private);
 
     /* Create structure with what we expect */
     /* We discover and respond to the multifile parameter.
@@ -239,9 +239,9 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
     
 #ifdef QIO_DEBUG
     printf("%s(%d): file XML = %s\n",
-	   myname,this_node,XML_string_ptr(xml_file));
+	   myname,this_node,QIO_string_ptr(xml_file));
 #endif
-    length = XML_string_bytes(xml_file);
+    length = QIO_string_bytes(xml_file);
   }
   
   /* Broadcast the user xml file to all nodes */
@@ -250,9 +250,9 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   
   /* Receiving nodes resize their strings */
   if(this_node != QIO_MASTER_NODE){
-    XML_string_realloc(xml_file,length);
+    QIO_string_realloc(xml_file,length);
   }
-  DML_broadcast_bytes(XML_string_ptr(xml_file),length);
+  DML_broadcast_bytes(QIO_string_ptr(xml_file),length);
   
 #ifdef QIO_DEBUG
   printf("%s(%d): Done with user file XML\n",myname,this_node);fflush(stdout);

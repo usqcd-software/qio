@@ -1,11 +1,10 @@
 QIO package
 
 LRL
--- LRL/dime seeks for writes and reads (and check skip to next record)
+-- LRL/lime seeks for writes and reads (and check skip to next record)
 -- Modes for writing (CREAT OPEN APPEND) ??
 
 DML
--- Correct size_t = -1
 -- Debug parallel reads and writes
 -- Add multifile capability for one disk per partition (as opposed to
    the current one disk per node)
@@ -16,6 +15,5 @@ DML
 Additions
 -- stdin, stdout, stderr: Global broadcast scanf and printf 
 -- Pure XML I/O
--- QLA I/O
--- Integrate XML_string handling with XML package if necessary
+
 
