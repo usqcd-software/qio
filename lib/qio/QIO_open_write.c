@@ -68,7 +68,7 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
      or if writing in multifile, all nodes open the file.  Otherwise,
      only master does. */
 
-  if((PARALLEL_WRITE && serpar == QIO_PARALLEL)
+  if((QIO_USE_PARALLEL_WRITE && serpar == QIO_PARALLEL)
      || volfmt == QIO_MULTIFILE
      || this_node == QIO_MASTER_NODE){
     /* Modify filename for multifile writes */
