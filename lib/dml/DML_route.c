@@ -240,7 +240,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 
 #else
 
-/* #warning "Using native QMP_route since it is available" */
+#warning "Using native QMP_route since it is available"
 
 /* Use native version of QMP_route since it is available */
 QMP_status_t DML_grid_route(void* buffer, size_t count,
