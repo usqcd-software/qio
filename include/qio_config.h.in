@@ -53,6 +53,12 @@
 #undef PACKAGE_VERSION
 #endif
 
+/* Enable parallel file-system read */
+#undef QIO_USE_PARALLEL_READ
+
+/* Enable parallel file-system write */
+#undef QIO_USE_PARALLEL_WRITE
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
