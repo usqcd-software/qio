@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #endif
 
-#undef DEBUG
+#undef QIO_DEBUG
 
 
 #undef PARALLEL_READ
@@ -89,7 +89,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
     qio_in->lrl_file_in = lrl_file_in;
   }
 
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d) Reading xml_file_private\n",myname,this_node);fflush(stdout);
 #endif
 
@@ -103,7 +103,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
       printf("%s(%d): error reading private file XML\n",myname,this_node);
       return NULL;
     }
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): private file XML = %s\n",myname,this_node,
 	   XML_string_ptr(xml_file_private));
 #endif
@@ -127,7 +127,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   /* Broadcast the file info to all nodes */
   DML_broadcast_bytes((char *)file_info_found, sizeof(QIO_FileInfo));
   
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d): private file info was broadcast\n",
 	 myname,this_node);fflush(stdout);
 #endif
@@ -180,7 +180,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
     
     /* Each node reads its own site list */
     if(QIO_read_sitelist(qio_in, lime_type))return NULL;
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): Sitelist was read\n",myname,this_node);fflush(stdout);
 #endif
     /* For now we support only a site order that matches the current
@@ -197,7 +197,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
       return NULL;
     }
     else{
-#ifdef DEBUG
+#ifdef QIO_DEBUG
       printf("%s(%d): List is in natural order\n",
 	     myname,this_node);fflush(stdout);
 #endif
@@ -207,7 +207,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
 
   QIO_destroy_file_info(file_info_found);
 
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d): Reading user file XML\n",myname,this_node);fflush(stdout);
 #endif
   
@@ -219,7 +219,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
       return NULL;
     }
     
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): file XML = %s\n",
 	   myname,this_node,XML_string_ptr(xml_file));
 #endif
@@ -236,7 +236,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   }
   DML_broadcast_bytes(XML_string_ptr(xml_file),length);
   
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d): Done with user file XML\n",myname,this_node);fflush(stdout);
 #endif
   

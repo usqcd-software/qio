@@ -7,7 +7,7 @@
 #include <qioxml.h>
 #include <stdio.h>
 
-#undef DEBUG
+#undef QIO_DEBUG
 
 /* Read record data */
 /* Can be called separately from QIO_read, but then QIO_read_record_info
@@ -56,7 +56,7 @@ int QIO_read_record_data(QIO_Reader *in,
 
   if(this_node == QIO_MASTER_NODE){
     if(QIO_read_string(in, BinX, lime_type))return 1;
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): BinX = %s\n",myname,this_node,XML_string_ptr(BinX));
 #endif
   }
@@ -76,7 +76,7 @@ int QIO_read_record_data(QIO_Reader *in,
 		    &checksum, lime_type))
     return 1;
 
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d): done reading field\n",myname,this_node);fflush(stdout);
 #endif
 
@@ -84,7 +84,7 @@ int QIO_read_record_data(QIO_Reader *in,
   if(this_node == QIO_MASTER_NODE){
     xml_checksum = XML_string_create(QIO_STRINGALLOC);
     if(QIO_read_string(in, xml_checksum, lime_type))return 1;
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): checksum = %s\n",myname,this_node,
 	   XML_string_ptr(xml_checksum));
 #endif

@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#undef DEBUG
+#undef QIO_DEBUG
 
 /* Write a lattice field to a record.  Includes XML and checksum */
 /* Return 0 success.  1 failure */
@@ -50,7 +50,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
     if (QIO_write_string(out, msg_begin, msg_end, xml_record_private, 
 			 (const LIME_type)"scidac-private-record-xml"))
       return 1;
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): private record XML = %s\n",
 	   myname,this_node,XML_string_ptr(xml_record_private));
 #endif
@@ -64,7 +64,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
     if (QIO_write_string(out, msg_begin, msg_end, xml_record, 
 			 (const LIME_type)"scidac-record-xml"))
       return 1;
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): user record XML = XXX%sXXX\n",
 	   myname,this_node,XML_string_ptr(xml_record));
 #endif
@@ -78,7 +78,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
     if (QIO_write_string(out, msg_begin, msg_end, BinX, 
 			 (const LIME_type)"scidac-binx-xml"))
       return 1;
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): BinX = %s\n",myname,this_node,XML_string_ptr(BinX));
 #endif
     msg_begin = 0;
@@ -90,7 +90,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   QIO_write_field(out, msg_begin, msg_end, xml_record, 
 		  get, datum_size, word_size, arg, &checksum,
 		  (const LIME_type)"scidac-binary-data");
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d): wrote field\n",myname,this_node);fflush(stdout);
 #endif
 
@@ -105,7 +105,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
     if (QIO_write_string(out, msg_begin, msg_end, xml_checksum,
 	(const LIME_type)"scidac-checksum"))return 1;
 
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): checksum string = %s\n",
 	   myname,this_node,XML_string_ptr(xml_checksum));
 #endif

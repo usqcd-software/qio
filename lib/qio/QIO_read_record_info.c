@@ -10,7 +10,7 @@
 #include <malloc.h>
 #endif
 
-#undef DEBUG
+#undef QIO_DEBUG
 
 /* Read user record XML */
 /* Can be called separately from QIO_read for discovering the record
@@ -43,7 +43,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 
       /* Read private record XML */
       if(QIO_read_string(in, xml_record_private, lime_type ))return 1;
-#ifdef DEBUG
+#ifdef QIO_DEBUG
       printf("%s(%d): private XML = %s\n",myname,this_node,
 	     XML_string_ptr(xml_record_private));
 #endif
@@ -72,14 +72,14 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
     DML_broadcast_bytes((char *)&(in->record_info), 
 			sizeof(QIO_RecordInfo));
 
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): Done broadcasting private record data\n",
 	   myname,this_node);
 #endif
     /* Master node reads the user XML record */
     if(this_node == QIO_MASTER_NODE){
       if(QIO_read_string(in, in->xml_record, lime_type))return 1;
-#ifdef DEBUG
+#ifdef QIO_DEBUG
       printf("%s(%d): user XML = %s\n",myname,this_node,
 	     XML_string_ptr(in->xml_record));
 #endif
@@ -104,7 +104,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
   *record_info = in->record_info;
   XML_string_copy(xml_record,in->xml_record);
 
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d): Finished\n",myname,this_node);
 #endif
 
