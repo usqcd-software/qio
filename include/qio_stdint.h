@@ -1,6 +1,8 @@
 #ifndef QIO_STDINT_H
 #define QIO_STDINT_H
 
+#include "qio_config.h"
+
 #if HAVE_STDINT_H
 #include <stdint.h>
 #else
