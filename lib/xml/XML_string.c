@@ -76,6 +76,7 @@ void XML_string_set(XML_string *xml, const char *string)
 
 void XML_string_destroy(XML_string *xml)
 {
-  free(xml->string);
+  if (xml->length > 0)
+    free(xml->string);
   free(xml);
 }
