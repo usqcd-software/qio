@@ -55,16 +55,12 @@ int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) {
   return QMP_route(buf, size, fromnode, tonode);
 }
 #else
+/* Use BJ's rollaround route defined in DML_route.c */
+extern QMP_status_t DML_route(void* buffer, QMP_u32_t count,
+                       QMP_u32_t src, QMP_u32_t dest);
+
 int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) {
-  int this_node = QMP_get_node_number();
-
-  if (this_node == tonode)
-    DML_get_bytes(buf,size,fromnode);
-
-  if (this_node == fromnode)
-    DML_send_bytes(buf,size,tonode);
-
-  return 0;
+  return DML_route(buf, size, fromnode, tonode);
 }
 #endif
 

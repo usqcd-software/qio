@@ -3,7 +3,7 @@ AC_INIT(qio, 0.1, edwards@jlab.org)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
-# AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADER([include/qio_config.h])
 
 AM_INIT_AUTOMAKE
 
@@ -160,6 +160,20 @@ AC_CHECK_HEADERS([malloc.h])
 
 # Checks for library functions.
 ## AC_FUNC_MALLOC
+
+# Check for QMP route
+QMP_BKUP_CFLAGS="${CFLAGS}"
+QMP_BKUP_LDFLAGS="${LDFLAGS}"
+QMP_BKUP_LIBS="${LIBS}"
+AC_LANG_SAVE
+CFLAGS="${CFLAGS} ${QMP_CFLAGS}"
+LDFLAGS="${LDFLAGS} ${QMP_LDFLAGS}"
+LIBS="${LIBS} ${QMP_LIBS}"
+AC_CHECK_FUNCS(QMP_route)
+CFLAGS="${QMP_BKUP_CFLAGS}"
+LDFLAGS="${QMP_BKUP_LDFLAGS}"
+LIBS="${LIBS}"
+AC_LANG_RESTORE
 
 #
 # Now have all the options... Do some configuration 
