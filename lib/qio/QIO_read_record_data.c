@@ -7,6 +7,7 @@
 #include <qio_string.h>
 #include <qioxml.h>
 #include <stdio.h>
+#include <string.h>
 
 /* Read record data */
 /* Can be called separately from QIO_read, but then QIO_read_record_info

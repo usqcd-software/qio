@@ -57,9 +57,9 @@
 /* Enable parallel file-system write */
 #undef QIO_USE_PARALLEL_WRITE
 
-/* Enable QMP route if it exists */
+/* Enable QMP_route if it exists */
 #undef QIO_USE_QMP_ROUTE
- 
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
