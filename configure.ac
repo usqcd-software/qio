@@ -162,12 +162,27 @@ AC_SUBST(QLA_LDFLAGS)
 ## AC_CHECK_HEADERS([stdlib.h string.h strings.h])
 AC_CHECK_HEADERS([malloc.h])
 
-# Checks for typedefs, structures, and compiler characteristics.
-## AC_C_CONST
-## AC_TYPE_SIZE_T
+# Checks for type configuration
+AC_CHECK_HEADERS([stdint.h],
+[ dnl for inttypes.h and stdint.h for uint_xxx types
+  dnl if successful check for the actual types too
+  AC_CHECK_TYPES([uint16_t, uint32_t, uint64_t],
+                 [],
+                 [AC_MSG_ERROR([stdint.h found but either uint16_t, uint32_t or uint64_t not found]) ]
+                )
+],
+[ 
+  dnl no inttypes.h or stdint.h found check common unsigned types
+  dnl for sizes and make appropriate decisions in the lime_fixed_types.h file
+  AC_CHECK_SIZEOF(unsigned char)
+  AC_CHECK_SIZEOF(unsigned short)
+  AC_CHECK_SIZEOF(unsigned int)
+  AC_CHECK_SIZEOF(unsigned long)
+  AC_CHECK_SIZEOF(unsigned long long)
+]
+)
 
-# Checks for library functions.
-## AC_FUNC_MALLOC
+
 
 
 # Check for QMP route on parscalar
