@@ -58,7 +58,7 @@ void QIO_free_scalar_field(s_field *field)
 
 int QIO_bytes_of_word(char *type)
 {
-  int value;
+  int value=0;
   switch(*type)
     {
     case 'I':
@@ -204,7 +204,7 @@ int QIO_set_this_node(QIO_Filesystem *fs, QIO_Layout *layout, int node)
 char *QIO_set_filepath(QIO_Filesystem *fs, 
 		  const char * const filename, int node)
 {
-  char *path, *newfilename;
+  char *path, *newfilename=NULL;
   int fnlength = strlen(filename);
   int drlength;
   
@@ -541,7 +541,6 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
   
   /* Set output path according to MULTI/SINGLE PATH flag */
   newfilename = QIO_set_filepath(fs,filename,i);
-  if(status)return status;
   
   /* Open to read */
   infile[i] = QIO_open_read_master(newfilename,ionode_layout,
@@ -567,8 +566,7 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
 	
 	/* Set output path according to MULTI/SINGLE PATH flag */
 	newfilename = QIO_set_filepath(fs,filename,i);
-	if(status)return status;
-	
+
 	/* Open to read */
 	infile[i] = QIO_open_read_master(newfilename,ionode_layout,
 					 0,fs->my_io_node,fs->master_io_node);

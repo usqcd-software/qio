@@ -102,6 +102,11 @@ void setup_layout(int len[], int nd, int numnodes)
     nsquares[j] *= prime[k];
   }
 
+  /* setup QMP logical topology */
+  if(!QMP_logical_topology_is_declared()) {
+    QMP_declare_logical_topology(nsquares, ndim);
+  }
+
   sites_on_node = 1;
   for(i=0; i<ndim; ++i) {
     sites_on_node *= squaresize[i];

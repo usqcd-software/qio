@@ -848,7 +848,7 @@ uint64_t DML_multifile_out(LRL_RecordWriter *lrl_record_out,
   DML_SiteRank rank;
   int this_node = layout->this_node;
   char myname[] = "DML_multifile_out";
-  char *lbuf, *buf;
+  char *lbuf, *buf=NULL;
   int *coords;
   int err;
 
@@ -1003,7 +1003,7 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
 	  DML_Checksum *checksum)
 {
-  char *buf,*inbuf;
+  char *buf=NULL,*inbuf;
   int dest_node, my_io_node;
   DML_SiteRank rcv_coords;
   uint64_t nbytes = 0;

@@ -178,6 +178,9 @@ int read_su3_field(QIO_Reader *infile, int count,
   QIO_RecordInfo rec_info;
   int status;
   
+  /* Create the record XML */
+  xml_record_in = QIO_string_create();
+
   /* Read the field record */
   status = QIO_read(infile, &rec_info, xml_record_in, 
 		    vput_M, sizeof(suN_matrix)*count, sizeof(float), field_in);

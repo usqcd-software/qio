@@ -193,7 +193,6 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   LRL_RecordWriter *lrl_record_out = NULL;
   size_t planned_rec_size;
   int this_node = out->layout->this_node;
-  int volfmt = out->volfmt;
   int do_output;
   char myname[] = "QIO_write_field";
 
@@ -343,7 +342,7 @@ int QIO_read_field(QIO_Reader *in, int globaldata,
 	   DML_Checksum *checksum, uint64_t* nbytes,
 	   LIME_type *lime_type){
 
-  LRL_RecordReader *lrl_record_in;
+  LRL_RecordReader *lrl_record_in=NULL;
   DML_SiteList *sites = in->sites;
   size_t announced_rec_size, expected_rec_size;
   int this_node = in->layout->this_node;
