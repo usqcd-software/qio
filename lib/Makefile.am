@@ -1,7 +1,7 @@
 
 INCFLAGS=-I@top_srcdir@/include -I@top_srcdir@/other_libs/c-dime/include
 
-AM_CFLAGS = $(INCFLAGS) @CFLAGS@
+AM_CFLAGS = $(INCFLAGS) @CFLAGS@ @QMP_CFLAGS@
 VPATH = @top_srcdir@/lib
 VPATH += @top_srcdir@/include
 VPATH += @top_srcdir@/other_libs/c-dime/include
