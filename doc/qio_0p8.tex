@@ -1,0 +1,734 @@
+% -*-LaTeX-*- document QDP/C QIO API (C Language Binding) version 0.2
+%
+\documentclass{article}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Prototype elements
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\allTypes}{{\tt S, I, R, C, V, H, D, M, P}}
+\newcommand{\itt}{\it T}
+\newcommand{\QMDhandle}{{\tt XML\_String}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\title{
+   Input/Output for QDP \\{\large Version 0.2}
+}
+\author{ SciDAC Software Coordinating Committee}
+
+\maketitle
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+This is a proposal for the C binding for the Input/Output
+Applications Programmer Interface developed under the auspices of the
+U.S. Department of Energy Scientific Discovery through Advanced
+Computing (SciDAC) program.
+
+This interface provides for (1) moving QDP lattice fields to and from
+files, (2) creating and extracting physics metadata for describing
+these fields, and (3) reading and writing files containing metadata.
+[??? QLA fields - CD].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Overview of File Format}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec.fileformat}
+
+\subsection{Binary QDP Files}
+
+The binary file format has been designed with flexibility in mind. For
+archiving purposes, the allowable file organization may be further
+restricted.  Here we described the unrestricted format.
+
+Two classes of file volumes are supported: single-file volumes and
+multiple-file volumes.  In the latter case lattice data is scattered
+among several files for distributed reading and writing.  In the
+former case all the lattice data is contained in a single file.
+
+\subsubsection{Single file format}
+
+Single binary QDP files are composed of a series of one or more
+application records.  A single application record encodes a single QDP
+field or an array of QDP fields of the same data type.  Physics
+metadata, managed at the convenience of the applications programmer,
+is associated with the file itself and with each application record as
+well. Above the API the QDP file is viewed as follows:
+%
+\begin{itemize}
+  \item File physics metadata
+  \item Record 1 physics metadata and data
+  \item Record 2 physics metadata and data
+  \item etc.
+\end{itemize}
+%
+For example, a file might record a series of staggered fermion
+eigenvectors for a gauge field configuration.  Each record would map
+to a single field of type \verb|QDP_ColorVector|.  The file metadata
+might include information about the gauge field configuration and the
+record metadata might encode the eigenvalue and an index for the
+eigenvector.
+
+For another example, the gauge field configuration in four dimensions
+is represented in QDP as an array of four color matrix fields.  The
+configuration is conventionally written so that the four color matrices
+associated with each site appear together.  A file containing a single
+gauge field configuration would then consist of a single record
+containing the array of four color matrices.
+
+The API permits mixing records of different datatypes in the same
+file.  While this practice may be convenient for managing projects, it
+may be forbidden for archival files.
+
+Additional metadata is automatically managed by QIO (without requiring
+intervention by the applications programmer) to facilitate the
+implementation and to check data integrity.  Thus the file actually
+begins with QIO metadata and physics metadata and each application
+record consists of five logical records.  Within QIO the file is
+viewed as a series of logical records as follows:
+%
+\begin{itemize}
+  \item File QIO metadata
+  \item File physics metadata
+  \item Record 1 QIO metadata
+  \item Record 1 physics metadata
+  \item Record 1 binary data
+  \item Record 1 checksum
+  \item Record 2 QIO metadata
+  \item Record 2 physics metadata
+  \item Record 2 binary data
+  \item Record 2 checksum
+  \item etc.
+\end{itemize}
+%
+The site order of the binary data is lexicographic according to the
+site coordinate $r_i$ with the first coordinate $r_0$ varying most
+rapidly.
+
+We have adopted the DIME standard (a generalization of the MIME
+standard) for packaging the logical records.  File system limitations
+may require splitting data into multiple physical files.  The
+management of physical files is handled internally and is hidden from
+the applications programmer.
+
+\subsection{Multifile format}
+
+The API provides for rapid temporary writing of data to scratch disks
+and reading from scratch disks.  In this case it is assumed that the
+files are not intended for longer term storage.  Thus the file format
+in this case is implementation-dependent and not standardized.  A
+specific choice of format is described in the Appendix.
+
+\subsection{ASCII Metadata Files}
+
+The API also provides for reading and writing global values in a
+standard metadata format from or to a file or a character string.
+Startup parameters for controlling a simulation could be read in this
+way.  Results of a computation could be written in this way for post
+processing and analysis.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Metadata Standard and Manipulation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Metadata is required by a number of components in the I/O system.  We
+are currently formulating an XML standard for the metadata and an API
+for manipulating the metadata.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{QDP/C API}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Opening and closing binary files}
+
+As with standard Unix, a file must be opened before reading or
+writing.  However, we distinguish file handles for both cases.  If the
+system provides a parallel file system, it is possible for several
+processors to read and write a single file. We call this mode
+``parallel''.  Otherwise the file is read by a single processor and
+the data delivered according to the distributed memory layout.  The
+reverse occurs upon writing. We call this mode ``serial''. To allow
+user choice where the architecture permits, we provide for requesting
+either mode.  However, the request may be overridden if the system
+permits only one mode.  Upon writing, we allow appending to an
+existing file.
+
+\paragraph{Open a file for writing}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|QDP_Writer *QDP_open_write(|\QMDhandle\verb|*xml_file, char *filename,|\\
+                 & \verb|int volfmt, int serpar, int mode)|\\
+    \hline
+  Purpose        & Opens a named file for writing and writes the file metadata. \\
+\hline
+  Example  & \verb|QDP_Writer *outfile;| \\
+           & \verb|outfile = QDP_open_write(xml_file_out, filename, |\\
+	   & \verb|  QDP_SINGLEFILE, QDP_SERIAL, QDP_CREATE); |\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The \verb|QDP_Writer| return value is the file handle used in
+subsequent references to the file.  A null return value signals an
+error. The IO system takes responsibility for allocating and freeing
+space for the handle.  It is assumed the user has already created the
+file metadata and provides the \QMDhandle, so it can be written
+at the head of the file.  The \verb|volfmt| argument is one of
+%
+\begin{verbatim}
+  QDP_SINGLEFILE, QDP_MULTIFILE
+\end{verbatim}
+%
+The \verb|serpar| argument is one of
+%
+\begin{verbatim}
+  QDP_SERIAL, QDP_PARALLEL
+\end{verbatim}
+%
+and the \verb|mode| argument is one of
+%
+\begin{verbatim}
+  QDP_CREATE, QDP_OPEN, QDP_APPEND
+\end{verbatim}
+%
+where \verb|QDP_CREATE| fails if the file already exists,
+\verb|QDP_OPEN| overwrites the file if it already exists and creates
+it if not, and \verb|QDP_APPEND| fails if the file does not exist and
+otherwise appends at the end of the file.  When appending, the file
+metadata argument is ignored, since it should already exist.
+
+The user supplies the dimension of the space and the extent of the
+lattice coordinates.
+
+\paragraph{Open a file for reading}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|QDP_Reader *QDP_open_read(|\QMDhandle \verb| *xml_file, char *filename,|\\
+                 & \verb|int serpar)|\\
+    \hline
+  Purpose        & Opens a named file for reading and reads the file metadata. \\
+\hline
+  Example  & \verb|QDP_Reader *infile;| \\
+           & \verb|outfile = QDP_open_read(xml_file_in, filename, |\\
+	   & \verb|  QDP_SERIAL);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The \verb|QDP_Reader| return value is the file handle used in
+subsequent references to the file.  A null return value signals an
+error. The IO system takes responsibility for allocating and freeing
+space for the handle.  It is assumed the user has created space for
+the file metadata with address \verb|xml_file|, so it can be read from
+the head of the file and inserted.  The other arguments have the same
+meaning as with \verb|QDP_open_write|.  The volume format is
+autodetected, so is not specified.
+%
+\paragraph{Close an output file}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QDP_close_write(QDP_Writer *out);| \\
+    \hline
+  Purpose        & Closes an output file. \\
+\hline
+  Example        & \verb|QDP_close_write(outfile);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+\paragraph{Close an input file}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QDP_close_read(QDP_Reader *in);| \\
+    \hline
+  Purpose        & Closes an input file. \\
+\hline
+  Example        & \verb|QDP_close_read(infile);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+In both cases the integer return value is 0 for success and 1 for failure.
+
+\subsection{Opening and closing ASCII metadata files}
+[Not described, yet]
+
+\subsection{Writing and reading QDP fields}
+
+\paragraph{Writing a field}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QDP_write_|\itt\verb|(QDP_Writer *out,| \QMDhandle \verb| *xml_record,|\\
+                 & \verb| QDP_{\it Type}\verb| *field);|\\
+    \hline
+  Purpose        & Writes the field and its metadata as the next record in the specified file. \\
+\hline
+  \itt     & \allTypes \\
+   \hline
+  Example  & \verb|QDP_Real *field_out;| \\
+           & \verb|QDP_write_R(outfile, xml_record_out, field_out);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The integer return value is 0 for success and 1 for failure.  It is
+assumed the user has prepared the record metadata and the field data
+in advance.
+
+\paragraph{Reading a field}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QDP_read_|\itt\verb|(QDP_Reader *in,|\QMDhandle \verb| *xml_record,|\\
+                 & \verb| QDP_|{\it Type}\verb| *field);|\\
+    \hline
+  Purpose        & Reads the field and its metadata from the next record in the specified file. \\
+\hline
+  \itt     & \allTypes \\
+   \hline
+  Example  & \verb|QDP_Real *field_out;| \\
+           & \verb|QDP_read_R(infile, xml_record_in, field_in);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The integer return value is 0 for success and 1 for failure.  It is
+assumed the user has prepared space for the record metadata and the
+field data in advance.  The datatype of the record must match the
+field type.
+
+\paragraph{Writing an array of fields}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QDP_write_multi_|\itt\verb|(QDP_Writer *out, |\QMDhandle\verb| *xml_record,|\\
+                 & \verb| QDP_|{\it Type}\verb| *field, int n);|\\
+    \hline
+  Purpose        & Writes the array of fields and its metadata as the next record in the specified file. \\
+\hline
+  \itt     & \allTypes \\
+   \hline
+  Example  & \verb|QDP_ColorMatrix field[4];| \\
+           & \verb|QDP_write_multi_M(outfile, xml_record_out, field, 4);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The integer return value is 0 for success and 1 for failure.  It is
+assumed the user has prepared the record metadata and the field data
+in advance.
+
+\paragraph{Reading an array of fields}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QDP_read_multi_|\itt\verb|(QDP_Reader *in, |\QMDhandle\verb| *xml_record,|\\
+                 & \verb| QDP_|{\it Type}|\verb| *field, int n);|\\
+    \hline
+  Purpose        & Reads the array of fields and its metadata from the next record in the specified file. \\
+\hline
+  \itt     & \allTypes \\
+   \hline
+  Example  & \verb|QDP_ColorMatrix field[4];| \\
+           & \verb|QDP_read_multi_M(infile, xml_record_in, field, 4);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The integer return value is 0 for success and 1 for failure.  It is
+assumed the user has prepared space for the record metadata and the
+field data in advance.
+
+\paragraph{Reading only the record information}
+
+It may be convenient to examine the record metadata to decide whether
+to read or skip the accompanying binary data.
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QDP_read_record_info(QDP_Reader *in,|\QMDhandle \verb| *xml_record);|\\
+    \hline
+  Purpose        & Reads the only the metadata from the next record in the specified file. \\
+   \hline
+  Example  & \verb|QDP_read_record_info(infile, xml_record_in);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+A subsequent call to \verb|QDP_read_T| returns a copy of the same
+metadata along with the lattice field.
+
+\paragraph{Skipping to the next record}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QDP_next_record(QDP_Reader *in);|\\
+    \hline
+  Purpose        & Advances to the beginning of the next record. \\
+   \hline
+  Example  & \verb|QDP_next_record(infile);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{XML String Handling}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A separate SciDAC package currently under development provides the
+tools for constructing XML documents as ``XML strings''.  For present
+purposes of reading and writing lattice fields, the accompanying
+metadata documents are treated merely as strings.  Until the package
+is ready, a few utilities are provided for constructing the XML string
+type \verb|XML_String| required by the API\@.
+
+\paragraph{Creating an XML String}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|XML_String *XML_string_create(int length);|\\
+    \hline
+  Purpose        & Creates an empty string of length \verb|length|. \\
+   \hline
+  Example        & \verb|XML_string_create(MAX_XML);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+\paragraph{Inserting a character string}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|void XML_string_set(XML_String *xml, const char *const string);|\\
+    \hline
+  Purpose        & Inserts the character string \verb|string|. \\
+   \hline
+  Example        & \verb|XML_string_set(mystring);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+\paragraph{Copying an XML string}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|void XML_string_copy(XML_String *dest, XML_String *src);|\\
+    \hline
+  Purpose        & Copies \verb|src| to \verb|dest|. \\
+   \hline
+  Example        & \verb|XML_string_copy(newxml, oldxml);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+\paragraph{Accessing the character string}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|char *XML_string_bytes(const XML_String *const xml);|\\
+    \hline
+  Purpose        & Returns a pointer to the string. \\
+   \hline
+  Example        & \verb|printf("%s\n", XML_string_bytes(xml));| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+\paragraph{Accessing the string length}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|size_t XML_string_ptr(const XML_String *const xml);|\\
+    \hline
+  Purpose        & Returns the length of the string. \\
+   \hline
+  Example        & \verb| length = XML_string_length(xml);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+\paragraph{Destroying an XML string}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|void XML_string_destroy(XML_String *xml);|\\
+    \hline
+  Purpose        & Frees storage. \\
+   \hline
+  Example        & \verb|XML_string_destroy(xml);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Compilation with QIO}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In addition to the usual header files required by QDP, the following
+are also needed:
+%
+\begin{verbatim}
+  qdpio.h
+  xml_string.h
+\end{verbatim}
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Appendix: QIO Implementation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This appendix describes the QIO implementation currently shared by the
+QDP/C and QDP++ cluster codes.  This implementation could stand on its
+own as an API for non-SciDAC code.  The functionality is very similar
+to that described above.  The reader is therefore referred to the
+corresponding \verb|QDP| calls for a description of the shared
+arguments.  The key difference is that the characteristics of internal
+storage layout needed for QIO are encapsulated in a \verb|QDP_Layout|
+structure, which must then be defined in any implementation, and the
+information required for presenting field data in the correct byte
+order is encapsulated in a ``factory'' function, which also must be
+supplied by the implementer.
+
+\paragraph{The layout structure}
+
+The structure is defined as follows:
+\begin{verbatim}
+typedef struct {
+  int (*node_number)(int coords[]);
+  int *latsize;
+  int latdim;
+  size_t volume;
+  int this_node;
+} QIO_Layout;
+\end{verbatim}
+%
+The \verb|node_number| member is an implementer-supplied function
+returning the number of the node that has the specified lattice
+coordinate.  The next two members specify the lattice coordinate
+extent and spacetime dimension.  The fourth member specifies the full
+spacetime volume.  The fifth member gives the number of the present
+node.
+
+\paragraph{Open a file for writing}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|QIO_Writer *QIO_open_write(|\QMDhandle\verb| *xml_file, char *filename, |\\
+		 & \verb|int volfmt, int mode, QIO_Layout *layout);| \\
+  Purpose        & Opens a named file for writing and writes the file metadata. \\
+\hline
+  Example  & \verb|QIO_Writer *outfile;| \\
+           & \verb|QIO_Layout layout;| \\
+           & \verb|outfile = QIO_open_write(xml_file_out, filename, |\\
+	   & \verb|  QDP_SINGLEFILE, QDP_SERIAL, QDP_CREATE, &layout);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+It is assumed that the user has prepared the \verb|layout| argument as described above.
+
+\paragraph{Open a file for reading}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|QIO_Reader *QIO_open_read(XML_MetaData *xml_file, char *filename,|\\
+                 & \verb| int volfmt, QIO_Layout *layout);|\\
+  Purpose        & Opens a named file for writing and writes the file metadata. \\
+\hline
+  Example  & \verb|QIO_Reader *outfile;| \\
+           & \verb|QIO_Layout layout;| \\
+           & \verb|infile = QIO_open_read(xml_file_in, filename, |\\
+           & \verb|  QDP_SINGLEFILE, QDP_SERIAL, &layout);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+
+\paragraph{Close an output file}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_close_write(QIO_Writer *out);| \\
+\hline
+  Example  & \verb|QIO_close_write(outfile);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+
+\paragraph{Close an input file}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_close_read(QIO_Reader *in);| \\
+\hline
+  Example  & \verb|QIO_close_read(infile);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+
+
+\paragraph{Write a field}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_write(QIO_Writer *out,|\QMDhandle\verb| *xml_record, |\\
+	    & \verb| void (*get)(char *buf, int coords[], void *arg),|\\
+            & \verb| int datum_size, void *arg);| \\
+\hline
+  Example  & \verb|QIO_write(outfile, xml_record, QDP_F_get_r, sizeof(QLA_Real),|\\
+           & \verb| (void *)field);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The third argument is a factory function that, in this example, is
+invoked by QIO like this:
+%
+\begin{verbatim}
+  QDP_F_get_r(buf, coords, field);
+\end{verbatim}
+%
+The factory function \verb|get| is expected to fill the QIO-supplied
+buffer \verb|buf| with a byte-serialized copy of the field datum
+belonging to a single site of QIO's choosing, specified by its lattice
+coordinates.  Since the open operation has already registered a
+\verb|node_number| function, QIO knows to ask only for a site on the
+present node.  The factory function is not required to fetch data from
+a different node.  The fifth argument of \verb|QIO_write| is passed
+back as the third argument of the \verb|get| function.  It is used to
+identify the field.  If the write operation involves a single field,
+e.g. a \verb|QDP_ColorVector| field, the datum at a single site would
+be a single color vector.  If the write operation involves an array of
+fields, e.g. the four directional components of a gauge field, the
+datum at a single site would be an array of four color matrices.  The
+byte count is provided by the fourth argument of \verb|QIO_write| and
+must be the total number of bytes required to serialize the datum.
+The serialization must conform to requirements of the file layout.
+
+
+\paragraph{Read a field}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_read(QIO_Reader *in,|\QMDhandle\verb| *xml_record, |\\
+	    & \verb| void (*put)(char *buf, int coords[], void *arg), |\\
+            & \verb| int datum_size, void *arg);| \\
+\hline
+  Example  & \verb|QIO_read(infile, xml_record, QDP_F_put_r, sizeof(QLA_Real),|\\
+           & \verb| (void *)field);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+This operation is simply the inverse of the write operation described.
+The \verb|put| factory function does the reverse of the \verb|get|
+function.
+
+\paragraph{Read only the record metadata}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_peek(QIO_Reader *in,| \QMDhandle\verb| *xml_record);| \\
+\hline
+  Example  & \verb|QIO_peek(infile, xml_record);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+\paragraph{Skip the next record}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_skip(QIO_Reader *in);| \\
+\hline
+  Example  & \verb|QIO_skip(infile);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+ 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Appendix: Multidump format}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The principal file read by the master node contains most of the metadata:
+
+\begin{itemize}
+  \item File QIO metadata
+  \item File physics metadata
+  \item Binary index of sites
+  \item Record 1 QIO metadata
+  \item Record 1 physics metadata
+  \item Record 1 binary data
+  \item Record 1 checksum
+  \item Record 2 QIO metadata
+  \item Record 2 physics metadata
+  \item Record 2 binary data
+  \item Record 2 checksum
+  \item etc.
+\end{itemize}
+
+The secondary files are given unique names, constructed by attaching
+the file extension {\tt .vol}{\it nnn}, where {\it nnn} is the number
+of the node that reads the file (with leading zeros).  The secondary
+files contain these records:
+
+\begin{itemize}
+  \item Binary index of sites
+  \item Record 1 binary data
+  \item Record 2 binary data
+  \item etc.
+\end{itemize}
+
+The site index in each case is a table of contents, that is, a list of
+the linearized (lexicographic) ranks of all sites contained in the
+file in the order of appearance.
+
+Data is written in storage order.  At present it can be reread only to
+the same layout.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Appendix: Data layout}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This appendix should specify in detail the layout of data for the
+various QLA types.
+
+\end{document}
+
