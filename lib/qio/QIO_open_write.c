@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <malloc.h>
 
+#undef QIO_DEBUG
+
 #undef PARALLEL_WRITE
 #if defined(QIO_USE_PARALLEL_WRITE)
 #define PARALLEL_WRITE 1
@@ -115,9 +117,11 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
 	     myname,this_node);
       return NULL;
     }
+#ifdef QIO_DEBUG
     /* Debug */
     printf("%s(%d): private file XML = %s\n",
 	   myname,this_node,XML_string_ptr(xml_file_private));
+#endif
     msg_begin = 0;
   }
 
@@ -143,9 +147,11 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
 	     myname,this_node);
       return NULL;
     }
+#ifdef QIO_DEBUG
     /* Debug */
     printf("%s(%d): user file XML  = %s\n",
 	   myname,this_node, XML_string_ptr(xml_file));
+#endif
   }
 
   return qio_out;
