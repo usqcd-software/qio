@@ -1,11 +1,15 @@
 /* DML_utils.c */
 /* Utilities for DML */
 
+#include <qio_config.h>
 #include <lrl.h>
 #include <dml.h>
 #include <stdio.h>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
+#ifdef HAVE_STRING_H
+#include <string.h>
 #endif
 #include <assert.h>
 #include <crc32.h>
@@ -85,7 +89,7 @@ char *DML_allocate_msg(size_t size, char *myname, int this_node){
   char *msg;
   size_t sizeof_msg = DML_msg_sizeof(size);
 
-  msg = malloc(sizeof_msg);
+  msg = (char *)malloc(sizeof_msg);
   if(!msg)printf("%s(%d) can't malloc msg\n",myname,this_node);
   return msg;
 }
@@ -168,7 +172,7 @@ void DML_checksum_accum(DML_Checksum *checksum, DML_SiteRank rank,
 
   DML_SiteRank rank29 = rank;
   DML_SiteRank rank31 = rank;
-  u_int32 work = DML_crc32(0, buf, size);
+  u_int32 work = DML_crc32(0, (unsigned char*)buf, size);
 
   rank29 %= 29; rank31 %= 31;
 
@@ -249,7 +253,7 @@ char *DML_allocate_buf(size_t size, size_t max_buf_sites, int this_node){
   char myname[] = "DML_allocate_buf";
 
   if(max_buf_sites == 0)return NULL;
-  lbuf = malloc(max_buf_sites*size);
+  lbuf = (char*)malloc(max_buf_sites*size);
   if(!lbuf)
     printf("%s(%d): Can't malloc lbuf\n",myname,this_node);
     
