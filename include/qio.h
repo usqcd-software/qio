@@ -5,7 +5,7 @@
 #include <lrl.h>
 #include <dml.h>
 
-#define MAX_BINX  256 /* dummy */
+#define QIO_MAX_STRING_LEN  256
 #define QIO_MASTER_NODE DML_MASTER_NODE
 
 #define QIO_SERIAL     DML_SERIAL     
@@ -57,32 +57,30 @@ typedef struct {
   size_t *sitelist;
 } QIO_Reader;
 
-QIO_Writer *QIO_open_write(XML_MetaData *xml_file, const char *filename, 
+QIO_Writer *QIO_open_write(XML_string *xml_file, const char *filename, 
 			   int volfmt, int siteorder, int mode,
 			   QIO_Layout *layout);
-QIO_Reader *QIO_open_read(XML_MetaData *xml_file, const char *filename, int volfmt,
+QIO_Reader *QIO_open_read(XML_string *xml_file, const char *filename, int volfmt,
 			  QIO_Layout *layout);
 
 int QIO_close_write(QIO_Writer *out);
 int QIO_close_read(QIO_Reader *in);
 
-int QIO_write(QIO_Writer *out, XML_MetaData *xml_record, 
+int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
 	      void (*get)(char *buf, const int coords[], void *arg),
 	      int datum_size, void *arg);
-int QIO_read(QIO_Reader *out, XML_MetaData *xml_record, 
+int QIO_read(QIO_Reader *out, XML_string *xml_record, XML_string *BinX,
 	     void (*put)(char *buf, const int coords[], void *arg),
 	     int datum_size, void *arg);
 
 /* Internal utilities  */
-int QIO_write_string(QIO_Writer *out_file_out, char *buf, size_t strlength);
-int QIO_write_XML(QIO_Writer *out_file_out, XML_MetaData *xml);
-int QIO_write_field(QIO_Writer *out, int volfmt, XML_MetaData *xml_record, 
+int QIO_write_string(QIO_Writer *out_file_out, XML_string *xml);
+int QIO_write_field(QIO_Writer *out, int volfmt, XML_string *xml_record, 
 		    void (*get)(char *buf, const int coords[], void *arg),
 		    size_t datum_size, void *arg, 
 		    DML_Checksum *checksum);
-size_t QIO_read_string(QIO_Reader *lrl_file_in, char *buf, size_t buf_size);
-size_t QIO_read_XML(QIO_Reader *in, XML_MetaData *xml);
-size_t QIO_read_field(QIO_Reader *in, int volfmt, XML_MetaData *xml_record, 
+size_t QIO_read_string(QIO_Reader *in, XML_string *xml);
+size_t QIO_read_field(QIO_Reader *in, int volfmt, XML_string *xml_record, 
 		   void (*put)(char *buf, const int coords[], void *arg),
 		   int datum_size, void *arg, 
 		   DML_Checksum *checksum);

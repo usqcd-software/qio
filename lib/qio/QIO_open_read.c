@@ -7,13 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-QIO_Reader *QIO_open_read(XML_MetaData *xml_file, const char *filename, int serpar,
+QIO_Reader *QIO_open_read(XML_string *xml_file, const char *filename, int serpar,
 			  QIO_Layout *layout){
 
   QIO_Reader *qio_in;
   LRL_FileReader *lrl_file_in;
-  LRL_RecordReader *lrl_record_in;
-  XML_MetaData *xml_file_private;
+  XML_string *xml_file_private;
   DML_Layout *dml_layout;
   int *latsize;
   int latdim = layout->latdim;
@@ -54,35 +53,45 @@ QIO_Reader *QIO_open_read(XML_MetaData *xml_file, const char *filename, int serp
     qio_in->lrl_file_in = lrl_file_in;
   }
 
-  /* Create private file XML and make space to hold input XML*/
-  xml_file_private = XML_create(MAX_XML);
+  /* Initialize private file XML - space will be allocated by read_string */
+  xml_file_private = XML_string_create(0);
   
+  printf("Reading xml_file_private\n");fflush(stdout);
+
   /* Master node reads the private file XML record */
   if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_XML(qio_in, xml_file_private)){
+    if(!QIO_read_string(qio_in, xml_file_private)){
       printf("QIO_open_read: error reading private file XML\n");
       return NULL;
     }
     printf("QIO_open_read: private file XML = %s\n",
-	   XML_string(xml_file_private));
+	   XML_string_ptr(xml_file_private));
   }
   
+  printf("Done xml_file_private\n");fflush(stdout);
+
   /* Here we should process the private XML data */
   /* We need the volume format for consistency checking */
   /*** OMITTED FOR NOW ***/
   qio_in->volfmt = QIO_SINGLEFILE;
   
   /* Then we free the storage */
-  XML_destroy(xml_file_private);
+  XML_string_destroy(xml_file_private);
   
+  printf("Reading xml_file\n");fflush(stdout);
+
   /* Master node reads the user file XML record */
+  /* Assumes xml_file created by caller */
   if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_XML(qio_in, xml_file)){
+    if(!QIO_read_string(qio_in, xml_file)){
       printf("QIO_open_read: error reading user file XML\n");
       return NULL;
     }
-    printf("QIO_open_read: file XML = %s\n",XML_string(xml_file));
+    printf("QIO_open_read: file XML = %s\n",XML_string_ptr(xml_file));
   }
+
+  printf("Done xml_file\n");fflush(stdout);
+
   return qio_in;
 }
 

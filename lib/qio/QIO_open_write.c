@@ -10,13 +10,13 @@
 /* Dummy for now */
 char file_private_output[] = "XML with QIO version no and lattice size";
 
-QIO_Writer *QIO_open_write(XML_MetaData *xml_file, const char *filename, 
+QIO_Writer *QIO_open_write(XML_string *xml_file, const char *filename, 
 			   int serpar, int siteorder, int mode,
 			   QIO_Layout *layout)
 {
   QIO_Writer *qio_out;
   LRL_FileWriter *lrl_file_out;
-  XML_MetaData *xml_file_private;
+  XML_string *xml_file_private;
   DML_Layout *dml_layout;
   int *latsize;
   int latdim = layout->latdim;
@@ -58,30 +58,30 @@ QIO_Writer *QIO_open_write(XML_MetaData *xml_file, const char *filename,
   /* Create private file XML */
   /* This is a dummy for now, but we need to write at least
      QIO version number, lattice dimensions, and the volume format */
-  xml_file_private = XML_create(MAX_XML);
-  XML_set(xml_file_private, file_private_output);
+  xml_file_private = XML_string_create(QIO_MAX_STRING_LEN);
+  XML_string_set(xml_file_private, file_private_output);
   
   /* Master node writes the private file XML record */
   if(this_node == QIO_MASTER_NODE){
-    if(QIO_write_XML(qio_out,xml_file_private)){
+    if(QIO_write_string(qio_out,xml_file_private)){
       printf("QIO_open_write: error writing private file XML\n");
       return NULL;
     }
     printf("QIO_open_write: private file XML = %s\n",
-	   XML_string(xml_file_private));
+	   XML_string_ptr(xml_file_private));
   }
 
   /* Free storage */
-  XML_destroy(xml_file_private);
+  XML_string_destroy(xml_file_private);
 
   /* Master node writes the user file XML record */
   if(this_node == QIO_MASTER_NODE){
-    if(QIO_write_XML(qio_out,xml_file)){
+    if(QIO_write_string(qio_out,xml_file)){
       printf("QIO_open_write: error writing user file XML\n");
       return NULL;
     }
     printf("QIO_open_write: user file XML  = %s\n",
-	   XML_string(xml_file));
+	   XML_string_ptr(xml_file));
   }
 
   return qio_out;

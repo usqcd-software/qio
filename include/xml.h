@@ -1,10 +1,9 @@
-/* Dummy XML header for qio-toy */
+/* String support for XML */
 
 #ifndef XML_H
 #define XML_H
 
 #include <stdio.h>
-#define MAX_XML 256
 
 #ifdef __cplusplus
 extern "C"
@@ -14,13 +13,14 @@ extern "C"
 typedef struct {
   char *string;
   size_t length;
-} XML_MetaData;
+} XML_string;
 
-XML_MetaData *XML_create(int length);
-void XML_set(XML_MetaData *xml, const char *string);
-size_t XML_bytes(XML_MetaData *xml);
-char * XML_string(XML_MetaData *xml);
-void XML_destroy(XML_MetaData *xml);
+XML_string *XML_string_create(int length);
+XML_string *XML_string_realloc(XML_string *xml, int length);
+void XML_string_set(XML_string *xml, const char *string);
+size_t XML_string_bytes(XML_string *xml);
+char * XML_string_ptr(XML_string *xml);
+void XML_string_destroy(XML_string *xml);
 
 #ifdef __cplusplus
 }
