@@ -1915,8 +1915,7 @@ else
   ;;
   *)
   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-as_dummy="${QMP_HOME}/bin:${PATH}"
-for as_dir in $as_dummy
+for as_dir in ${QMP_HOME}/bin ${PATH}
 do
   IFS=$as_save_IFS
   test -z "$as_dir" && as_dir=.

@@ -99,7 +99,7 @@ case ${LOCAL_PARALLEL_ARCH} in
     if test "X${QMP_HOME}X" = "XX" ; then
       AC_PATH_PROG([QMP_CONFIG], [qmp-config], [])
     else
-      AC_PATH_PROG([QMP_CONFIG], [qmp-config], [], [${QMP_HOME}/bin:${PATH}])
+      AC_PATH_PROG([QMP_CONFIG], [qmp-config], [], [${QMP_HOME}/bin ${PATH}])
     fi
 
     if test "X${QMP_CONFIG}X" != "XX" ; then
