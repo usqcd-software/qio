@@ -17,7 +17,7 @@ typedef struct {
 } XML_MetaData;
 
 XML_MetaData *XML_create(int length);
-void XML_set(XML_MetaData *xml, char *string);
+void XML_set(XML_MetaData *xml, const char *string);
 size_t XML_bytes(XML_MetaData *xml);
 char * XML_string(XML_MetaData *xml);
 void XML_destroy(XML_MetaData *xml);

@@ -33,7 +33,7 @@ XML_MetaData *XML_create(int length){
 /* dummy for inserting values into an XML structure */
 /* Just point to the given string for now and hope it is invariant */
 
-void XML_set(XML_MetaData *xml, char *string){
+void XML_set(XML_MetaData *xml, const char *string){
   strncpy(xml->string, string, xml->length);
 }
 
