@@ -1,3 +1,8 @@
+05/11/2004 -- Robert Edwards
+
+	Version 0.9.5. Last minor changes. Will split off c-lime to
+        its own module.
+
 03/19/2004 -- Robert Edwards
 
 	Version 0.9.4. Added back in tests for QMP_route to supplant
