@@ -8,6 +8,7 @@ VPATH += @top_srcdir@/lib/qio
 VPATH += @top_srcdir@/lib/dml
 VPATH += @top_srcdir@/lib/lrl
 VPATH += @top_srcdir@/lib/xml
+VPATH += @top_srcdir@/lib/lrl/c-dime/include
 
 HDRS = qio.h dml.h lrl.h xml.h
 
