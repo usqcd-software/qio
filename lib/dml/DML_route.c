@@ -6,6 +6,8 @@
 #include <stdarg.h>
 #include <string.h>
 
+#ifndef HAVE_QMP_ROUTE
+
 /* Private implementation of route method */
 QMP_status_t DML_grid_route(void* buffer, QMP_u32_t count,
 			    QMP_u32_t src, QMP_u32_t dest)
@@ -235,3 +237,16 @@ QMP_status_t DML_grid_route(void* buffer, QMP_u32_t count,
 
   return(QMP_SUCCESS);
 }
+
+#else
+
+/* #warning "Using native QMP_route since it is available" */
+
+/* Use native version of QMP_route since it is available */
+QMP_status_t DML_grid_route(void* buffer, QMP_u32_t count,
+			    QMP_u32_t src, QMP_u32_t dest)
+{
+  return QMP_route(buffer, count, src, dest);
+}
+
+#endif
