@@ -6,7 +6,7 @@
 #include <xml.h>
 #include <stdio.h>
 
-QIO_Reader *QIO_open_read(XML_MetaData *xml_file, char *filename, int serpar,
+QIO_Reader *QIO_open_read(XML_MetaData *xml_file, const char *filename, int serpar,
 			  QIO_Layout *layout){
 
   QIO_Reader *qio_in;

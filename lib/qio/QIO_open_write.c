@@ -9,7 +9,7 @@
 /* Dummy for now */
 char file_private_output[] = "XML with QIO version no and lattice size";
 
-QIO_Writer *QIO_open_write(XML_MetaData *xml_file, char *filename, 
+QIO_Writer *QIO_open_write(XML_MetaData *xml_file, const char *filename, 
 			   int serpar, int siteorder, int mode,
 			   QIO_Layout *layout){
   QIO_Writer *qio_out;
