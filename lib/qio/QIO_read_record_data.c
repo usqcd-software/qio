@@ -93,6 +93,9 @@ int QIO_generic_read_record_data(QIO_Reader *in,
     printf("%s(%d): done reading field\n",myname,this_node);fflush(stdout);
   }
 
+  /* Copy most recent node checksum into reader */
+  in->last_checksum = *checksum;
+
   if(this_node == in->layout->master_io_node){
     if(QIO_verbosity() >= QIO_VERB_REG){
       printf("%s(%d): Read field. datatype %s globaltype %d \n                         precision %s colors %d spins %d count %d\n",
@@ -211,6 +214,9 @@ int QIO_read_record_data(QIO_Reader *in,
   
   /* Combine checksums over all nodes */
   DML_checksum_combine(&checksum);
+
+  /* Copy most recent combined checksum into reader */
+  in->last_checksum = checksum;
 
   checksum_info_expect = QIO_read_checksum(in);
   if(this_node == in->layout->master_io_node)

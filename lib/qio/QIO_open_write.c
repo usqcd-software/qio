@@ -12,6 +12,15 @@
 #endif
 
 
+/* Accessors for writer information */
+uint32_t QIO_get_writer_last_checksuma(QIO_Writer *out){
+  return out->last_checksum.suma;
+}
+
+uint32_t QIO_get_writer_last_checksumb(QIO_Writer *out){
+  return out->last_checksum.sumb;
+}
+
 /* Opens a file for writing, whether in MPP mode or on host */
 /* Writes the private file XML record */
 /* Writes the site list if multifile format */
@@ -70,6 +79,7 @@ QIO_Writer *QIO_generic_open_write(QIO_String *xml_file, const char *filename,
   qio_out->lrl_file_out = NULL;
   qio_out->volfmt       = volfmt;
   qio_out->layout       = dml_layout;
+  DML_checksum_init(&(qio_out->last_checksum));
   
   /*****************************/
   /* Open the file for writing */

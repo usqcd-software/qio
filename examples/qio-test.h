@@ -22,17 +22,32 @@ void get_coords(int x[], int node, int index);
 EXTERN int sites_on_node;
 EXTERN int this_node;
 
+#define NCLR 3
+
+typedef struct
+{
+  float re;
+  float im;
+} complex;
+
+typedef struct { complex e[NCLR][NCLR]; } suN_matrix;
+
 /* get and put */
 void vput_R(char *buf, size_t index, int count, void *qfin);
 void vget_R(char *buf, size_t index, int count, void *qfin);
+void vput_M(char *buf, size_t index, int count, void *qfin);
+void vget_M(char *buf, size_t index, int count, void *qfin);
 void vput_r(char *buf, size_t index, int count, void *qfin);
 void vget_r(char *buf, size_t index, int count, void *qfin);
 
 int vcreate_R(float *field_out[],int count);
+int vcreate_M(suN_matrix *field[] , int count);
 void vdestroy_R(float *field[], int count);
+void vdestroy_M(suN_matrix *field[], int count);
 void vset_R(float *field[],int count);
-float vcompare_R(float *fielda[], float *fieldb[],
-                 int sites_on_node, int count);
+void vset_M(suN_matrix *field[], int count);
+float vcompare_R(float *fielda[], float *fieldb[], int count);
+float vcompare_M(suN_matrix *fielda[], suN_matrix *fieldb[], int count);
 float vcompare_r(float arraya[], float arrayb[], int count);
 
 int qio_test(int volfmt, int argc, char *argv[]);

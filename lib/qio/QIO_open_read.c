@@ -62,6 +62,7 @@ QIO_Reader *QIO_create_reader(const char *filename,
   qio_in->layout      = dml_layout;
   qio_in->read_state  = QIO_RECORD_INFO_PRIVATE_NEXT;
   qio_in->volfmt      = 0;
+  DML_checksum_init(&(qio_in->last_checksum));
 
   /* First, only the global master node opens the file, regardless of
      whether it will be read by all nodes */
@@ -138,7 +139,7 @@ QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in,
 }
 
 /***********************************/
-/* Accessor for lattice dimensions */
+/* Accessor for header information */
 /***********************************/
 int QIO_get_reader_latdim(QIO_Reader *in){
   return in->layout->latdim;
@@ -148,6 +149,13 @@ int *QIO_get_reader_latsize(QIO_Reader *in){
   return in->layout->latsize;
 }
 
+uint32_t QIO_get_reader_last_checksuma(QIO_Reader *in){
+  return in->last_checksum.suma;
+}
+
+uint32_t QIO_get_reader_last_checksumb(QIO_Reader *in){
+  return in->last_checksum.sumb;
+}
 
 /*****************************************/
 /* In case we are in discovery mode,
@@ -344,8 +352,9 @@ int QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename){
     {
       /* One file for all nodes */
       if(this_node == dml_layout->master_io_node){
-	printf("%s(%d): opened %s for reading in singlefile mode\n",
-	       myname,this_node,filename);fflush(stdout);
+	if(QIO_verbosity() >= QIO_VERB_LOW)
+	  printf("%s(%d): opened %s for reading in singlefile mode\n",
+		 myname,this_node,filename);fflush(stdout);
       }
     }
   else if(qio_in->volfmt == QIO_PARTFILE)

@@ -70,6 +70,7 @@ typedef struct {
   int serpar;
   DML_Layout *layout;
   DML_SiteList *sites;
+  DML_Checksum last_checksum;
 } QIO_Writer;
 
 #define QIO_RECORD_INFO_PRIVATE_NEXT 0
@@ -86,6 +87,7 @@ typedef struct {
   int read_state;
   QIO_String *xml_record;
   QIO_RecordInfo record_info;
+  DML_Checksum last_checksum;
 } QIO_Reader;
 
 typedef int QIO_ioflag;
@@ -138,6 +140,11 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
 			   QIO_Layout *layout, QIO_ioflag iflag);
 int QIO_get_reader_latdim(QIO_Reader *in);
 int *QIO_get_reader_latsize(QIO_Reader *in);
+uint32_t QIO_get_reader_last_checksuma(QIO_Reader *in);
+uint32_t QIO_get_reader_last_checksumb(QIO_Reader *in);
+
+uint32_t QIO_get_writer_last_checksuma(QIO_Writer *out);
+uint32_t QIO_get_writer_last_checksumb(QIO_Writer *out);
 
 int QIO_close_write(QIO_Writer *out);
 int QIO_close_read(QIO_Reader *in);

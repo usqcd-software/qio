@@ -14,6 +14,7 @@
 
 #define NREAL 2
 #define NARRAY 3
+#define NMATRIX 4 
 
 /* Open a QIO file for writing */
 
@@ -22,7 +23,7 @@ QIO_Writer *open_test_output(char *filename, int volfmt, char *myname){
   char xml_write_file[] = "Dummy user file XML";
   QIO_Writer *outfile;
 
-  /** QIO_verbose(QIO_VERB_DEBUG); **/
+  QIO_verbose(QIO_VERB_DEBUG);
 
   /* Create the file XML */
   xml_file_out = QIO_string_create();
@@ -41,7 +42,7 @@ QIO_Writer *open_test_output(char *filename, int volfmt, char *myname){
 int write_real_field(QIO_Writer *outfile, int count, 
 		     float *field_out[], char *myname){
   QIO_String *xml_record_out;
-  char xml_write_field[] = "Dummy user record XML for field";
+  char xml_write_field[] = "Dummy user record XML for real field";
   int status;
   QIO_RecordInfo *rec_info;
 
@@ -55,6 +56,32 @@ int write_real_field(QIO_Writer *outfile, int count,
   /* Write the record for the field */
   status = QIO_write(outfile, rec_info, xml_record_out, vget_R, 
 		     count*sizeof(float), sizeof(float), field_out);
+  printf("%s(%d): QIO_write returns status %d\n",myname,this_node,status);
+  if(status != QIO_SUCCESS)return 1;
+
+  QIO_destroy_record_info(rec_info);
+  QIO_string_destroy(xml_record_out);
+
+  return 0;
+}
+
+int write_su3_field(QIO_Writer *outfile, int count, 
+		     suN_matrix *field_out[], char *myname){
+  QIO_String *xml_record_out;
+  char xml_write_field[] = "Dummy user record XML for su3 field";
+  int status;
+  QIO_RecordInfo *rec_info;
+
+  /* Create the record info for the field */
+  rec_info = QIO_create_record_info(QIO_FIELD, "QDP_F_ColorMatrix", "F", 3,
+				    0, sizeof(suN_matrix), count);
+  /* Create the record XML for the field */
+  xml_record_out = QIO_string_create();
+  QIO_string_set(xml_record_out,xml_write_field);
+
+  /* Write the record for the field */
+  status = QIO_write(outfile, rec_info, xml_record_out, vget_M, 
+		     count*sizeof(suN_matrix), sizeof(float), field_out);
   printf("%s(%d): QIO_write returns status %d\n",myname,this_node,status);
   if(status != QIO_SUCCESS)return 1;
 
@@ -143,6 +170,22 @@ int read_real_field(QIO_Reader *infile, int count,
   if(status != QIO_SUCCESS)return 1;
   return 0;
 }
+ 
+int read_su3_field(QIO_Reader *infile, int count, 
+		    suN_matrix *field_in[], char *myname)
+{
+  QIO_String *xml_record_in;
+  QIO_RecordInfo rec_info;
+  int status;
+  
+  /* Read the field record */
+  status = QIO_read(infile, &rec_info, xml_record_in, 
+		    vput_M, sizeof(suN_matrix)*count, sizeof(float), field_in);
+  printf("%s(%d): QIO_read_record_data returns status %d\n",
+	 myname,this_node,status);
+  if(status != QIO_SUCCESS)return 1;
+  return 0;
+}
 
 int read_real_global(QIO_Reader *infile, int count, 
 		    float array_in[], char *myname)
@@ -172,13 +215,14 @@ int qio_test(int volfmt, int argc, char *argv[]){
 
   float array_in[NARRAY], array_out[NARRAY];
   float *field_in[NREAL], *field_out[NREAL];
+  suN_matrix *field_su3_out[NMATRIX], *field_su3_in[NMATRIX];
   QIO_Writer *outfile;
   QIO_Reader *infile;
   float diff_field, diff_array;
   QMP_thread_level_t provided;
   int status;
   int i,volume;
-  char filename[] = "binary_real";
+  char filename[] = "binary_test";
   char myname[] = "qio_test";
   
   /* Start message passing */
@@ -224,8 +268,7 @@ int qio_test(int volfmt, int argc, char *argv[]){
   if(status)return status;
 
   /* Set some values for the field */
-  vset_R(field_out,NREAL);
-  if(status)return status;
+  vset_R(field_out, NREAL);
 
   /* Write the real test field */
   status = write_real_field(outfile, NREAL, field_out, myname);
@@ -239,12 +282,27 @@ int qio_test(int volfmt, int argc, char *argv[]){
   status = write_real_global(outfile, NARRAY, array_out, myname);
   if(status)return status;
 
+  /* Create the test output su3 field */
+  status = vcreate_M(field_su3_out, NMATRIX);
+  if(status)return status;
+
+  /* Set some values for the su3 field */
+  vset_M(field_su3_out, NMATRIX);
+
+  /* Write the su3 test field */
+  status = write_su3_field(outfile, NMATRIX, field_su3_out, myname);
+  if(status)return status;
+
   /* Close the file */
   QIO_close_write(outfile);
   printf("%s(%d): Closed file for writing\n",myname,this_node);
 
   /* Set up a dummy input field */
   status = vcreate_R(field_in, NREAL);
+  if(status)return status;
+
+  /* Set up a dummy input SU(N) field */
+  status = vcreate_M(field_su3_in, NMATRIX);
   if(status)return status;
 
   /* Open the test file for reading */
@@ -272,27 +330,40 @@ int qio_test(int volfmt, int argc, char *argv[]){
   status = read_real_global(infile, NARRAY, array_in, myname);
   if(status)return status;
 
+  /* Read the su3 field record */
+  status = read_su3_field(infile, NMATRIX, field_su3_in, myname);
+  if(status)return status;
+
   /* Close the file */
   QIO_close_read(infile);
   printf("%s(%d): Closed file for reading\n",myname,this_node);
 
   /* Compare the input and output fields */
-  diff_field = vcompare_R(field_out, field_in, sites_on_node, NREAL);
+  diff_field = vcompare_R(field_out, field_in, NREAL);
   if(this_node == 0){
-    printf("%s(%d): Comparison of in and out fields |in - out|^2 = %e\n",
+    printf("%s(%d): Comparison of in and out real fields |in - out|^2 = %e\n",
 	   myname,this_node,diff_field);
   }
 
   /* Compare the input and output global arrays */
   diff_array = vcompare_r(array_out, array_in, NREAL);
   if(this_node == 0){
-    printf("%s(%d): Comparison of in and out arrays |in - out|^2 = %e\n",
+    printf("%s(%d): Comparison of in and out real global arrays |in - out|^2 = %e\n",
 	   myname, this_node, diff_array);
+  }
+
+  /* Compare the input and output suN fields */
+  diff_field = vcompare_M(field_su3_out, field_su3_in, NMATRIX);
+  if(this_node == 0){
+    printf("%s(%d): Comparison of in and out suN fields |in - out|^2 = %e\n",
+	   myname, this_node, diff_field);
   }
 
   /* Clean up */
   vdestroy_R(field_out, NREAL);
   vdestroy_R(field_in, NREAL);
+  vdestroy_M(field_su3_in, NMATRIX);
+  vdestroy_M(field_su3_out, NMATRIX);
 
   /* Shut down QMP */
   QMP_finalize_msg_passing();

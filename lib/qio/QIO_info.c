@@ -941,6 +941,10 @@ char *QIO_get_precision(QIO_RecordInfo *record_info){
   return record_info->precision.value;
 }
 
+char *QIO_get_record_date(QIO_RecordInfo *record_info){
+  return record_info->date.value;
+}
+
 int QIO_get_colors(QIO_RecordInfo *record_info){
   return record_info->colors.value;
 }

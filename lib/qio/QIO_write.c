@@ -113,6 +113,9 @@ int QIO_generic_write(QIO_Writer *out, QIO_RecordInfo *record_info,
     printf("%s(%d): wrote field\n",myname,this_node);fflush(stdout);
   }
 
+  /* Copy most recent node checksum into writer */
+  out->last_checksum = *checksum;
+
   return QIO_SUCCESS;
 }
 
@@ -145,6 +148,9 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 
   /* Combine checksums over all nodes */
   DML_checksum_combine(&checksum);
+
+  /* Copy most recent combined checksum into writer */
+  out->last_checksum = checksum;
 
   /* Sum the bytes written by all nodes */
   DML_sum_uint64_t(&nbytes);
@@ -185,11 +191,11 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 	     QIO_get_colors(record_info),
 	     QIO_get_spins(record_info),
 	     QIO_get_datacount(record_info));
-      
+
       printf("%s(%d): checksum string = %s\n",
 	     myname,this_node,QIO_string_ptr(xml_checksum));
     }
-    
+      
     QIO_string_destroy(xml_checksum);
   }
 
