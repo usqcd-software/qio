@@ -33,13 +33,14 @@ XML_string *XML_string_create(int length)
 XML_string* XML_string_realloc(XML_string *xml, int length)
 {
   int i;
+  char *tmp;
 
   if(xml == NULL) 
     return NULL;
   if(length == 0) 
     return xml;
   
-  char *tmp = (char *)malloc(length);
+  tmp = (char *)malloc(length);
   if(tmp == NULL)
     return NULL;
 
