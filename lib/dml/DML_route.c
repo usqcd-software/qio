@@ -1,5 +1,5 @@
 #include "qmp.h"
-#include "config.h"
+#include "qio_config.h"
 
 #include <stdlib.h>
 #include <stdio.h>
