@@ -7,7 +7,7 @@
 #include <qio.h>
 #include <qioxml.h>
 #include <qio_string.h>
-#include <inttypes.h>
+#include <qio_stdint.h>
 #include <sys/types.h>
 #include <time.h>
 #ifdef HAVE_STDLIB_H

@@ -1,9 +1,9 @@
-/* $Id: DML_scalar.c,v 1.8 2004-09-03 05:30:22 edwards Exp $ */
+/* $Id: DML_scalar.c,v 1.9 2004-11-30 19:52:04 osborn Exp $ */
 /* Scalar versions of QMP-dependent utilities for DML */
 
 #include <lrl.h>
 #include <dml.h>
-#include <inttypes.h>
+#include <qio_stdint.h>
 
 /* Sum a uint64_t over all nodes (for 64 bit byte counts) */
 void DML_peq_uint64_t(uint64_t *subtotal, uint64_t *addend)

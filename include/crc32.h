@@ -23,7 +23,7 @@
 #ifndef CRC32_H
 #define CRC32_H
 
-#include <inttypes.h>
+#include <qio_stdint.h>
 
 typedef uint32_t uLong;            /* At least 32 bits */
 

@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 1.1.beta4, detar@physics.utah.edu)
+AC_INIT(qio, 1.1.0, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])

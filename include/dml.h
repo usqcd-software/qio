@@ -2,7 +2,7 @@
 #define DML_H
 
 #include <lrl.h>
-#include <inttypes.h>
+#include <qio_stdint.h>
 #include <stdlib.h>
 
 /* File fragmentation */

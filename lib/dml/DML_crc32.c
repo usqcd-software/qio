@@ -38,7 +38,7 @@
   (zlib format), rfc1951.txt (deflate format) and rfc1952.txt (gzip format).
 */
 
-#include <inttypes.h>
+#include <qio_stdint.h>
 #include <stdlib.h>
 typedef uint32_t uLong;            /* At least 32 bits */
 typedef unsigned char Byte;

@@ -4,7 +4,7 @@
 #include <lrl.h>
 #include <qmp.h>
 #include <dml.h>
-#include <inttypes.h>
+#include <qio_stdint.h>
 
 /* Sum a uint64_t over all nodes (for 64 bit byte counts) */
 

@@ -13,7 +13,7 @@
 #define QIO_XMLINFO "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 
 #include <qio_string.h>
-#include <inttypes.h>
+#include <qio_stdint.h>
 
 #ifdef __cplusplus
 extern "C"

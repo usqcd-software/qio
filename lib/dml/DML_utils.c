@@ -13,7 +13,7 @@
 #endif
 #include <assert.h>
 #include <sys/types.h>
-#include <inttypes.h>
+#include <qio_stdint.h>
 
 #undef DML_DEBUG
 
