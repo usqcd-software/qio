@@ -4615,7 +4615,7 @@ subdirs="$subdirs other_libs/c-lime"
 
 
 # Configure makefiles
-                                                            ac_config_files="$ac_config_files Makefile examples/Makefile include/Makefile lib/Makefile other_libs/Makefile other_libs/c-lime/Makefile"
+                                                  ac_config_files="$ac_config_files Makefile examples/Makefile include/Makefile lib/Makefile other_libs/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -5191,7 +5191,6 @@ do
   "include/Makefile" ) CONFIG_FILES="$CONFIG_FILES include/Makefile" ;;
   "lib/Makefile" ) CONFIG_FILES="$CONFIG_FILES lib/Makefile" ;;
   "other_libs/Makefile" ) CONFIG_FILES="$CONFIG_FILES other_libs/Makefile" ;;
-  "other_libs/c-lime/Makefile" ) CONFIG_FILES="$CONFIG_FILES other_libs/c-lime/Makefile" ;;
   "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
   "include/qio_config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS include/qio_config.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
