@@ -1,3 +1,8 @@
+10/29/2004 -- Robert Edwards
+
+	Version 1.0.beta5. Turned back on DML_route_bytes. This allows
+        optimized QMP calls on gigE boxes.
+
 10/18/2004 -- Robert Edwards
 
 	Version 1.0.beta4. Improvements on autoconf-isms.
