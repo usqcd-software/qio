@@ -2,12 +2,14 @@
 #define QIOXML_H
 
 #define QIO_MAXTAG 64
-#define QIO_MAXVALUESTRING 128
+#define QIO_MAXVALUESTRING 512
 #define QIO_MAXINTARRAY 8
-#define QIO_STRINGALLOC 256
+#define QIO_STRINGALLOC 1024
 #define QIO_FILEFORMATVERSION "1.0"
 #define QIO_RECORDFORMATVERSION "1.0"
 #define QIO_CHECKSUMFORMATVERSION "1.0"
+#define QIO_QUESTXML "?xml"
+#define QIO_XMLINFO "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 
 #include <xml_string.h>
 #include <type32.h>
@@ -43,6 +45,25 @@ typedef struct {
   int  n;
   short occur;
 } QIO_TagIntArrayValue;
+
+
+/*******************************************************************/
+/* Top level wrapper for private record XML
+
+   tag           member           description          
+   ------------------------------------------------------------
+   scidacRecord  recordinfo_tags  string of private record tags (see below)
+
+*/
+
+typedef struct {
+  QIO_TagCharValue     recordinfo_tags;
+} QIO_RecordInfoWrapper;
+
+#define QIO_RECORD_INFO_WRAPPER {\
+  {"scidacRecord",  0 , 0}       \
+}
+
 
 /*******************************************************************/
 /* Contents of private record XML
@@ -83,6 +104,24 @@ typedef struct {
 }
 
 /*******************************************************************/
+/* Top level wrapper for private file XML
+
+   tag           member           description          
+   ------------------------------------------------------------
+   scidacFile  fileinfo_tags  string of private file tags (see below)
+
+*/
+
+typedef struct {
+  QIO_TagCharValue     fileinfo_tags;
+} QIO_FileInfoWrapper;
+
+#define QIO_FILE_INFO_WRAPPER {\
+  {"scidacFile",  0 , 0}       \
+}
+
+
+/*******************************************************************/
 /* Contents of private file XML
 
    tag        member       description                  e.g. gauge config
@@ -107,13 +146,31 @@ typedef struct {
   {"multifile",  0 , 0}       \
 }
 
+
+/*******************************************************************/
+/* Top level wrapper for private checksum XML
+
+   tag           member           description          
+   ------------------------------------------------------------
+   scidacChecksum  checksuminfo_tags  string of checksum tags (see below)
+
+*/
+
+typedef struct {
+  QIO_TagCharValue     checksuminfo_tags;
+} QIO_ChecksumInfoWrapper;
+
+#define QIO_CHECKSUM_INFO_WRAPPER {\
+  {"scidacChecksum",  0 , 0}       \
+}
+
+
 /*******************************************************************/
 /* Contents of record checksum XML
-   NEEDS MORE THOUGHT
 
-   tag        member       description                  e.g. gauge config
+   tag        member       description
    ------------------------------------------------------------
-   version    version      file format version number      1.0
+   version    version      checksum version number      1.0
    suma       suma         
    sumb       sumb         
 */
@@ -145,9 +202,14 @@ int QIO_decode_checksum_info(QIO_ChecksumInfo *checksum,
 void QIO_encode_checksum_info(XML_String *file_string, 
 			      QIO_ChecksumInfo *checksum);
 
+int QIO_insert_file_tag_string(QIO_FileInfoWrapper *wrapper, 
+			       char *fileinfo_tags);
 int QIO_insert_spacetime_dims(QIO_FileInfo *file_info, 
 			      int spacetime, int *dims);
 int QIO_insert_multifile(QIO_FileInfo *file_info, int multifile);
+
+int QIO_insert_record_tag_string(QIO_RecordInfoWrapper *wrapper, 
+				 char *recordinfo_tags);
 int QIO_insert_record_date(QIO_RecordInfo *record_info, char* date);
 int QIO_insert_datatype(QIO_RecordInfo *record_info, char* datatype);
 int QIO_insert_precision(QIO_RecordInfo *record_info, char* precision);
@@ -156,9 +218,12 @@ int QIO_insert_spins(QIO_RecordInfo *record_info, int spins);
 int QIO_insert_typesize(QIO_RecordInfo *record_info, int typesize);
 int QIO_insert_datacount(QIO_RecordInfo *record_info, int datacount);
 
+int QIO_insert_checksum_tag_string(QIO_ChecksumInfoWrapper *wrapper, 
+				   char *checksuminfo_tags);
 int QIO_insert_suma_sumb(QIO_ChecksumInfo *checksum_info, 
 			 u_int32 suma, u_int32 sumb);
 
+char *QIO_get_file_info_tag_string(QIO_FileInfoWrapper *wrapper);
 char *QIO_get_file_version(QIO_FileInfo *file_info);
 int QIO_get_spacetime(QIO_FileInfo *file_info);
 int *QIO_get_dims(QIO_FileInfo *file_info);
@@ -167,6 +232,7 @@ int QIO_defined_spacetime(QIO_FileInfo *file_info);
 int QIO_defined_dims(QIO_FileInfo *file_info);
 int QIO_defined_multifile(QIO_FileInfo *file_info);
 
+char *QIO_get_record_info_tag_string(QIO_RecordInfoWrapper *wrapper);
 char *QIO_get_record_date(QIO_RecordInfo *record_info);
 char *QIO_get_datatype(QIO_RecordInfo *record_info);
 char *QIO_get_precision(QIO_RecordInfo *record_info);
@@ -175,6 +241,7 @@ int QIO_get_spins(QIO_RecordInfo *record_info);
 int QIO_get_typesize(QIO_RecordInfo *record_info);
 int QIO_get_datacount(QIO_RecordInfo *record_info);
 
+char *QIO_get_checksum_info_tag_string(QIO_ChecksumInfoWrapper *wrapper);
 u_int32 QIO_get_suma(QIO_ChecksumInfo *checksum_info);
 u_int32 QIO_get_sumb(QIO_ChecksumInfo *checksum_info);
 int QIO_defined_suma(QIO_ChecksumInfo *checksum_info);

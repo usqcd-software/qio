@@ -33,6 +33,7 @@ int QIO_read(QIO_Reader *in, QIO_RecordInfo *record_info,
 #ifdef DEBUG
   printf("%s(%d): QIO_read_record_info returned %d\n",
 	 myname,this_node,status);
+  fflush(stdout);
 #endif
   if(status)return 1;
 

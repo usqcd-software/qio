@@ -50,7 +50,7 @@ char *QIO_strncat(char *s1, char *s2, int *n){
   return c;
 }
 
-/* Find the next tag */
+/* Find the next <tag> or </tag> */
 /* On return left_angle points to open "<" and return value
    to end ">" or to end of string, whichever comes first */
 char *QIO_next_tag(char *parse_pt, char *tag, char **left_angle){
@@ -106,6 +106,10 @@ char *QIO_next_tag(char *parse_pt, char *tag, char **left_angle){
 
   return parse_pt;
 }
+
+/* Starting from parse_pt, scan for next <tag> and then find matching
+   end </tag>.  Copy the enclosed string to value_string with null
+   termination. */
 
 char *QIO_get_tag_value(char *parse_pt, char *tag, char *value_string){
   char tmptag[QIO_MAXTAG];
@@ -166,6 +170,8 @@ char *QIO_get_tag_value(char *parse_pt, char *tag, char *value_string){
   return parse_pt;
 }
 
+/* If tag matches, set value to the string */
+
 void QIO_decode_as_string(char *tag, char *value_string, 
 			    QIO_TagCharValue *tag_value){
   int n = strlen(value_string);
@@ -175,11 +181,13 @@ void QIO_decode_as_string(char *tag, char *value_string,
       n = QIO_MAXVALUESTRING - 1;
       printf("QIO_decode_as_string: string truncated");
     }
-    strncpy(tag_value->value,value_string,QIO_MAXVALUESTRING);
-    tag_value->value[QIO_MAXVALUESTRING-1] = '\0';  /* null termination */
+    strncpy(tag_value->value,value_string,QIO_MAXVALUESTRING-1);
+    tag_value->value[QIO_MAXVALUESTRING-1] = '\0';
     tag_value->occur++;
   }
 }
+
+/* If tag matches, set value to int conversion of string */
 
 void QIO_decode_as_int(char *tag, char *value_string, 
 			 QIO_TagIntValue *tag_value){
@@ -189,12 +197,16 @@ void QIO_decode_as_int(char *tag, char *value_string,
   }
 }
 
+/* If tag matches, set value to hex32 conversion of string */
+
 void QIO_decode_as_hex32(char *tag, char *value_string, 
 			    QIO_TagHex32Value *tag_value){
   if(strcmp(tag,tag_value->tag)==0){
     if(sscanf(value_string,"%x",&tag_value->value)==1)tag_value->occur++;
   }
 }
+
+/* If tag matches, set array value to the list of integers */
 
 void QIO_decode_as_intlist(char *tag, char *value_string, 
 			     QIO_TagIntArrayValue *tag_value){
@@ -350,13 +362,36 @@ int QIO_check_hex32_occur(QIO_TagHex32Value *tag_value){
 int QIO_decode_record_info(QIO_RecordInfo *record_info, 
 			XML_String *record_string){
   char *parse_pt = XML_string_ptr(record_string);
+  char *tmp_pt;
   char tag[QIO_MAXTAG];
+  char tags_string[QIO_MAXVALUESTRING];
   char value_string[QIO_MAXVALUESTRING];
   int errors = 0;
+  QIO_RecordInfoWrapper wrapper = QIO_RECORD_INFO_WRAPPER;
   QIO_RecordInfo template = QIO_RECORD_INFO_TEMPLATE;
-  
-  /* Initialize from template */
+  char *left_angle;
+
+  /* Initialize record info structure from a template */
   *record_info = template;
+
+  /* Start parsing record_string */
+  /* Check leading tag, which is probably the info phrase "<?xml ...?>" */
+  /* We ignore it if it is there */
+  tmp_pt = QIO_next_tag(parse_pt, tag, &left_angle);
+  if(strcmp(tag,QIO_QUESTXML)==0){
+    /* Found ?xml, so resume parsing after the closing ">", ignoring
+       the field. Otherwise, leave the parse_pt at its initial value */
+    parse_pt = tmp_pt;
+  }
+
+  /* Open top-level tag (wrapper) and extract string containing tags */
+  parse_pt = QIO_get_tag_value(parse_pt, tag, tags_string);
+  QIO_decode_as_string (tag, tags_string, &wrapper.recordinfo_tags);
+
+  /* If outer wrapper has bad tag exit with error status */
+  if(QIO_check_string_occur(&wrapper.recordinfo_tags))return 1;
+  /* Otherwise start parsing the string of tags */
+  parse_pt = QIO_get_record_info_tag_string(&wrapper);
 
   /* Scan string until null character is reached */
   while(*parse_pt){
@@ -386,12 +421,15 @@ int QIO_decode_record_info(QIO_RecordInfo *record_info,
 void QIO_encode_record_info(XML_String *record_string, 
 			  QIO_RecordInfo *record_info){
   char *buf;
-  int remainder;
-  XML_string_realloc(record_string, QIO_STRINGALLOC);
-  buf  = XML_string_ptr(record_string);
-  remainder = XML_string_bytes(record_string);
-  
-  /* Initialize string: encoding is done by appending */
+  int remainder,n;
+  char recordinfo_tags[QIO_MAXVALUESTRING];
+  QIO_RecordInfoWrapper wrapper = QIO_RECORD_INFO_WRAPPER;
+
+  /* Start by creating string of inner tags */
+  buf = recordinfo_tags;
+  remainder = QIO_MAXVALUESTRING;
+
+  /* Build inner tag string by appending tags */
   *buf = '\0';
   buf = QIO_encode_as_string(buf,&record_info->version, &remainder);
   buf = QIO_encode_as_string(buf,&record_info->date, &remainder);
@@ -401,19 +439,64 @@ void QIO_encode_record_info(XML_String *record_string,
   buf = QIO_encode_as_int   (buf,&record_info->spins, &remainder);
   buf = QIO_encode_as_int   (buf,&record_info->typesize, &remainder);
   buf = QIO_encode_as_int   (buf,&record_info->datacount, &remainder);
+
+  /* Insert inner tag string into file wrapper structure */
+  QIO_insert_record_tag_string(&wrapper, recordinfo_tags);
+
+  /* Now build final XML string */
+  XML_string_realloc(record_string, QIO_STRINGALLOC);
+  buf  = XML_string_ptr(record_string);
+  remainder = XML_string_bytes(record_string);
+  
+  /* Begin with xml info stuff */
+  strncpy(buf,QIO_XMLINFO,remainder);
+  buf[remainder-1] = '\0';
+  n = strlen(buf);
+  remainder -= n;
+  buf += n;
+  if(remainder < 0){
+    printf("QIO_encode_record_info: record_string overflow\n");
+  }
+  else{
+    /* Conclude by appending the wrapped tag string */
+    buf = QIO_encode_as_string (buf,&wrapper.recordinfo_tags, &remainder);
+  }
 }
 
 
 int QIO_decode_file_info(QIO_FileInfo *file_info, 
 			  XML_String *file_string){
   char *parse_pt = XML_string_ptr(file_string);
+  char *tmp_pt;
   char tag[QIO_MAXTAG];
+  char tags_string[QIO_MAXVALUESTRING];
   char value_string[QIO_MAXVALUESTRING];
   int errors = 0;
+  QIO_FileInfoWrapper wrapper = QIO_FILE_INFO_WRAPPER;
   QIO_FileInfo template = QIO_FILE_INFO_TEMPLATE;
+  char *left_angle;
   
-  /* Initialize from template */
+  /* Initialize file info structure from a template */
   *file_info = template;
+
+  /* Start parsing file_string */
+  /* Check leading tag, which is probably the info phrase "<?xml ...?>" */
+  /* We ignore it if it is there */
+  tmp_pt = QIO_next_tag(parse_pt, tag, &left_angle);
+  if(strcmp(tag,QIO_QUESTXML)==0){
+    /* Found ?xml, so resume parsing after the closing ">", ignoring
+       the field. Otherwise, leave the parse_pt at its initial value. */
+    parse_pt = tmp_pt;
+  }
+
+  /* Open top-level tag (wrapper) and extract string containing tags */
+  parse_pt = QIO_get_tag_value(parse_pt, tag, tags_string);
+  QIO_decode_as_string (tag, tags_string, &wrapper.fileinfo_tags);
+
+  /* If outer wrapper has bad tag exit with error status */
+  if(QIO_check_string_occur(&wrapper.fileinfo_tags))return 1;
+  /* Otherwise start parsing the enclosed string of tags */
+  parse_pt = QIO_get_file_info_tag_string(&wrapper);
 
   /* Scan string until null character is reached */
   while(*parse_pt){
@@ -442,33 +525,80 @@ int QIO_decode_file_info(QIO_FileInfo *file_info,
 }
 
 void QIO_encode_file_info(XML_String *file_string, 
-			     QIO_FileInfo *file_info){
-  
+			  QIO_FileInfo *file_info){
   char *buf;
-  int remainder;
-  XML_string_realloc(file_string, QIO_STRINGALLOC);
-  buf  = XML_string_ptr(file_string);
-  remainder = XML_string_bytes(file_string);
+  int remainder,n;
+  char fileinfo_tags[QIO_MAXVALUESTRING];
+  QIO_FileInfoWrapper wrapper = QIO_FILE_INFO_WRAPPER;
 
-  /* Initialize string: encoding is done by appending */
+  /* Start by creating string of inner tags */
+  buf = fileinfo_tags;
+  remainder = QIO_MAXVALUESTRING;
+
+  /* Build inner tag string by appending tags */
   *buf = '\0';
   buf = QIO_encode_as_string (buf,&file_info->version, &remainder);
   buf = QIO_encode_as_int    (buf,&file_info->spacetime, &remainder);
   buf = QIO_encode_as_intlist(buf,&file_info->dims, 
 			      file_info->spacetime.value, &remainder);
   buf = QIO_encode_as_int    (buf,&file_info->multifile, &remainder);
+
+  /* Insert inner tag string into file wrapper structure */
+  QIO_insert_file_tag_string(&wrapper, fileinfo_tags);
+
+  /* Now build final XML string */
+  XML_string_realloc(file_string, QIO_STRINGALLOC);
+  buf  = XML_string_ptr(file_string);
+  remainder = XML_string_bytes(file_string);
+
+  /* Begin with xml info stuff */
+  strncpy(buf,QIO_XMLINFO,remainder);
+  buf[remainder-1] = '\0';
+  n = strlen(buf);
+  remainder -= n;
+  buf += n;
+  if(remainder < 0){
+    printf("QIO_encode_file_info: file_string overflow\n");
+  }
+  else{
+    /* Conclude by appending the wrapped tag string */
+    buf = QIO_encode_as_string (buf,&wrapper.fileinfo_tags, &remainder);
+  }
 }
 
 int QIO_decode_checksum_info(QIO_ChecksumInfo *checksum, 
 			     XML_String *file_string){
   char *parse_pt = XML_string_ptr(file_string);
+  char *tmp_pt;
   char tag[QIO_MAXTAG];
+  char tags_string[QIO_MAXVALUESTRING];
   char value_string[QIO_MAXVALUESTRING];
   int errors = 0;
+  QIO_ChecksumInfoWrapper wrapper = QIO_CHECKSUM_INFO_WRAPPER;
   QIO_ChecksumInfo template = QIO_CHECKSUM_INFO_TEMPLATE;
+  char *left_angle;
   
   /* Initialize from template */
   *checksum = template;
+
+  /* Start parsing checksum_string */
+  /* Check leading tag, which is probably the info phrase "<?xml ...?>" */
+  /* We ignore it if it is there */
+  tmp_pt = QIO_next_tag(parse_pt, tag, &left_angle);
+  if(strcmp(tag,QIO_QUESTXML)==0){
+    /* Found ?xml, so resume parsing after the closing ">", ignoring
+       the field. Otherwise, leave the parse_pt at its initial value. */
+    parse_pt = tmp_pt;
+  }
+
+  /* Open top-level tag (wrapper) and extract string containing tags */
+  parse_pt = QIO_get_tag_value(parse_pt, tag, tags_string);
+  QIO_decode_as_string (tag, tags_string, &wrapper.checksuminfo_tags);
+
+  /* If outer wrapper has bad tag exit with error status */
+  if(QIO_check_string_occur(&wrapper.checksuminfo_tags))return 1;
+  /* Otherwise start parsing the enclosed string of tags */
+  parse_pt = QIO_get_checksum_info_tag_string(&wrapper);
 
   /* Scan string until null character is reached */
   while(*parse_pt){
@@ -490,26 +620,61 @@ int QIO_decode_checksum_info(QIO_ChecksumInfo *checksum,
 
 void QIO_encode_checksum_info(XML_String *checksum_string, 
 			      QIO_ChecksumInfo *checksum){
-  
   char *buf;
-  int remainder;
-  XML_string_realloc(checksum_string, QIO_STRINGALLOC);
-  buf  = XML_string_ptr(checksum_string);
-  remainder = XML_string_bytes(checksum_string);
+  int remainder,n;
+  char checksuminfo_tags[QIO_MAXVALUESTRING];
+  QIO_ChecksumInfoWrapper wrapper = QIO_CHECKSUM_INFO_WRAPPER;
 
-  /* Initialize string: encoding is done by appending */
+  /* Start by creating string of inner tags */
+  buf = checksuminfo_tags;
+  remainder = QIO_MAXVALUESTRING;
+
+  /* Build inner tag string by appending tags */
   *buf = '\0';
   buf = QIO_encode_as_string (buf,&checksum->version, &remainder);
   buf = QIO_encode_as_hex32  (buf,&checksum->suma, &remainder);
   buf = QIO_encode_as_hex32  (buf,&checksum->sumb, &remainder);
+
+  /* Insert inner tag string into checksum wrapper structure */
+  QIO_insert_checksum_tag_string(&wrapper, checksuminfo_tags);
+
+  /* Now build final XML string */
+  XML_string_realloc(checksum_string, QIO_STRINGALLOC);
+  buf  = XML_string_ptr(checksum_string);
+  remainder = XML_string_bytes(checksum_string);
+
+  /* Begin with xml info stuff */
+  strncpy(buf,QIO_XMLINFO,remainder);
+  buf[remainder-1] = '\0';
+  n = strlen(buf);
+  remainder -= n;
+  buf += n;
+  if(remainder < 0){
+    printf("QIO_encode_checksum_info: checksum_string overflow\n");
+  }
+  else{
+    /* Conclude by appending the wrapped tag string */
+    buf = QIO_encode_as_string (buf,&wrapper.checksuminfo_tags, &remainder);
+  }
 }
 
 /* Utilities for loading file_info values */
 
+int QIO_insert_file_tag_string(QIO_FileInfoWrapper *wrapper, 
+			       char *fileinfo_tags){
+  wrapper->fileinfo_tags.occur = 0;
+  if(!fileinfo_tags)return 1;
+  strncpy(wrapper->fileinfo_tags.value, fileinfo_tags, QIO_MAXVALUESTRING-1);
+  wrapper->fileinfo_tags.value[QIO_MAXVALUESTRING-1] = '\0';
+  wrapper->fileinfo_tags.occur = 1;
+  if(strlen(fileinfo_tags) >= QIO_MAXVALUESTRING)return 1;
+  else return 0;
+}
+
 int QIO_insert_file_version(QIO_FileInfo *file_info, char *version){
   file_info->version.occur = 0;
   if(!version)return 1;
-  strncpy(file_info->version.value, version, QIO_MAXVALUESTRING);
+  strncpy(file_info->version.value, version, QIO_MAXVALUESTRING-1);
   file_info->version.value[QIO_MAXVALUESTRING-1] = '\0';
   file_info->version.occur = 1;
   if(strlen(version) >= QIO_MAXVALUESTRING)return 1;
@@ -542,10 +707,22 @@ int QIO_insert_multifile(QIO_FileInfo *file_info, int multifile){
 
 /* Utilities for loading record_info values */
 
+int QIO_insert_record_tag_string(QIO_RecordInfoWrapper *wrapper, 
+				 char *recordinfo_tags){
+  wrapper->recordinfo_tags.occur = 0;
+  if(!recordinfo_tags)return 1;
+  strncpy(wrapper->recordinfo_tags.value, recordinfo_tags, 
+	  QIO_MAXVALUESTRING-1);
+  wrapper->recordinfo_tags.value[QIO_MAXVALUESTRING-1] = '\0';
+  wrapper->recordinfo_tags.occur = 1;
+  if(strlen(recordinfo_tags) >= QIO_MAXVALUESTRING)return 1;
+  else return 0;
+}
+
 int QIO_insert_record_version(QIO_RecordInfo *record_info, char *version){
   record_info->version.occur = 0;
   if(!version)return 1;
-  strncpy(record_info->version.value, version, QIO_MAXVALUESTRING);
+  strncpy(record_info->version.value, version, QIO_MAXVALUESTRING-1);
   record_info->version.value[QIO_MAXVALUESTRING-1] = '\0';
   record_info->version.occur = 1;
   if(strlen(version) >= QIO_MAXVALUESTRING)return 1;
@@ -557,7 +734,7 @@ int QIO_insert_record_date(QIO_RecordInfo *record_info, char *date_string){
 
   record_info->date.occur = 0;
   if(!date_string)return 1;
-  strncpy(record_info->date.value, date_string, QIO_MAXVALUESTRING);
+  strncpy(record_info->date.value, date_string, QIO_MAXVALUESTRING-1);
   /* Edit date: replace trailing end-of-line by blank and add UTC */
   n = strlen(record_info->date.value);
   if(record_info->date.value[n-1] == '\n')record_info->date.value[n-1] = ' ';
@@ -571,7 +748,7 @@ int QIO_insert_record_date(QIO_RecordInfo *record_info, char *date_string){
 int QIO_insert_datatype(QIO_RecordInfo *record_info, char* datatype){
   record_info->datatype.occur = 0;
   if(!record_info)return 1;
-  strncpy(record_info->datatype.value, datatype, QIO_MAXVALUESTRING);
+  strncpy(record_info->datatype.value, datatype, QIO_MAXVALUESTRING-1);
   record_info->datatype.value[QIO_MAXVALUESTRING-1] = '\0';
   record_info->datatype.occur = 1;
   if(strlen(datatype) >= QIO_MAXVALUESTRING)return 1;
@@ -581,7 +758,7 @@ int QIO_insert_datatype(QIO_RecordInfo *record_info, char* datatype){
 int QIO_insert_precision(QIO_RecordInfo *record_info, char* precision){
   record_info->precision.occur = 0;
   if(!precision)return 1;
-  strncpy(record_info->precision.value, precision, QIO_MAXVALUESTRING);
+  strncpy(record_info->precision.value, precision, QIO_MAXVALUESTRING-1);
   record_info->precision.value[QIO_MAXVALUESTRING-1] = '\0';
   record_info->precision.occur = 1;
   if(strlen(precision) >= QIO_MAXVALUESTRING)return 1;
@@ -622,11 +799,23 @@ int QIO_insert_datacount(QIO_RecordInfo *record_info, int datacount){
 
 /* Utility for loading checksum values */
 
+int QIO_insert_checksum_tag_string(QIO_ChecksumInfoWrapper *wrapper, 
+				   char *checksuminfo_tags){
+  wrapper->checksuminfo_tags.occur = 0;
+  if(!checksuminfo_tags)return 1;
+  strncpy(wrapper->checksuminfo_tags.value, checksuminfo_tags, 
+	  QIO_MAXVALUESTRING-1);
+  wrapper->checksuminfo_tags.value[QIO_MAXVALUESTRING-1] = '\0';
+  wrapper->checksuminfo_tags.occur = 1;
+  if(strlen(checksuminfo_tags) >= QIO_MAXVALUESTRING)return 1;
+  else return 0;
+}
+
 int QIO_insert_checksum_version(QIO_ChecksumInfo *checksum_info, 
 				char *version){
   checksum_info->version.occur = 0;
   if(!version)return 1;
-  strncpy(checksum_info->version.value, version, QIO_MAXVALUESTRING);
+  strncpy(checksum_info->version.value, version, QIO_MAXVALUESTRING-1);
   checksum_info->version.value[QIO_MAXVALUESTRING-1] = '\0';
   checksum_info->version.occur = 1;
   if(strlen(version) >= QIO_MAXVALUESTRING)return 1;
@@ -648,6 +837,10 @@ int QIO_insert_suma_sumb(QIO_ChecksumInfo *checksum_info,
 
 
 /* Accessors for file info */
+
+char *QIO_get_file_info_tag_string(QIO_FileInfoWrapper *wrapper){
+  return wrapper->fileinfo_tags.value;
+}
 
 char *QIO_get_file_version(QIO_FileInfo *file_info){
   return file_info->version.value;
@@ -679,6 +872,10 @@ int QIO_defined_multifile(QIO_FileInfo *file_info){
 
 
 /* Accessors for record info */
+
+char *QIO_get_record_info_tag_string(QIO_RecordInfoWrapper *wrapper){
+  return wrapper->recordinfo_tags.value;
+}
 
 char *QIO_get_datatype(QIO_RecordInfo *record_info){
   return record_info->datatype.value;
@@ -728,7 +925,11 @@ int QIO_defined_datacount(QIO_RecordInfo *record_info){
   return record_info->datacount.occur;
 }
 
-/* Accessors for record info */
+/* Accessors for checksum info */
+
+char *QIO_get_checksum_info_tag_string(QIO_ChecksumInfoWrapper *wrapper){
+  return wrapper->checksuminfo_tags.value;
+}
 
 u_int32 QIO_get_suma(QIO_ChecksumInfo *checksum_info){
   return checksum_info->suma.value;
