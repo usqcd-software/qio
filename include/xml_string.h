@@ -17,7 +17,7 @@ typedef struct {
 
 XML_String *XML_string_create(int length);
 XML_String *XML_string_realloc(XML_String *xml, int length);
-void XML_string_set(XML_String *xml, const char *const string);
+XML_String *XML_string_set(const char *const string);
 void XML_string_copy(XML_String *dest, XML_String *src);
 size_t XML_string_bytes(const XML_String *const xml);
 char * XML_string_ptr(XML_String *xml);
