@@ -26,7 +26,7 @@ typedef struct {
 
 typedef struct {
   FILE *file;
-  DimeReader *dg;
+  DimeReader *dr;
 } LRL_FileReader;
 
 typedef struct {
