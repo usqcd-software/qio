@@ -20,7 +20,7 @@ DML_SCALAR = ${OBJECTS} dml/DML_scalar.c
 # LRL_SRCS = lrl/LRL_dummy.c
 LRL_SRCS = lrl/LRL_main.c
 
-XML_SRCS = xml/XML_dummy.c
+XML_SRCS = xml/XML_string.c
 
 GENERIC_SRCS = $(QIO_SRCS) $(DML_GENERIC) $(LRL_SRCS) $(XML_SRCS)
 
