@@ -2,6 +2,7 @@
 #define LRL_H
 
 #include <stdio.h>
+#include "dime.h"
 
 /* Dummy DIME tag for now */
 typedef char* DIME_tag;
@@ -11,14 +12,17 @@ typedef char* DIME_tag;
 
 typedef struct {
   FILE *file;
+  DimeWriter *dg;
 } LRL_FileWriter;
 
 typedef struct {
   LRL_FileWriter *fr;
+  DimeRecordHeader *h;
 } LRL_RecordWriter;
 
 typedef struct {
   FILE *file;
+  DimeReader *dg;
 } LRL_FileReader;
 
 typedef struct {
