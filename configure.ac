@@ -130,7 +130,7 @@ case ${LOCAL_PARALLEL_ARCH} in
       AC_MSG_RESULT(yes)
     else
       AC_MSG_RESULT(no)
-      AC_MSG_ERROR([Cannot compile/link a basic QMP C++ program!
+      AC_MSG_ERROR([Cannot compile/link a basic QMP C program!
         Check QMP_CFLAGS, QMP_LDFLAGS, QMP_LIBS.])
     fi
     ;;
