@@ -1,3 +1,7 @@
+03/07/2004 -- Robert Edwards
+
+	Version 0.9.2. Cleanups. Changed XML_string to QIO_String.
+
 02/28/2004 -- Robert Edwards
 
 	Version 0.9.1. Fixed some mem leaks with record_info.
