@@ -162,8 +162,10 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   printf("%s(%d): rec_size = %d\n",myname,out->layout->this_node,rec_size);
 #endif
 
-  /* In all cases the master node writes the record */
-  do_write = ( out->layout->this_node == QIO_MASTER_NODE );
+  /* In all cases the master node writes the record header */
+  /* For multifile all nodes write the record header */
+  do_write = ( out->layout->this_node == QIO_MASTER_NODE ) ||
+    ( out->volfmt == QIO_MULTIFILE );
 
   /* Open record */
 
