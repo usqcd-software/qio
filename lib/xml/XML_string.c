@@ -2,10 +2,12 @@
 
 #include <qio_config.h>
 #include <xml_string.h>
-#include <string.h>
 #include <stdio.h>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
+#ifdef HAVE_STRING_H
+#include <string.h>
 #endif
 
 /* Size of string in XML */
@@ -67,10 +69,17 @@ XML_String* XML_string_realloc(XML_String *xml, int length)
   return xml;
 }
 
-void XML_string_set(XML_String *xml, const char *const string)
+/* String creation convenience*/
+XML_String *XML_string_set(const char *const string)
 {
-  strncpy(xml->string, string, xml->length);
-  xml->string[xml->length-1] = '\0';  /* Assure null termination */
+  XML_String *xml;
+  size_t len = strlen(string) + 1;
+
+  xml = XML_string_create(len);
+  if(xml == NULL)return NULL;
+  strncpy(xml->string, string, len); /* Assure null termination with +1 above */
+
+  return xml;
 }
 
 void XML_string_destroy(XML_String *xml)
