@@ -3,7 +3,7 @@
 
 #include <lrl.h>
 #include <type32.h>
-#include <config.h>
+#include <qio_config.h>
 
 #define DML_MASTER_NODE 0
 
@@ -83,6 +83,7 @@ void DML_checksum_accum(DML_Checksum *checksum, DML_SiteRank rank,
 			char *buf, size_t size);
 void DML_checksum_combine(DML_Checksum *checksum);
 void DML_global_xor(u_int32 *x);
+int DML_big_endian(void);
 void DML_byterevn(char *buf, size_t size, int word_size);
 size_t DML_max_buf_sites(size_t size, int factor);
 char *DML_allocate_buf(size_t size, size_t max_buf_sites, int this_node);

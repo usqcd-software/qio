@@ -5,7 +5,7 @@
 #include <xml_string.h>
 #include <lrl.h>
 #include <dml.h>
-#include <config.h>
+#include <qio_config.h>
 #include "lime.h"
 
 #define QIO_MASTER_NODE DML_MASTER_NODE
