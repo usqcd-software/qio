@@ -44,8 +44,14 @@ case ${PARALLEL_ARCH} in
     AC_MSG_NOTICE([Mapping architecture ${PARALLEL_ARCH} to  parscalar])
     AC_SUBST(LOCAL_PARALLEL_ARCH, [parscalar])
     ;;
+  scalar)
+    AC_SUBST(LOCAL_PARALLEL_ARCH, [scalar])
+    ;;
+  parscalar)
+    AC_SUBST(LOCAL_PARALLEL_ARCH, [parscalar])
+    ;;
   *)
-    AC_SUBST(LOCAL_PARALLEL_ARCH, PARALLEL_ARCH)
+    AC_MSG_ERROR([ Unknown value for --enable-parallel-arch ])
     ;;
 esac
 
