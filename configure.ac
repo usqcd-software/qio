@@ -205,9 +205,11 @@ export CC CFLAGS
 AC_CONFIG_SUBDIRS(other_libs/c-lime)
 
 # Configure makefiles
-AC_CONFIG_FILES([Makefile
-		 examples/Makefile
-                 include/Makefile
-                 lib/Makefile
-                 other_libs/Makefile])
+AC_CONFIG_FILES(Makefile)
+AC_CONFIG_FILES(other_libs/Makefile)
+AC_CONFIG_FILES(include/Makefile)
+AC_CONFIG_FILES(lib/Makefile)
+AC_CONFIG_FILES(bin/Makefile)
+AC_CONFIG_FILES(bin/qio-config)
+AC_CONFIG_FILES(examples/Makefile)
 AC_OUTPUT

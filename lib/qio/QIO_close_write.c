@@ -1,5 +1,6 @@
 /* QIO_close_write.c */
 
+#include <qio_config.h>
 #include <qio.h>
 #include <lrl.h>
 #ifdef HAVE_STDLIB_H

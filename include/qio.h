@@ -5,7 +5,6 @@
 #include <qio_string.h>
 #include <lrl.h>
 #include <dml.h>
-#include <qio_config.h>
 #include "lime.h"
 
 #define QIO_SINGLEFILE DML_SINGLEFILE 

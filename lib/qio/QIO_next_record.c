@@ -2,6 +2,7 @@
 
 /* Skip to beginning of next field (LIME message) in file */
 
+#include <qio_config.h>
 #include <qio.h>
 #include <lrl.h>
 #include <stdio.h>

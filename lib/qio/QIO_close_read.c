@@ -1,5 +1,6 @@
 /* QIO_close_read.c */
 
+#include <qio_config.h>
 #include <qio.h>
 #include <qio_string.h>
 #include <lrl.h>

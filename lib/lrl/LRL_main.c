@@ -1,3 +1,4 @@
+#include <qio_config.h>
 #include <lrl.h>
 #include <stdio.h>
 #ifdef HAVE_MALLOC_H

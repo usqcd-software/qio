@@ -1,5 +1,6 @@
 /* QIO utilities for host file conversion */
 
+#include <qio_config.h>
 #include <qio.h>
 #include <dml.h>
 #include <stdio.h>

@@ -1,5 +1,6 @@
 /* QIO_read_record_info.c */
 
+#include <qio_config.h>
 #include <qio.h>
 #include <lrl.h>
 #include <dml.h>

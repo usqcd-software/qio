@@ -1,6 +1,7 @@
 /* Read and write private record, file, and checksum XML for SciDAC
    binary file format */
 
+#include <qio_config.h>
 #include <stdio.h>
 #include <string.h>
 #include <qio.h>
