@@ -159,7 +159,7 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in, int siteorder,
   char *buf;
   int dest_node;
   size_t rcv_rank, rcv_coords;
-  int *coords;  int dim;
+  int *coords;
   int this_node = layout->this_node;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
