@@ -1314,7 +1314,7 @@ ac_configure="$SHELL $ac_aux_dir/configure" # This should be Cygnus configure.
 
 
 
-          ac_config_headers="$ac_config_headers include/qio_config.h"
+          ac_config_headers="$ac_config_headers include/qio_config_internal.h"
 
 
 am__api_version="1.7"
@@ -4454,7 +4454,7 @@ do
   "lib/Makefile" ) CONFIG_FILES="$CONFIG_FILES lib/Makefile" ;;
   "other_libs/Makefile" ) CONFIG_FILES="$CONFIG_FILES other_libs/Makefile" ;;
   "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
-  "include/qio_config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS include/qio_config.h" ;;
+  "include/qio_config_internal.h" ) CONFIG_HEADERS="$CONFIG_HEADERS include/qio_config_internal.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
    { (exit 1); exit 1; }; };;
