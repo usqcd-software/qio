@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 0.1, edwards@jlab.org)
+AC_INIT(qio, 0.9.5, edwards@jlab.org)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
