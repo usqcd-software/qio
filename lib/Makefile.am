@@ -28,16 +28,24 @@ DML_GENERIC = \
    dml/DML_crc32.c \
    dml/DML_stream_in.c \
    dml/DML_stream_out.c \
-   dml/DML_utils.c \
-   dml/DML_parscalar.c \
-   dml/DML_route.c
+   dml/DML_utils.c
 
-# LRL_SRCS = lrl/LRL_dummy.c
+DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c dml/DML_route.c
+DML_SCALAR = ${OBJECTS} dml/DML_scalar.c
+
 LRL_SRCS = lrl/LRL_main.c
 
 GENERIC_SRCS = $(QIO_SRCS) $(DML_GENERIC) $(LRL_SRCS)
 
-libqio_a_SOURCES = $(GENERIC_SRCS)
+if ARCH_SCALAR
+  libqio_a_SOURCES = $(GENERIC_SRCS) $(DML_SCALAR)
+  EXTRA_libqio_a_SOURCES = $(DML_PARSCALAR)
+endif
+
+if ARCH_PARSCALAR
+  libqio_a_SOURCES = $(GENERIC_SRCS) $(DML_PARSCALAR)
+  EXTRA_libqio_a_SOURCES = $(DML_SCALAR)
+endif
 
 # Need this header as part of libqio_a_sources
 nodist_libqio_a_SOURCES = $(HDRS)
