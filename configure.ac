@@ -3,7 +3,7 @@ AC_INIT(qio, 1.0.beta3, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
-AC_CONFIG_HEADER([include/qio_config.h])
+AC_CONFIG_HEADER([include/qio_config_internal.h])
 
 AM_INIT_AUTOMAKE
 
