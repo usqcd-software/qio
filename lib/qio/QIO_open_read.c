@@ -139,8 +139,10 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   /* Are we reading multiple files? */
   if(QIO_get_multifile(file_info_found) == 1){
     /* Single file */
+#ifdef QIO_DEBUG
     printf("%s(%d): reading %s as single file\n",
 	   myname,this_node,filename);fflush(stdout);
+#endif
     qio_in->volfmt = QIO_SINGLEFILE;
     /* Single file site ordering must be lexicographic */
     qio_in->siteorder = QIO_LEX_ORDER;
@@ -159,8 +161,10 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   }
   else {
     /* Multifile */
+#ifdef QIO_DEBUG
     printf("%s(%d): reading %s as multifile\n",
 	   myname,this_node,filename);fflush(stdout);
+#endif
     qio_in->volfmt = QIO_MULTIFILE;
     /* For now we support only multifile reads with one file per node */
     if(QIO_get_multifile(file_info_found) != layout->number_of_nodes){
