@@ -6,6 +6,9 @@
 #include <xml_string.h>
 #include <qioxml.h>
 #include <stdio.h>
+#ifdef HAVE_MALLOC_H
+#include <malloc.h>
+#endif
 
 #define DEBUG
 
