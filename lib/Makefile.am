@@ -22,7 +22,9 @@ QIO_SRCS = \
    qio/QIO_read_record_info.c \
    qio/QIO_string.c \
    qio/QIO_utils.c \
-   qio/QIO_write.c
+   qio/QIO_write.c \
+   qio/QIO_host_file_conversion.c \
+   qio/QIO_host_utils.c
 
 DML_GENERIC = \
    dml/DML_crc32.c \

@@ -717,8 +717,13 @@ int QIO_insert_spacetime_dims(QIO_FileInfo *file_info,
   file_info->spacetime.occur = 0;
   file_info->dims.occur = 0;
   if(!spacetime)return QIO_BAD_ARG;
-  if(!dims)return 1;
+  if(!dims)return QIO_BAD_ARG;
   file_info->spacetime.value =  spacetime;
+  if(spacetime > QIO_MAXINTARRAY){
+    printf("QIO_insert_spacetime_dims: spacetime %d exceeds max %d\n",
+	   spacetime, QIO_MAXINTARRAY);
+    return QIO_BAD_ARG;
+  }
   for(i = 0; i < spacetime; i++)
     file_info->dims.value[i] = dims[i];
   file_info->spacetime.occur = 1;
@@ -1068,7 +1073,7 @@ int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
     if(!QIO_defined_volfmt(found) &&
        QIO_get_volfmt(found) != QIO_get_volfmt(expect))
       {
-	printf("%s(%d):Volfmt parameter mismatch expected %d found %d \n",
+	printf("%s(%d):Volfmt parameter mismatch: expected %d found %d \n",
 	       myname,this_node,
 	       QIO_get_volfmt(expect),QIO_get_volfmt(found));
 	return QIO_ERR_FILE_INFO;

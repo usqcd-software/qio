@@ -62,9 +62,14 @@ char *QIO_string_ptr(QIO_String *qs)
 
 void QIO_string_copy(QIO_String *dest, QIO_String *src)
 {
-  size_t len = src->length;
+  size_t len;
+  if(src == NULL)return;
+  if(dest == NULL)return;
+
+  len = src->length;
   dest->string = realloc(dest->string, len);
   memcpy(dest->string, src->string, len);
+  dest->length = len;
 }
 
 /* Non-destructive string reallocation */

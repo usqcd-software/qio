@@ -8,8 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#undef QIO_DEBUG
-
 /* Reads a lattice field or global data from a record.  Includes XML
    and checksum */
 /* Calls QIO_read_record_info and QIO_read_record_data */
@@ -28,19 +26,22 @@ int QIO_read(QIO_Reader *in, QIO_RecordInfo *record_info,
 
   /* Read info if not already done */
   status = QIO_read_record_info(in, record_info, xml_record);
-#ifdef QIO_DEBUG
-  printf("%s(%d): QIO_read_record_info returned %d\n",
-	 myname,this_node,status);
-  fflush(stdout);
-#endif
+
+  if(QIO_verbosity() >= QIO_VERB_DEBUG){
+    printf("%s(%d): QIO_read_record_info returned %d\n",
+	   myname,this_node,status);
+    fflush(stdout);
+  }
+
   if(status!=QIO_SUCCESS)return status;
 
   /* Read data */
   status = QIO_read_record_data(in, put, datum_size, word_size, arg);
-#ifdef QIO_DEBUG
-  printf("%s(%d): QIO_read_record_data returned %d\n",
-	 myname,this_node,status);
-#endif
+
+  if(QIO_verbosity() >= QIO_VERB_DEBUG){
+    printf("%s(%d): QIO_read_record_data returned %d\n",
+	   myname,this_node,status);
+  }
 
   return status;
 }

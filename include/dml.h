@@ -73,7 +73,7 @@ uint64_t DML_stream_out(LRL_RecordWriter *lrl_record_out, int globaldata,
 	   void (*get)(char *buf, size_t index, int count, void *arg),
            int count, size_t size, int word_size, void *arg, 
 	   DML_Layout *layout, DML_SiteList *sites,
-	   int volfmt, DML_Checksum *checksum);
+ 	   int volfmt, DML_Checksum *checksum);
 
 size_t DML_stream_global_out(LRL_RecordWriter *lrl_record_out, 
 			     void *buf, 
@@ -83,8 +83,8 @@ size_t DML_stream_global_out(LRL_RecordWriter *lrl_record_out,
 uint64_t DML_stream_in(LRL_RecordReader *lrl_record_in, int globaldata,
 	     void (*put)(char *buf, size_t index, int count, void *arg),
 	     int count, size_t size, int word_size, void *arg, 
-             DML_Layout *layout, DML_SiteList *sites, int volfmt, 
-             DML_Checksum *checksum);
+             DML_Layout *layout, DML_SiteList *sites, 
+	     int volfmt, DML_Checksum *checksum);
 
 size_t DML_stream_global_in(LRL_RecordWriter *lrl_record_in,
                             void *buf,
@@ -95,9 +95,9 @@ size_t DML_stream_global_in(LRL_RecordWriter *lrl_record_in,
 
 void DML_lex_init(int *dim, int coords[], int latdim, int latsize[]);
 int DML_lex_next(int *dim, int coords[], int latdim, int latsize[]);
-void DML_lex_coords(int coords[], int latdim, int latsize[], 
-		    DML_SiteRank rcv_coords);
-DML_SiteRank DML_lex_rank(int coords[], int latdim, int latsize[]);
+void DML_lex_coords(int coords[], const int latdim, const int latsize[], 
+		    const DML_SiteRank rcv_coords);
+DML_SiteRank DML_lex_rank(const int coords[], int latdim, int latsize[]);
 int *DML_allocate_coords(int latdim, char *myname, int this_node);
 char *DML_allocate_msg(size_t size, char *myname, int this_node);
 size_t DML_msg_sizeof(size_t size);
@@ -109,12 +109,13 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt,
 		      DML_Layout *layout);
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
-		      LIME_type lime_type);
+		      LIME_type *lime_type);
 int DML_compare_sitelists(DML_SiteRank *lista, DML_SiteRank *listb, size_t n);
 void DML_checksum_init(DML_Checksum *checksum);
 void DML_checksum_accum(DML_Checksum *checksum, DML_SiteRank rank, 
 			char *buf, size_t size);
 void DML_checksum_combine(DML_Checksum *checksum);
+void DML_checksum_peq(DML_Checksum *total, DML_Checksum *checksum);
 void DML_global_xor(uint32_t *x);
 int DML_big_endian(void);
 void DML_byterevn(char *buf, size_t size, int word_size);
@@ -131,6 +132,7 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, int size,
 			 size_t max_send_sites, 
 			 uint64_t *nbytes, char *myname, int this_node,
 			 int *err);
+int DML_my_ionode(int volfmt, DML_Layout *layout);
 uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out, 
 	   void (*get)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t size, int word_size, void *arg, 

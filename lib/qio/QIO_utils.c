@@ -12,31 +12,45 @@
 #include <string.h>
 #endif
 
-#undef QIO_DEBUG
+static int QIO_verbosity_level = QIO_VERB_REG;
+
+/* Set verbosity level. */
+int QIO_verbose (int level)
+{
+  int old = QIO_verbosity_level;
+  QIO_verbosity_level = level;
+  return old;
+}
+
+/* Check verbosity level */
+int QIO_verbosity(){
+  return QIO_verbosity_level;
+}
 
 /* In case of multifile format we use a common file name stem and add
    a suffix that depends on the node number */
 
-char *QIO_filename_edit(const char *filename, int volfmt, int this_node,
-			int master_io_node){
+char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
+
   /* Caller must clean up returned filename */
   int n = strlen(filename) + 12;
   char *newfilename = (char *)malloc(n);
 
-  /* No change if a single file or on the master node */
-  if(volfmt == QIO_SINGLEFILE || this_node == master_io_node){
-    strncpy(newfilename,filename,strlen(filename));
-    newfilename[strlen(filename)] = '\0';
-    return newfilename;
-  }
   if(!newfilename){
     printf("QIO_filename_edit: Can't malloc newfilename\n");
     return NULL;
   }
 
-  snprintf(newfilename,n,"%s.vol%03d",filename,this_node);
+  /* No change if a single file or on the master node */
+  if(volfmt == QIO_SINGLEFILE){
+    strncpy(newfilename,filename,strlen(filename));
+    newfilename[strlen(filename)] = '\0';
+    return newfilename;
+  }
+  snprintf(newfilename,n,"%s.vol%04d",filename,this_node);
   return newfilename;
 }
+
 
 /* Write an XML record */
 
@@ -47,33 +61,33 @@ int QIO_write_string(QIO_Writer *out,
 {
   LRL_RecordWriter *lrl_record_out;
   char *buf;
-  size_t check, rec_size;
+  size_t actual_rec_size, planned_rec_size;
   char myname[] = "QIO_write_string";
 
   buf = QIO_string_ptr(xml);
-  rec_size = strlen(buf)+1;  /* Include terminating null */
+  planned_rec_size = strlen(buf)+1;  /* Include terminating null */
 
   lrl_record_out = LRL_open_write_record(out->lrl_file_out, 
 					 msg_begin,
-					 msg_end, &rec_size, 
+					 msg_end, &planned_rec_size, 
 					 lime_type);
-  check = LRL_write_bytes(lrl_record_out, buf, rec_size);
-#ifdef QIO_DEBUG
-  printf("%s(%d): wrote %d bytes\n",myname,out->layout->this_node,check);fflush(stdout);
-#endif
+  actual_rec_size = LRL_write_bytes(lrl_record_out, buf, planned_rec_size);
+  if(QIO_verbosity() >= QIO_VERB_DEBUG)
+    printf("%s(%d): wrote %d bytes\n",myname,out->layout->this_node,
+	   actual_rec_size);fflush(stdout);
 
   /* Check byte count */
-  if(check != rec_size){
-    printf("%s(%d): bytes written %lu != expected rec_size %lu\n",
-	   myname, out->layout->this_node, (unsigned long)check, 
-	   (unsigned long)rec_size);
+  if(actual_rec_size != planned_rec_size){
+    printf("%s(%d): bytes written %lu != planned rec_size %lu\n",
+	   myname, out->layout->this_node, (unsigned long)actual_rec_size, 
+	   (unsigned long)planned_rec_size);
     return QIO_ERR_BAD_WRITE_BYTES;
   }
   LRL_close_write_record(lrl_record_out);
-#ifdef QIO_DEBUG
-  printf("%s(%d): closed string record\n",myname,out->layout->this_node);
-  fflush(stdout);
-#endif
+  if(QIO_verbosity() >= QIO_VERB_DEBUG){
+    printf("%s(%d): closed string record\n",myname,out->layout->this_node);
+    fflush(stdout);
+  }
   return QIO_SUCCESS;
 }
 
@@ -156,6 +170,9 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
     return QIO_ERR_BAD_WRITE_BYTES;
   }
 
+  if(QIO_verbosity() >= QIO_VERB_DEBUG)
+    printf("%s(%d): wrote sitelist\n", myname, out->layout->this_node);
+  
   /* Close record when done and clean up*/
   LRL_close_write_record(lrl_record_out);
 
@@ -169,74 +186,73 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 	    QIO_String *xml_record, int globaldata,
 	    void (*get)(char *buf, size_t index, int count, void *arg),
 	    int count, size_t datum_size, int word_size, void *arg, 
-	    DML_Checksum *checksum,
+	    DML_Checksum *checksum, uint64_t *nbytes,
 	    const LIME_type lime_type){
   
   LRL_RecordWriter *lrl_record_out = NULL;
-  off_t total_bytes,check;
-  size_t rec_size;
-  size_t volume = out->layout->volume;
+  size_t planned_rec_size;
   int this_node = out->layout->this_node;
   int volfmt = out->volfmt;
-  int do_write;
+  int do_output;
   char myname[] = "QIO_write_field";
 
   /* Compute record size */
   if(globaldata == QIO_GLOBAL){
-    rec_size = datum_size; /* Global data */
-    total_bytes = rec_size;
-#ifdef QIO_DEBUG
-    printf("%s(%d): global data: size %lu\n",myname,out->layout->this_node,
-	   (unsigned long)datum_size);
-#endif
+    /* Global data */
+    planned_rec_size = datum_size;
+    if(QIO_verbosity() >= QIO_VERB_DEBUG){
+      printf("%s(%d): global data: size %lu\n",myname,out->layout->this_node,
+	     (unsigned long)datum_size);
+    }
   }
   else{
-    rec_size = out->sites->number_of_io_sites * datum_size;
-    total_bytes = volume * datum_size;
-#ifdef QIO_DEBUG
-    printf("%s(%d): field data: sites %lu datum %lu\n",
-	   myname,out->layout->this_node,
-	   (unsigned long)out->layout->sites_on_node,
-	   (unsigned long)datum_size);
-#endif
+    /* Field data */
+    planned_rec_size = out->sites->number_of_io_sites * datum_size;
+    if(QIO_verbosity() >= QIO_VERB_DEBUG){
+      printf("%s(%d): field data: sites %lu datum %lu\n",
+	     myname,out->layout->this_node,
+	     (unsigned long)out->layout->sites_on_node,
+	     (unsigned long)datum_size);
+    }
   }
   
-#ifdef QIO_DEBUG
-  printf("%s(%d): rec_size = %lu\n",myname,out->layout->this_node,
-	 (unsigned long)rec_size);
-#endif
+  /* For global data only the master node opens and writes the record.
+     Othewise, all nodes process output, even though only some nodes
+     actually write */
+  do_output = (globaldata == DML_FIELD) ||
+    (this_node == out->layout->master_io_node);
 
-  /* For singlefile the master node writes the record header */
-  if(volfmt == QIO_SINGLEFILE)
-    do_write = (this_node == out->layout->master_io_node);
-  /* For multifile all nodes write the record header */
-  else if(volfmt == QIO_MULTIFILE)
-    do_write = 1;
-  /* For partitioned I/O the I/O nodes write the header */
-  else if(volfmt == QIO_PARTFILE)
-    do_write = (this_node == out->layout->ionode(this_node));
+  /* Open record only if we have a file handle and are writing */
+  /* Nodes that do not write to a file will have a NULL file handle */
 
-  /* Open record */
+  if(!out->lrl_file_out || !do_output)
+    {
+      if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	printf("%s(%d): skipping LRL_open_write_record\n",
+	       myname,this_node);
+    }
+  else
+    {
+      lrl_record_out = LRL_open_write_record(out->lrl_file_out, 
+		     msg_begin, msg_end, &planned_rec_size, lime_type);
+      if(!lrl_record_out)
+	return QIO_ERR_OPEN_WRITE;
+    }
+  
+  /* Initialize byte count and checksum */
+  *nbytes = 0;
+  DML_checksum_init(checksum);
 
-  if(do_write)
-    lrl_record_out = LRL_open_write_record(out->lrl_file_out, 
-					   msg_begin, msg_end, &rec_size, 
-					   lime_type);
   /* Write bytes */
 
-  check = DML_stream_out(lrl_record_out, globaldata, get, count, datum_size, 
-			 word_size, arg, out->layout, out->sites, out->volfmt, 
-			 checksum);
+  if(do_output)
+    *nbytes = DML_stream_out(lrl_record_out, globaldata, get, count, 
+			     datum_size, word_size, arg, out->layout,
+			     out->sites, out->volfmt, checksum);
 
   /* Close record when done and clean up*/
-  LRL_close_write_record(lrl_record_out);
-
-  if(check != total_bytes){
-    printf("%s(%d): bytes written %lu != expected rec_size %lu\n",
-	   myname, out->layout->this_node, (unsigned long)check, 
-	   (unsigned long)total_bytes);
-    return QIO_ERR_BAD_WRITE_BYTES;
-  }
+  if(out->lrl_file_out && do_output)
+    LRL_close_write_record(lrl_record_out);
 
   return QIO_SUCCESS;
 }
@@ -244,36 +260,41 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 
 /* Read an XML record */
 
-int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type lime_type){
+int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type *lime_type){
   char *buf;
   size_t buf_size;
   LRL_RecordReader *lrl_record_in;
-  size_t check,rec_size;
+  size_t actual_rec_size,expected_rec_size;
+  int status;
   char myname[] = "QIO_read_string";
 
   /* Open record and find record size */
   if(!in->lrl_file_in)return QIO_SUCCESS;
-  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, lime_type);
-  if(!lrl_record_in)return QIO_ERR_OPEN_READ;
+  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &expected_rec_size, 
+				       lime_type, &status);
+  if(!lrl_record_in){
+    if(status == LRL_EOF)return QIO_EOF;
+    else return QIO_ERR_OPEN_READ;
+  }
 
   buf_size = QIO_string_length(xml);   /* The size allocated for the string */
   buf      = QIO_string_ptr(xml);
 
   /* Realloc if necessary */
-  if(rec_size+1 > buf_size){
-    QIO_string_realloc(xml,rec_size+1);  /* The +1 will insure null terminating string */
+  if(expected_rec_size+1 > buf_size){
+    QIO_string_realloc(xml,expected_rec_size+1);  /* +1 for null termination */
   }
 
   buf_size = QIO_string_length(xml);   /* Get this again */
   buf      = QIO_string_ptr(xml);
 
-  check = LRL_read_bytes(lrl_record_in, buf, rec_size);
+  actual_rec_size = LRL_read_bytes(lrl_record_in, buf, expected_rec_size);
   LRL_close_read_record(lrl_record_in);
 
-  if(check != rec_size){
+  if(actual_rec_size != expected_rec_size){
     printf("%s(%d): bytes read %lu != expected rec_size %lu\n",
-	   myname, in->layout->this_node, (unsigned long)check, 
-	   (unsigned long)rec_size);
+	   myname, in->layout->this_node, (unsigned long)actual_rec_size, 
+	   (unsigned long)expected_rec_size);
     return QIO_ERR_BAD_READ_BYTES;
   }
 
@@ -282,7 +303,7 @@ int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type lime_type){
 
 /* Read site list */
 
-int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
+int QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type){
   int this_node = in->layout->this_node;
   int volfmt = in->volfmt;
   char myname[] = "QIO_read_sitelist";
@@ -303,11 +324,11 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
   DML_sum_int(&not_ok);
   if(not_ok)return QIO_ERR_BAD_SITELIST;
   else {
-#ifdef QIO_DEBUG
-    if(this_node == in->layout->master_io_node)
-      printf("%s(%d): sitelist passes test\n",
-	     myname,this_node);fflush(stdout);
-#endif
+    if(QIO_verbosity() >= QIO_VERB_DEBUG){
+      if(this_node == in->layout->master_io_node)
+	printf("%s(%d): sitelist passes test\n",
+	       myname,this_node);fflush(stdout);
+    }
   }
 
   return QIO_SUCCESS;
@@ -318,67 +339,72 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
 int QIO_read_field(QIO_Reader *in, int globaldata,
 	   void (*put)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t datum_size, int word_size, void *arg, 
-	   DML_Checksum *checksum,
-	   LIME_type lime_type){
+	   DML_Checksum *checksum, uint64_t* nbytes,
+	   LIME_type *lime_type){
 
   LRL_RecordReader *lrl_record_in;
   DML_SiteList *sites = in->sites;
-  size_t rec_size, buf_size;
-  off_t total_bytes, check;
-  size_t volume = in->layout->volume;
+  size_t announced_rec_size, expected_rec_size;
   int this_node = in->layout->this_node;
+  int status;
+  int do_open;
   char myname[] = "QIO_read_field";
 
-  /* Open record only if we have a file handle */
-  if(!in->lrl_file_in) {
-#ifdef QIO_DEBUG
-    printf("%s(%d): skipping LRL_open_read_record %x\n",
-	   myname,this_node,in->lrl_file_in);
-#endif
+  /* For field data we open the record if the file is being read
+     by this node.  For global data only the master node opens
+     the record */
+  do_open = ( in->lrl_file_in && (globaldata == DML_FIELD) ) || 
+    (this_node == in->layout->master_io_node);
+
+  /* Open record only if we have a file handle and are reading */
+  /* Nodes that do not read from a file will have a NULL file handle */
+  if(!do_open) {
+    if(QIO_verbosity() >= QIO_VERB_DEBUG)
+      printf("%s(%d): skipping LRL_open_read_record\n",
+	     myname,this_node);
   }
   else{
     lrl_record_in = LRL_open_read_record(in->lrl_file_in, 
-					 &rec_size, lime_type);
-    if(!lrl_record_in)return QIO_ERR_OPEN_READ;
-    
+			 &announced_rec_size, lime_type, &status);
+    if(!lrl_record_in){
+      if(status == LRL_EOF)return QIO_EOF;
+      else return QIO_ERR_OPEN_READ;
+    }
+
     /* Check that the record size matches the expected size of the data */
-    if(globaldata == QIO_GLOBAL){
-      buf_size = datum_size; /* Global data */
-      total_bytes = buf_size;
-    }
-    else { /* Field data */
-      buf_size = sites->number_of_io_sites * datum_size;
-      total_bytes = volume * datum_size;
-    }
+    if(globaldata == QIO_GLOBAL)
+      /* Global data */
+      expected_rec_size = datum_size;
+    else 
+      /* Field data */
+      expected_rec_size = sites->number_of_io_sites * datum_size; 
     
-    if (rec_size != buf_size){
+    if (announced_rec_size != expected_rec_size){
       printf("%s(%d): rec_size mismatch: found %lu expected %lu\n",
-	     myname, this_node, (unsigned long)rec_size, 
-	     (unsigned long)buf_size);
+	     myname, this_node, (unsigned long)announced_rec_size, 
+	     (unsigned long)expected_rec_size);
       return QIO_ERR_BAD_READ_BYTES;
     }
   }
 
-  /* Nodes read and/or collect data.  Compute checksum */
-  check = DML_stream_in(lrl_record_in, globaldata, put, 
-			count, datum_size, word_size,
-			arg, in->layout, in->sites, in->volfmt,
-			checksum);
-#ifdef QIO_DEBUG
-  printf("%s(%d): done with DML_stream_in\n", myname,this_node);
-#endif
-
-  /* Close record when done and clean up*/
-  if(in->lrl_file_in){
-    LRL_close_read_record(lrl_record_in);
+  /* Initialize byte count and checksum */
+  *nbytes = 0;
+  DML_checksum_init(checksum);
   
-    if(check != total_bytes){
-      printf("%s(%d): bytes read %lu != expected rec_size %lu\n",
-	     myname, in->layout->this_node,
-	     (unsigned long)check, (unsigned long)total_bytes);
-      return QIO_ERR_BAD_READ_BYTES;
-    }
+  /* All nodes process input.  Compute checksum and byte count
+     for node*/
+
+  *nbytes = DML_stream_in(lrl_record_in, globaldata, put, 
+			  count, datum_size, word_size,
+			  arg, in->layout,
+			  in->sites, in->volfmt, checksum);
+  if(QIO_verbosity() >= QIO_VERB_DEBUG){
+    printf("%s(%d): done with DML_stream_in\n", myname,this_node);
   }
+    
+  /* Close record when done and clean up*/
+  if(do_open)
+    LRL_close_read_record(lrl_record_in);
 
   return QIO_SUCCESS;
 }

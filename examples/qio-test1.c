@@ -1,4 +1,4 @@
-/* MULTIFILE test of QIO */
+/* SINGLEFILE test of QIO */
 
 /* C. DeTar */
 /* October 18, 2004 */
@@ -7,5 +7,5 @@
 #include "qio-test.h"
 
 int main(int argc, char *argv[]){
-  return qio_test(QIO_MULTIFILE, argc, argv);
+  return qio_test(QIO_SINGLEFILE, argc, argv);
 }

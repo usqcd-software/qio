@@ -8,7 +8,7 @@
 
 #if(0)
 int QIO_next_record(QIO_Reader *in){
-  if(in->read_state == QIO_RECORD_XML_NEXT){
+  if(in->read_state == QIO_RECORD_INFO_PRIVATE_NEXT){
 
     /* Skip private XML record */
     LRL_next_record(in->lrl_file_in);
@@ -34,5 +34,6 @@ int QIO_next_record(QIO_Reader *in){
 int QIO_next_record(QIO_Reader *in){
   if(LRL_next_message(in->lrl_file_in) != LRL_SUCCESS)
     return QIO_ERR_SKIP;
+  in->read_state = QIO_RECORD_INFO_PRIVATE_NEXT;
   return QIO_SUCCESS;
 }

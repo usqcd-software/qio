@@ -15,14 +15,18 @@
 LRL_FileReader *LRL_open_read_file(const char *filename)
 {
   LRL_FileReader *fr;
+  FILE *fpt;
 
+  /* First check for a readable file */
+  fpt = fopen(filename,"r");
+  if(fpt == NULL)return NULL;
+
+  /* Set up LRL_FileReader structure */
   fr = (LRL_FileReader *)malloc(sizeof(LRL_FileReader));
   if (fr == NULL)
     return NULL;
 
-  fr->file = fopen(filename,"r");
-  if (fr->file == NULL)return NULL;
-
+  fr->file = fpt;
   fr->dr = limeCreateReader(fr->file);
   if (fr->dr == (LimeReader *)NULL)
     return NULL;
@@ -39,26 +43,26 @@ LRL_FileReader *LRL_open_read_file(const char *filename)
  */
 LRL_FileWriter *LRL_open_write_file(const char *filename)
 {
-  LRL_FileWriter *fr;
+  LRL_FileWriter *fw;
 
-  fr = (LRL_FileWriter *)malloc(sizeof(LRL_FileWriter));
-  if (fr == NULL)
+  fw = (LRL_FileWriter *)malloc(sizeof(LRL_FileWriter));
+  if (fw == NULL)
     return NULL;
 
-  fr->file = fopen(filename,"w");
-  if (fr->file == NULL){
+  fw->file = fopen(filename,"w");
+  if (fw->file == NULL){
     printf("LRL_open_write_file: failed to open %s for writing\n",
 	   filename);
     return NULL;
   }
 
-  fr->dg = limeCreateWriter(fr->file);
-  if (fr->dg == (LimeWriter *)NULL){
+  fw->dg = limeCreateWriter(fw->file);
+  if (fw->dg == (LimeWriter *)NULL){
     printf("LRL_open_write_file: limeCreateWriter failed\n");
     return NULL;
   }
 
-  return fr;
+  return fw;
 }
 
 /** 
@@ -68,14 +72,14 @@ LRL_FileWriter *LRL_open_write_file(const char *filename)
  * \param rec_size   record size ( Modify )
  * \param tag        tag for the record header ( Read )
  *
- * \return null if failure
+ * \return null if failure and set status to error flag
  */
 LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
 				       size_t *rec_size, 
-				       LIME_type lime_type)
+				       LIME_type *lime_type, int *status)
 {
   LRL_RecordReader *rr;
-  int status;
+  int lime_status;
   char myname[] = "LRL_open_read_record";
 
   if (fr == NULL)
@@ -89,16 +93,21 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
   rr->fr = fr;
   
   /* Get next record header */
-  status = limeReaderNextRecord(rr->fr->dr);
-  if (status != LIME_SUCCESS){
-    printf("%s lime error %d getting next record header\n",myname,status);
+  lime_status = limeReaderNextRecord(rr->fr->dr);
+  if (lime_status != LIME_SUCCESS){
+    if(lime_status == LIME_EOF)*status = LRL_EOF;
+    else{
+      printf("%s lime error %d getting next record header\n",myname,*status);
+      *status = LRL_ERR_READ;
+    }
     return NULL;
   }
 
   /* Extract record information */
   *rec_size = limeReaderBytes(rr->fr->dr);
-  lime_type = limeReaderType(rr->fr->dr);
+  *lime_type = limeReaderType(rr->fr->dr);
 
+  *status = LIME_SUCCESS;
   return rr;
 }
 
@@ -106,46 +115,46 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
 /** 
  * Open a record for writing 
  *
- * \param fr         LRL file writer  ( Read )
+ * \param fw         LRL file writer  ( Read )
  * \param rec_size   record size ( Modify )
  * \param tag        tag for the record header ( Read )
  *
  * \return null if failure
  */
-LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, 
+LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fw, 
 					int msg_begin, int msg_end, 
 					size_t *rec_size, 
 					LIME_type lime_type)
 {
-  LRL_RecordWriter *rr;
+  LRL_RecordWriter *rw;
   LimeRecordHeader *h;
   int status;
   char myname[] = "LRL_open_write_record";
   
-  if (fr == NULL)
+  if (fw == NULL)
     return NULL;
 
 
-  rr = (LRL_RecordWriter *)malloc(sizeof(LRL_RecordWriter));
-  if (rr == NULL){
+  rw = (LRL_RecordWriter *)malloc(sizeof(LRL_RecordWriter));
+  if (rw == NULL){
     printf("%s: Can't malloc writer\n",myname);
     return NULL;
   }
-  rr->fr = fr;
+  rw->fw = fw;
 
   /* Write record */
   h = limeCreateHeader(msg_begin, msg_end, lime_type, *rec_size);
-  status = limeWriteRecordHeader(h, rr->fr->dg);
+  status = limeWriteRecordHeader(h, rw->fw->dg);
 
   if (status < 0)
   { 
-    printf( "%s: fatal error. status is: %d\n", myname, status);
+    printf( "%s: fatal error. LIME status is: %d\n", myname, status);
     exit(EXIT_FAILURE);
   }
 
   limeDestroyHeader(h);
 
-  return rr;
+  return rw;
 }
 
 
@@ -182,22 +191,22 @@ size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf,
 /** 
  * Write bytes
  *
- * \param rr         LRL record writer  ( Read )
+ * \param rw         LRL record writer  ( Read )
  * \param buf        buffer for writing ( Read )
  * \param nbytes     number of bytes to write ( Read )
  *
  * \return number of bytes written
  */
-size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, 
+size_t LRL_write_bytes(LRL_RecordWriter *rw, char *buf, 
 		       size_t nbytes)
 {
   int status;
   size_t nbyt = nbytes;
 
-  if (rr == NULL)
+  if (rw == NULL)
     return 0;
 
-  status = limeWriteRecordData(buf, &nbyt, rr->fr->dg);
+  status = limeWriteRecordData(buf, &nbyt, rw->fw->dg);
 
   if( status != LIME_SUCCESS ) 
   { 
@@ -232,20 +241,20 @@ int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset)
    payload.  We are not allowed to go beyond the end of the
    payload. */
 
-int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset)
+int LRL_seek_write_record(LRL_RecordWriter *rw, off_t offset)
 {
   int status;
 
-  if (rr == NULL){
+  if (rw == NULL){
     printf("LRL_seek_write_record: null record writer\n");
     return LRL_ERR_SEEK;
   }
-  if(rr->fr == NULL){
+  if(rw->fw == NULL){
     printf("LRL_seek_write_record: null file writer\n");
     return LRL_ERR_SEEK;
   }
 
-  status = limeWriterSeek(rr->fr->dg, offset, SEEK_CUR);
+  status = limeWriterSeek(rw->fw->dg, offset, SEEK_CUR);
 
   if( status != LIME_SUCCESS ) 
   { 
@@ -255,17 +264,19 @@ int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset)
   return LRL_SUCCESS;
 }
 
-/* For skipping to the beginning of the next message */
+/* For skipping to the end of the current message */
 
 int LRL_next_message(LRL_FileReader *fr)
 {
   int status;
-  int msg_begin = 0;
+  int msg_end = 0;
 
   if(fr == NULL)return LRL_ERR_SKIP;
-  while(msg_begin == 0){
+  while(msg_end == 0){
     status = limeReaderNextRecord(fr->dr);
-    msg_begin = limeReaderMBFlag(fr->dr);
+    msg_end = limeReaderMEFlag(fr->dr);
+    printf("LRL_next_message skipping msg_end %d status %d\n",
+	   msg_end, status);
     if( status != LIME_SUCCESS ) 
       { 
 	printf( "LRL_next_message: LIME error %d\n", status);
@@ -275,7 +286,7 @@ int LRL_next_message(LRL_FileReader *fr)
   return LRL_SUCCESS;
 }
 
-/* For skipping to the beginning of the next record - DO WE NEED THIS? */
+/* For skipping to the beginning of the next record? */
 
 int LRL_next_record(LRL_FileReader *fr)
 {
@@ -312,17 +323,17 @@ int LRL_close_read_record(LRL_RecordReader *rr)
 
 /**
  *
- * \param rr     LRL record writer
+ * \param rw     LRL record writer
  *
  */
 
-int LRL_close_write_record(LRL_RecordWriter *wr)
+int LRL_close_write_record(LRL_RecordWriter *rw)
 {
   int status;
 
-  if(wr == NULL)return LRL_ERR_CLOSE;
-  status = limeWriterCloseRecord(wr->fr->dg);
-  free(wr);
+  if(rw == NULL)return LRL_ERR_CLOSE;
+  status = limeWriterCloseRecord(rw->fw->dg);
+  free(rw);
   if(status != LIME_SUCCESS)return LRL_ERR_CLOSE;
   else return LRL_SUCCESS;
 }

@@ -42,8 +42,8 @@ int DML_lex_next(int *dim, int coords[], int latdim, int latsize[])
 
 /* Convert linear lexicographic rank to lexicographic coordinate */
 
-void DML_lex_coords(int coords[], int latdim, int latsize[], 
-		    DML_SiteRank rcv_coords)
+void DML_lex_coords(int coords[], const int latdim, const int latsize[], 
+		    const DML_SiteRank rcv_coords)
 {
   int dim;
   DML_SiteRank rank = rcv_coords;
@@ -57,7 +57,7 @@ void DML_lex_coords(int coords[], int latdim, int latsize[],
 /* Convert coordinate to linear lexicographic rank (inverse of
    DML_lex_coords) */
 
-DML_SiteRank DML_lex_rank(int coords[], int latdim, int latsize[])
+DML_SiteRank DML_lex_rank(const int coords[], int latdim, int latsize[])
 {
   int dim;
   DML_SiteRank rank = coords[latdim-1];
@@ -321,35 +321,38 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt,
 /* Read and check the sitelist for input */
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
-		      LIME_type lime_type){
-  size_t check, rec_size;
+		      LIME_type *lime_type){
+  size_t check, announced_rec_size;
   int this_node = layout->this_node;
   LRL_RecordReader *lrl_record_in;
   DML_SiteRank *inputlist;
   int not_ok;
+  int status;
   char myname[] = "DML_read_sitelist";
 
   if(sites->use_list == 0)return 0;
 
   /* Open sitelist record */
-  lrl_record_in = LRL_open_read_record(lrl_file_in, &rec_size, lime_type);
+  lrl_record_in = LRL_open_read_record(lrl_file_in, &announced_rec_size, 
+				       lime_type, &status);
   if(!lrl_record_in)return 1;
 
   /* Require that the record size matches expectations */
   check = sites->number_of_io_sites * sizeof(DML_SiteRank);
-  if(rec_size != check){
-    printf("%s(%d): sitelist size mismatch: found %lu expected %lu\n",
-	   myname, this_node, (unsigned long)rec_size, (unsigned long)check);
+  if(announced_rec_size != check){
+    printf("%s(%d): sitelist size mismatch: found %lu expected %lu lime type %s\n",
+	   myname, this_node, (unsigned long)announced_rec_size,
+	   (unsigned long)check, *lime_type);
     return 1;
   }
 
   /* Allocate check list according to record size */
   
-  inputlist = (DML_SiteRank *)malloc(rec_size);
+  inputlist = (DML_SiteRank *)malloc(announced_rec_size);
   if(inputlist == NULL)return 1;
   
   /* Read the check list and close the record */
-  check = LRL_read_bytes(lrl_record_in, (char *)inputlist, rec_size);
+  check = LRL_read_bytes(lrl_record_in, (char *)inputlist, announced_rec_size);
   
   LRL_close_read_record(lrl_record_in);
     
@@ -359,15 +362,16 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 #endif
  
   /* Check bytes read */
-  if(check != rec_size){
+  if(check != announced_rec_size){
     printf("%s(%d): bytes read %lu != expected rec_size %lu\n",
-	   myname, this_node, (unsigned long)check, (unsigned long)rec_size);
+	   myname, this_node, (unsigned long)check, 
+	   (unsigned long)announced_rec_size);
     free(inputlist); return 1;
   }
  
   /* Byte reordering for entire sitelist */
   if (! DML_big_endian())
-    DML_byterevn((char *)inputlist, rec_size, sizeof(DML_SiteRank));
+    DML_byterevn((char *)inputlist, announced_rec_size, sizeof(DML_SiteRank));
   
   /* All input sitelists must agree exactly with what we expect */
   not_ok = DML_compare_sitelists(sites->list, inputlist, 
@@ -439,6 +443,13 @@ void DML_checksum_accum(DML_Checksum *checksum, DML_SiteRank rank,
 void DML_checksum_combine(DML_Checksum *checksum){
   DML_global_xor(&checksum->suma);
   DML_global_xor(&checksum->sumb);
+}
+
+
+/* Add single checksum set to the total */
+void DML_checksum_peq(DML_Checksum *total, DML_Checksum *checksum){
+  total->suma ^= checksum->suma;
+  total->sumb ^= checksum->sumb;
 }
 
 
@@ -597,8 +608,6 @@ int DML_my_ionode(int volfmt, DML_Layout *layout){
     return layout->this_node;
   }
   else if(volfmt == DML_PARTFILE){
-    printf("DML_my_ionode: PARTFILE %d maps to %d\n",layout->this_node,
-	   layout->ionode(layout->this_node));
     return layout->ionode(layout->this_node);
   }
   else {
@@ -609,7 +618,7 @@ int DML_my_ionode(int volfmt, DML_Layout *layout){
 
 /* Each I/O node (or the master node) receives data from all of its
    nodes and writes it to its file.
-   Returns the number of bytes written */
+   Returns the checksum and number of bytes written by this node only */
 
 /* In order to be nondeadlocking, this algorithm requires that the set
    of nodes containing sites belonging to any single I/O node are
@@ -635,16 +644,16 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   int current_node, new_node;
   int *coords;
   int this_node = layout->this_node;
+  int my_io_node;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
-  int my_io_node;
   size_t isite,buf_sites,max_buf_sites,max_dest_sites;
   int err;
   DML_SiteRank snd_coords;
   uint64_t nbytes = 0;
   char myname[] = "DML_partition_out";
 
-  /* My I/O node */
+  /* Get my I/O node */
   my_io_node = DML_my_ionode(volfmt, layout);
 
   /* Allocate buffer for writing or sending data */
@@ -766,12 +775,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   free(scratch_buf);
   free(outbuf);
 
-  /* Combine checksums over all nodes */
-  DML_checksum_combine(checksum);
-
-  /* Return the number of bytes written by all nodes */
-  DML_sum_uint64_t(&nbytes);
-
+  /* Number of bytes written by this node only */
   return nbytes;
 }
 
@@ -786,11 +790,11 @@ size_t DML_global_out(LRL_RecordWriter *lrl_record_out,
 {
   char *buf;
   int this_node = layout->this_node;
-  size_t my_size = size;
+  size_t nbytes = 0;
   char myname[] = "DML_global_out";
   
   /* Allocate buffer for datum */
-  buf = (char *)malloc(my_size);
+  buf = (char *)malloc(size);
   if(!buf){
     printf("%s(%d) can't malloc buf\n",myname,this_node);
     return 0;
@@ -811,19 +815,19 @@ size_t DML_global_out(LRL_RecordWriter *lrl_record_out,
     
     /* Do byte reordering before checksum */
     if (! DML_big_endian())
-      DML_byterevn(buf, my_size, word_size);
+      DML_byterevn(buf, size, word_size);
     
     /* Do checksum.  Straight crc32. */
-    DML_checksum_accum(checksum, 0, buf, my_size);
+    DML_checksum_accum(checksum, 0, buf, size);
     
     /* Write all the data */
-    if(LRL_write_bytes(lrl_record_out,(char *)buf,my_size) 
-       != my_size){
+    nbytes = LRL_write_bytes(lrl_record_out,(char *)buf,size);
+    if( nbytes != size){
       free(buf); return 0;}
   }
   
   free(buf);
-  return my_size;
+  return nbytes;
 }
 
 /* Each node writes its data to its own private file.  The order of
@@ -895,9 +899,6 @@ uint64_t DML_multifile_out(LRL_RecordWriter *lrl_record_out,
 
   free(lbuf);   free(coords);
   
-  /* Combine checksums over all nodes */
-  DML_checksum_combine(checksum);
-
   /* Return the number of bytes written by this node only */
   return nbytes;
 
@@ -975,16 +976,13 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 
   free(lbuf);   free(coords);
   
-  /* Combine checksums over all nodes */
-  DML_checksum_combine(checksum);
-
   /* Return the number of bytes read by this node only */
   return nbytes;
 }
 
 /* Each I/O node (or the master I/O node) reads data from its file and
    distributes it to its nodes.
-   Returns the number of bytes read */
+   Returns the number of bytes read by this node only */
 
 /* In order to be nondeadlocking, this algorithm requires that the set
    of nodes containing sites belonging to any single I/O node are
@@ -1011,7 +1009,6 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
   uint64_t nbytes = 0;
   int *coords;
   int this_node = layout->this_node;
-  int master_io_node = layout->master_io_node;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
   size_t isite, buf_sites, buf_extract, max_send_sites, max_buf_sites;
@@ -1081,8 +1078,8 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
     /* Send result to destination node. Avoid I/O node sending to itself. */
     if (dest_node != my_io_node)
       {
-#if 1
-	DML_route_bytes(buf,size,master_io_node,dest_node);
+#if 0
+	DML_route_bytes(buf,size,this_node,dest_node);
 #else
 	/* If destination elsewhere, send it */
 	if(this_node == my_io_node){
@@ -1115,13 +1112,9 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 
   }  while(DML_next_site_loop(&rcv_coords, sites));
 
-  /* Combine checksums over all nodes */
-  DML_checksum_combine(checksum);
-
-  /* Return the number of bytes read by all nodes */
-  DML_sum_uint64_t(&nbytes);
-
   free(inbuf); free(coords);
+
+  /* return the number of bytes read by this node only */
   return nbytes;
 }
 
@@ -1138,6 +1131,7 @@ size_t DML_global_in(LRL_RecordReader *lrl_record_in,
 {
   char *buf;
   int this_node = layout->this_node;
+  size_t nbytes = 0;
   char myname[] = "DML_global_in";
 
   /* Allocate buffer for datum */
@@ -1152,8 +1146,10 @@ size_t DML_global_in(LRL_RecordReader *lrl_record_in,
 
   if(this_node == layout->master_io_node){
     /* Read all the data */
-    if(LRL_read_bytes(lrl_record_in, (char *)buf, size) != size){
-      free(buf); return 0;}
+    nbytes = LRL_read_bytes(lrl_record_in, (char *)buf, size);
+    if(nbytes != size){
+      free(buf); return 0;
+    }
     
     /* Do checksum.  Straight crc32. */
     DML_checksum_accum(checksum, 0, buf, size);
@@ -1171,6 +1167,6 @@ size_t DML_global_in(LRL_RecordReader *lrl_record_in,
   put(buf,0,count,arg);
 
   free(buf);
-  return size;
+  return nbytes;
 }
 
