@@ -60,7 +60,9 @@ QIO_Reader *QIO_create_reader(const char *filename,
   }
   qio_in->lrl_file_in = NULL;
   qio_in->layout      = dml_layout;
+  qio_in->sites       = NULL;
   qio_in->read_state  = QIO_RECORD_INFO_PRIVATE_NEXT;
+  qio_in->xml_record  = NULL;
   qio_in->volfmt      = 0;
   DML_checksum_init(&(qio_in->last_checksum));
 
@@ -507,6 +509,7 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
 
   qio_in = QIO_open_read_master(filename, layout, iflag,
 				   DML_io_node, DML_master_io_node);
+  if(qio_in == NULL)return NULL;
 
   /* Master I/O node broadcasts the volume format to all the nodes, */
   /* inserting the value in the qio_in structure */
