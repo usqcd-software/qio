@@ -12,7 +12,7 @@
 #include <string.h>
 #endif
 
-#undef DEBUG
+#undef QIO_DEBUG
 
 /* In case of multifile format we use a common file name stem and add
    a suffix that depends on the node number */
@@ -56,7 +56,7 @@ int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
 					 msg_end, &rec_size, 
 					 lime_type);
   check = LRL_write_bytes(lrl_record_out, buf, rec_size);
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d): wrote bytes\n",myname,out->layout->this_node);fflush(stdout);
 #endif
 
@@ -100,9 +100,8 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
   }
 
   /* Byte reordering for entire sitelist */
-#if(!QIO_BIG_ENDIAN)
-  DML_byterevn((char *)sitelist, rec_size, sizeof(DML_SiteRank));
-#endif
+  if (! DML_big_endian())
+    DML_byterevn((char *)sitelist, rec_size, sizeof(DML_SiteRank));
 
   /* Write site list */
   lrl_record_out = LRL_open_write_record(out->lrl_file_out, 1, msg_begin,
@@ -143,7 +142,7 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 	   out->layout->sites_on_node,datum_size);
   }
 
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d): rec_size = %d\n",myname,out->layout->this_node,rec_size);
 #endif
 
@@ -252,7 +251,7 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
 
   LRL_close_read_record(lrl_record_in);
 
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d) site record was read %d\n",myname,in->layout->this_node,check);
 #endif
 
@@ -263,9 +262,8 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
   }
 
   /* Byte reordering for entire sitelist */
-#if(!QIO_BIG_ENDIAN)
-  DML_byterevn(buf, rec_size, sizeof(DML_SiteRank));
-#endif
+  if (! DML_big_endian())
+    DML_byterevn(buf, rec_size, sizeof(DML_SiteRank));
 
   return 0;
 }
@@ -287,7 +285,7 @@ int QIO_read_field(QIO_Reader *in,
 
   /* Open record only if we have a file handle */
   if(!in->lrl_file_in) {
-#ifdef DEBUG
+#ifdef QIO_DEBUG
     printf("%s(%d): skipping LRL_open_read_record %x\n",
 	   myname,this_node,in->lrl_file_in);
 #endif
@@ -316,7 +314,7 @@ int QIO_read_field(QIO_Reader *in,
   check = DML_stream_in(lrl_record_in, put, datum_size, word_size, arg, 
 			in->layout, in->serpar, in->siteorder, in->sitelist, 
 			in->volfmt,  checksum);
-#ifdef DEBUG
+#ifdef QIO_DEBUG
   printf("%s(%d): done with DML_stream_in\n", myname,this_node);
 #endif
 
