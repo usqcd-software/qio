@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 int QIO_read(QIO_Reader *in, XML_MetaData *xml_record, 
-	     void (*put)(char *buf, int coords[], void *arg),
+	     void (*put)(char *buf, const int coords[], void *arg),
 	     int datum_size, void *arg){
   /* Return status 0 for success, 1 for failure */
 

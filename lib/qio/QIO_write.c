@@ -10,7 +10,7 @@
 char record_private_output[] = "XML with record number";
 
 int QIO_write(QIO_Writer *out, XML_MetaData *xml_record, 
-	      void (*get)(char *buf, int coords[], void *arg),
+	      void (*get)(char *buf, const int coords[], void *arg),
 	      int datum_size, void *arg){
   /* Return status 0 for success, 1 for failure */
 

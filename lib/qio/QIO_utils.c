@@ -37,7 +37,7 @@ int QIO_write_XML(QIO_Writer *out, XML_MetaData *xml){
 }
 
 int QIO_write_field(QIO_Writer *out, int volfmt, XML_MetaData *xml_record, 
-		    void (*get)(char *buf, int coords[], void *arg),
+		    void (*get)(char *buf, const int coords[], void *arg),
 		    size_t datum_size, void *arg, 
 		    DML_Checksum *checksum){
   
@@ -91,7 +91,7 @@ size_t QIO_read_XML(QIO_Reader *in, XML_MetaData *xml){
 }
 
 size_t QIO_read_field(QIO_Reader *in, int volfmt, XML_MetaData *xml_record, 
-		      void (*put)(char *buf, int coords[], void *arg),
+		      void (*put)(char *buf, const int coords[], void *arg),
 		      int datum_size, void *arg, 
 		      DML_Checksum *checksum){
 
