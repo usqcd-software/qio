@@ -17,7 +17,8 @@ DML_GENERIC = dml/DML_get_sitelist.c dml/DML_stream_in.c dml/DML_stream_out.c dm
 DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c
 DML_SCALAR = ${OBJECTS} dml/DML_scalar.c
 
-LRL_SRCS = lrl/LRL_dummy.c
+# LRL_SRCS = lrl/LRL_dummy.c
+LRL_SRCS = lrl/LRL_main.c
 
 XML_SRCS = xml/XML_dummy.c
 
