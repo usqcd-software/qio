@@ -3,11 +3,15 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <qio.h>
 #include <qioxml.h>
 #include <xml_string.h>
 #include <type32.h>
 #include <sys/types.h>
 #include <time.h>
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
 
 /* Same as strpbrk: Find next occurrence of any character in tokens */
 char *QIO_next_token(char *parse_pt, char *tokens){
@@ -368,11 +372,11 @@ int QIO_decode_record_info(QIO_RecordInfo *record_info,
   char value_string[QIO_MAXVALUESTRING];
   int errors = 0;
   QIO_RecordInfoWrapper wrapper = QIO_RECORD_INFO_WRAPPER;
-  QIO_RecordInfo template = QIO_RECORD_INFO_TEMPLATE;
+  QIO_RecordInfo templ = QIO_RECORD_INFO_TEMPLATE;
   char *left_angle;
 
   /* Initialize record info structure from a template */
-  *record_info = template;
+  *record_info = templ;
 
   /* Start parsing record_string */
   /* Check leading tag, which is probably the info phrase "<?xml ...?>" */
@@ -473,11 +477,11 @@ int QIO_decode_file_info(QIO_FileInfo *file_info,
   char value_string[QIO_MAXVALUESTRING];
   int errors = 0;
   QIO_FileInfoWrapper wrapper = QIO_FILE_INFO_WRAPPER;
-  QIO_FileInfo template = QIO_FILE_INFO_TEMPLATE;
+  QIO_FileInfo templ = QIO_FILE_INFO_TEMPLATE;
   char *left_angle;
   
   /* Initialize file info structure from a template */
-  *file_info = template;
+  *file_info = templ;
 
   /* Start parsing file_string */
   /* Check leading tag, which is probably the info phrase "<?xml ...?>" */
@@ -575,11 +579,11 @@ int QIO_decode_checksum_info(QIO_ChecksumInfo *checksum,
   char value_string[QIO_MAXVALUESTRING];
   int errors = 0;
   QIO_ChecksumInfoWrapper wrapper = QIO_CHECKSUM_INFO_WRAPPER;
-  QIO_ChecksumInfo template = QIO_CHECKSUM_INFO_TEMPLATE;
+  QIO_ChecksumInfo templ = QIO_CHECKSUM_INFO_TEMPLATE;
   char *left_angle;
   
   /* Initialize from template */
-  *checksum = template;
+  *checksum = templ;
 
   /* Start parsing checksum_string */
   /* Check leading tag, which is probably the info phrase "<?xml ...?>" */
@@ -951,13 +955,13 @@ int QIO_defined_sumb(QIO_ChecksumInfo *checksum_info){
 /* Utilities for creating structures from templates */
 
 QIO_FileInfo *QIO_create_file_info(int spacetime, int *dims, int multifile){
-  QIO_FileInfo template = QIO_FILE_INFO_TEMPLATE;
+  QIO_FileInfo templ = QIO_FILE_INFO_TEMPLATE;
   QIO_FileInfo *file_info;
   
   file_info = (QIO_FileInfo *)malloc(sizeof(QIO_FileInfo));
   if(!file_info)return NULL;
   
-  *file_info = template;
+  *file_info = templ;
   QIO_insert_file_version(file_info,QIO_FILEFORMATVERSION);
   QIO_insert_spacetime_dims(file_info,spacetime,dims);
   QIO_insert_multifile(file_info,multifile);
@@ -1026,7 +1030,7 @@ int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
 QIO_RecordInfo *QIO_create_record_info(char *datatype, char *precision, 
 					int colors, int spins, int typesize, 
 					int datacount){
-  QIO_RecordInfo template = QIO_RECORD_INFO_TEMPLATE;
+  QIO_RecordInfo templ = QIO_RECORD_INFO_TEMPLATE;
   QIO_RecordInfo *record_info;
   time_t cu_time;
   
@@ -1034,7 +1038,7 @@ QIO_RecordInfo *QIO_create_record_info(char *datatype, char *precision,
   if(!record_info)return NULL;
   time(&cu_time);
 
-  *record_info = template;
+  *record_info = templ;
   QIO_insert_record_version(record_info,QIO_RECORDFORMATVERSION);
   QIO_insert_record_date(record_info,asctime(gmtime(&cu_time)));
   QIO_insert_datatype(record_info,datatype);
@@ -1114,13 +1118,13 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
 }
 
 QIO_ChecksumInfo *QIO_create_checksum_info(u_int32 suma, u_int32 sumb){
-  QIO_ChecksumInfo template = QIO_CHECKSUM_INFO_TEMPLATE;
+  QIO_ChecksumInfo templ = QIO_CHECKSUM_INFO_TEMPLATE;
   QIO_ChecksumInfo *checksum_info;
   
   checksum_info = (QIO_ChecksumInfo *)malloc(sizeof(QIO_ChecksumInfo));
   if(!checksum_info)return NULL;
 
-  *checksum_info = template;
+  *checksum_info = templ;
   QIO_insert_checksum_version(checksum_info,QIO_CHECKSUMFORMATVERSION);
   QIO_insert_suma_sumb(checksum_info,suma,sumb);
   return checksum_info;
