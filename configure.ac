@@ -125,5 +125,6 @@ AC_CONFIG_SUBDIRS(other_libs/c-dime)
 AC_CONFIG_FILES([Makefile
                  include/Makefile
                  lib/Makefile
+                 other_libs/Makefile
                  other_libs/c-dime/Makefile])
 AC_OUTPUT
