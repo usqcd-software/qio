@@ -20,7 +20,7 @@ QIO_Reader *QIO_open_read(XML_MetaData *xml_file, const char *filename, int serp
   int this_node = layout->this_node;
   int i;
 
-  /* Make a local copy of layout lattize */
+  /* Make a local copy of lattice size */
   latsize = (int *)malloc(sizeof(int)*latdim);
   for(i=0; i < latdim; ++i)
     latsize[i] = layout->latsize[i];

@@ -23,7 +23,7 @@ QIO_Writer *QIO_open_write(XML_MetaData *xml_file, const char *filename,
   int this_node = layout->this_node;
   int i;
 
-  /* Make a local copy of layout lattize */
+  /* Make a local copy of lattice size */
   latsize = (int *)malloc(sizeof(int)*latdim);
   for(i=0; i < latdim; ++i)
     latsize[i] = layout->latsize[i];
