@@ -6,7 +6,9 @@
 #include <xml_string.h>
 #include <qioxml.h>
 #include <stdio.h>
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
+#endif
 
 #define DEBUG
 
