@@ -1,4 +1,10 @@
-08/0/2004 -- Carleton DeTar
+08/03/2004 -- Robert Edwards
+
+	Version 1.0.beta3. Added back in scalar and parscalar builds.
+        Default is to always build for parallel environment requiring
+        QMP.
+
+08/01/2004 -- Carleton DeTar
 
         Version 1.0 supports partitioned I/O.
         Parallel I/O capability has been abandoned.
