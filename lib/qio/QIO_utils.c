@@ -136,8 +136,10 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
     rec_size = volume * datum_size;  /* Single file holds all the data */
   else{ 
     rec_size = out->layout->sites_on_node * datum_size; /* Multifile */
+#ifdef QIO_DEBUG
     printf("%s(%d): sites = %d datum %d\n",myname,out->layout->this_node,
 	   out->layout->sites_on_node,datum_size);
+#endif
   }
 
 #ifdef QIO_DEBUG
