@@ -1,6 +1,7 @@
 #ifndef QIO_H
 #define QIO_H
 
+#include <qio_config.h>
 #include <qioxml.h>
 #include <qio_string.h>
 #include <lrl.h>
