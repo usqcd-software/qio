@@ -1,3 +1,8 @@
+02/28/2004 -- Robert Edwards
+
+	Version 0.9.1. Fixed some mem leaks with record_info.
+        Config file now fully autoconf-iscated.
+
 02/27/2004 -- Robert Edwards
 
 	Version 0.9.0. Functionality extended to SINGLEFILE/MULTIFILE.
