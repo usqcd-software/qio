@@ -101,16 +101,22 @@ esac
 AC_PROG_CC
 AC_PROG_RANLIB
 
+#
+# Fricken autoconf does some odd things with these AC include 
+# stuff. I found the AC_FUNC_MALLOC substituted the name 
+# malloc with rpl_malloc - no idea what that is and failed to
+# link on IBM's.
+#
 # Checks for header files.
-AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h string.h strings.h])
+## AC_HEADER_STDC
+## AC_CHECK_HEADERS([stdlib.h string.h strings.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_C_CONST
-AC_TYPE_SIZE_T
+## AC_C_CONST
+## AC_TYPE_SIZE_T
 
 # Checks for library functions.
-AC_FUNC_MALLOC
+## AC_FUNC_MALLOC
 
 #
 # Now have all the options... Do some configuration 
