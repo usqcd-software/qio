@@ -42,10 +42,10 @@ int QIO_write_field(QIO_Writer *out, int volfmt, XML_string *xml_record,
   size_t rec_size;
   size_t volume = out->layout->volume;
 
-  printf("QIO_write_field\n");
-
   /* Compute record size */
   rec_size = volume * datum_size;
+
+  printf("QIO_write_field: rec_size = %d\n",rec_size);
 
   lrl_record_out = LRL_open_write_record(out->lrl_file_out, &rec_size, 
 					 dime_XML);
