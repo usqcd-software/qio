@@ -1,4 +1,4 @@
-% -*-LaTeX-*- document QDP/C QIO API (C Language Binding) version 0.2
+% -*-LaTeX-*- document QDP/C QIO API (C Language Binding) version 0.8
 %
 \documentclass{article}
 
@@ -13,7 +13,7 @@
 
 \begin{document}
 \title{
-   Input/Output for QDP \\{\large Version 0.2}
+   Input/Output for QDP \\{\large Version 0.8}
 }
 \author{ SciDAC Software Coordinating Committee}
 
@@ -21,7 +21,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-This is a proposal for the C binding for the Input/Output
+This document describes the C binding for the Input/Output
 Applications Programmer Interface developed under the auspices of the
 U.S. Department of Energy Scientific Discovery through Advanced
 Computing (SciDAC) program.
@@ -89,16 +89,16 @@ record consists of five logical records.  Within QIO the file is
 viewed as a series of logical records as follows:
 %
 \begin{itemize}
-  \item File QIO metadata
-  \item File physics metadata
-  \item Record 1 QIO metadata
-  \item Record 1 physics metadata
+  \item Private file QIO metadata
+  \item User file physics metadata
+  \item Record 1 private QIO metadata
+  \item Record 1 user physics metadata
   \item Record 1 binary data
-  \item Record 1 checksum
-  \item Record 2 QIO metadata
-  \item Record 2 physics metadata
+  \item Record 1 private checksum
+  \item Record 2 private QIO metadata
+  \item Record 2 user physics metadata
   \item Record 2 binary data
-  \item Record 2 checksum
+  \item Record 2 private checksum
   \item etc.
 \end{itemize}
 %
@@ -108,17 +108,19 @@ rapidly.
 
 We have adopted the DIME standard (a generalization of the MIME
 standard) for packaging the logical records.  File system limitations
-may require splitting data into multiple physical files.  The
-management of physical files is handled internally and is hidden from
-the applications programmer.
+may require splitting a logical single file into multiple physical
+files.  The management of physical files is handled internally and is
+hidden from the applications programmer.
 
 \subsection{Multifile format}
 
 The API provides for rapid temporary writing of data to scratch disks
-and reading from scratch disks.  In this case it is assumed that the
-files are not intended for longer term storage.  Thus the file format
-in this case is implementation-dependent and not standardized.  A
-specific choice of format is described in the Appendix.
+and reading from scratch disks.  This same format may be used for
+staging files for access by many compute nodes.  In this case it is
+assumed that the files are not intended for longer term storage.  Thus
+the file format in this case is implementation-dependent and not
+standardized.  A specific choice of format is described in the
+Appendix.
 
 \subsection{ASCII Metadata Files}
 
@@ -159,8 +161,8 @@ existing file.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|QDP_Writer *QDP_open_write(|\QMDhandle\verb|*xml_file, char *filename,|\\
-                 & \verb|int volfmt, int serpar, int mode)|\\
+  Prototype      & \verb|QDP_Writer *QDP_open_write(|\QMDhandle \verb|*xml_file,|\\
+                 & \verb| char *filename, int volfmt, int serpar, int mode);| \\
     \hline
   Purpose        & Opens a named file for writing and writes the file metadata. \\
 \hline
@@ -208,8 +210,8 @@ lattice coordinates.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|QDP_Reader *QDP_open_read(|\QMDhandle \verb| *xml_file, char *filename,|\\
-                 & \verb|int serpar)|\\
+  Prototype      & \verb|QDP_Reader *QDP_open_read(|\QMDhandle \verb| *xml_file,|\\
+                 & \verb| char *filename, int serpar);|\\
     \hline
   Purpose        & Opens a named file for reading and reads the file metadata. \\
 \hline
@@ -269,10 +271,11 @@ In both cases the integer return value is 0 for success and 1 for failure.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QDP_write_|\itt\verb|(QDP_Writer *out,| \QMDhandle \verb| *xml_record,|\\
-                 & \verb| QDP_{\it Type}\verb| *field);|\\
+  Prototype      & \verb|int QDP_write_|\itt\verb|(QDP_Writer *out,|\\
+                 &  \QMDhandle \verb|*xml_record, QDP_|{\it Type}\verb| *field);|\\
     \hline
-  Purpose        & Writes the field and its metadata as the next record in the specified file. \\
+  Purpose        & Writes the field and its metadata as the next record in \\
+                 & the specified file. \\
 \hline
   \itt     & \allTypes \\
    \hline
@@ -291,10 +294,11 @@ in advance.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QDP_read_|\itt\verb|(QDP_Reader *in,|\QMDhandle \verb| *xml_record,|\\
-                 & \verb| QDP_|{\it Type}\verb| *field);|\\
+  Prototype      & \verb|int QDP_read_|\itt\verb|(QDP_Reader *in,|\\
+                 &  \QMDhandle \verb|*xml_record, QDP_|{\it Type}\verb| *field);|\\
     \hline
-  Purpose        & Reads the field and its metadata from the next record in the specified file. \\
+  Purpose        & Reads the field and its metadata from the next record \\
+                 & in the specified file. \\
 \hline
   \itt     & \allTypes \\
    \hline
@@ -314,10 +318,11 @@ field type.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QDP_write_multi_|\itt\verb|(QDP_Writer *out, |\QMDhandle\verb| *xml_record,|\\
-                 & \verb| QDP_|{\it Type}\verb| *field, int n);|\\
+  Prototype      & \verb|int QDP_write_multi_|\itt\verb|(QDP_Writer *out, |\\
+                 & \QMDhandle \verb|*xml_record, QDP_|{\it Type}\verb| *field, int n);|\\
     \hline
-  Purpose        & Writes the array of fields and its metadata as the next record in the specified file. \\
+  Purpose        & Writes the array of fields and its metadata as the next \\
+                 & record in the specified file. \\
 \hline
   \itt     & \allTypes \\
    \hline
@@ -336,10 +341,11 @@ in advance.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QDP_read_multi_|\itt\verb|(QDP_Reader *in, |\QMDhandle\verb| *xml_record,|\\
-                 & \verb| QDP_|{\it Type}|\verb| *field, int n);|\\
+  Prototype      & \verb|int QDP_read_multi_|\itt\verb|(QDP_Reader *in, |\\
+                 &   \QMDhandle \verb|*xml_record, QDP_|{\it Type}\verb| *field, int n);|\\
     \hline
-  Purpose        & Reads the array of fields and its metadata from the next record in the specified file. \\
+  Purpose        & Reads the array of fields and its metadata from the next \\
+                 & record in the specified file. \\
 \hline
   \itt     & \allTypes \\
    \hline
@@ -361,9 +367,11 @@ to read or skip the accompanying binary data.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QDP_read_record_info(QDP_Reader *in,|\QMDhandle \verb| *xml_record);|\\
+  Prototype      & \verb|int QDP_read_record_info(QDP_Reader *in,|\\
+                 &  \QMDhandle \verb|*xml_record);|\\
     \hline
-  Purpose        & Reads the only the metadata from the next record in the specified file. \\
+  Purpose        & Reads the only the metadata from the next record in the \\
+                 & specified file. \\
    \hline
   Example  & \verb|QDP_read_record_info(infile, xml_record_in);| \\
    \hline
@@ -397,14 +405,14 @@ tools for constructing XML documents as ``XML strings''.  For present
 purposes of reading and writing lattice fields, the accompanying
 metadata documents are treated merely as strings.  Until the package
 is ready, a few utilities are provided for constructing the XML string
-type \verb|XML_String| required by the API\@.
+type \QMDhandle required by the API\@.
 
 \paragraph{Creating an XML String}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|XML_String *XML_string_create(int length);|\\
+  Prototype      & \QMDhandle \verb|*XML_string_create(int length);|\\
     \hline
   Purpose        & Creates an empty string of length \verb|length|. \\
    \hline
@@ -418,7 +426,8 @@ type \verb|XML_String| required by the API\@.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|void XML_string_set(XML_String *xml, const char *const string);|\\
+  Prototype      & \verb|void XML_string_set(|\QMDhandle \verb|*xml,| \\
+                 & \verb| const char *const string);|\\
     \hline
   Purpose        & Inserts the character string \verb|string|. \\
    \hline
@@ -432,7 +441,7 @@ type \verb|XML_String| required by the API\@.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|void XML_string_copy(XML_String *dest, XML_String *src);|\\
+  Prototype      & \verb|void XML_string_copy(|\QMDhandle \verb|*dest, |\QMDhandle \verb|*src);|\\
     \hline
   Purpose        & Copies \verb|src| to \verb|dest|. \\
    \hline
@@ -441,12 +450,28 @@ type \verb|XML_String| required by the API\@.
  \end{tabular}
 \end{flushleft}
 %
+\paragraph{Reallocating an XML string}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \QMDhandle \verb|*XML_string_realloc(|\QMDhandle \verb| *xml, int length);|\\
+    \hline
+  Purpose        & Copies \verb|src| to \verb|dest|. \\
+   \hline
+  Example        & \verb|newxml = XML_string_realloc(oldxml,length);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+Adjusts string length to a new length with null padding or truncation
+if necessary.
+%
 \paragraph{Accessing the character string}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|char *XML_string_bytes(const XML_String *const xml);|\\
+  Prototype      & \verb|char *XML_string_bytes(const |\QMDhandle \verb|*const xml);|\\
     \hline
   Purpose        & Returns a pointer to the string. \\
    \hline
@@ -460,7 +485,7 @@ type \verb|XML_String| required by the API\@.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|size_t XML_string_ptr(const XML_String *const xml);|\\
+  Prototype      & \verb|size_t XML_string_ptr(const |\QMDhandle \verb|*const xml);|\\
     \hline
   Purpose        & Returns the length of the string. \\
    \hline
@@ -474,7 +499,7 @@ type \verb|XML_String| required by the API\@.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|void XML_string_destroy(XML_String *xml);|\\
+  Prototype      & \verb|void XML_string_destroy(|\QMDhandle \verb|*xml);|\\
     \hline
   Purpose        & Frees storage. \\
    \hline
@@ -519,34 +544,60 @@ supplied by the implementer.
 The structure is defined as follows:
 \begin{verbatim}
 typedef struct {
-  int (*node_number)(int coords[]);
+  int (*node_number)(const int coords[]);
+  int (*node_index)(const int coords[]);
+  void (*get_coords)(int coords[], int node, int index);
   int *latsize;
   int latdim;
   size_t volume;
+  size_t sites_on_node;
   int this_node;
+  int number_of_nodes;
 } QIO_Layout;
 \end{verbatim}
 %
 The \verb|node_number| member is an implementer-supplied function
 returning the number of the node that has the specified lattice
-coordinate.  The next two members specify the lattice coordinate
-extent and spacetime dimension.  The fourth member specifies the full
-spacetime volume.  The fifth member gives the number of the present
-node.
+coordinate.  The \verb|node_index| member returns the storage order
+index for the site on its node.  The \verb|get_coords| member maps the
+node number and index values to lattice coordinates. The next two
+members specify the lattice coordinate extent and spacetime dimension.
+The sixth member specifies the full spacetime volume.  The seventh,
+gives the number of sites on the current node, the eighth, the number
+of the present node, and the last, the total number of nodes.
+
+Here is an illustration of how the layout structure is loaded from the
+data in the QDP/C API prior to a \verb|QIO_open_read| or
+\verb|QIO_open_write| call:
+%
+\begin{verbatim}
+QIO_Layout layout;
+
+layout.node_number = QDP_node_number;
+layout.node_index  = QDP_index;
+layout.get_coords = QDP_get_coords;
+QDP_latsize(layout.latsize);
+layout.latdim = QDP_ndim();
+layout.volume = QDP_volume();
+layout.sites_on_node = QDP_sites_on_node;
+layout.this_node = QDP_this_node;
+layout.number_of_nodes = QDP_numnodes();
+\end{verbatim}
 
 \paragraph{Open a file for writing}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|QIO_Writer *QIO_open_write(|\QMDhandle\verb| *xml_file, char *filename, |\\
-		 & \verb|int volfmt, int mode, QIO_Layout *layout);| \\
+  Prototype      & \verb|QIO_Writer *QIO_open_write(|\QMDhandle \verb|*xml_file,|\\
+		 & \verb| char *filename, int serpar, int volfmt, int mode,| \\
+                 & \verb| QIO_Layout *layout);| \\
   Purpose        & Opens a named file for writing and writes the file metadata. \\
 \hline
   Example  & \verb|QIO_Writer *outfile;| \\
            & \verb|QIO_Layout layout;| \\
            & \verb|outfile = QIO_open_write(xml_file_out, filename, |\\
-	   & \verb|  QDP_SINGLEFILE, QDP_SERIAL, QDP_CREATE, &layout);| \\
+	   & \verb|  QDP_SERIAL, QDP_SINGLEFILE, QDP_CREATE, &layout); |\\
    \hline
  \end{tabular}
 \end{flushleft}
@@ -558,18 +609,21 @@ It is assumed that the user has prepared the \verb|layout| argument as described
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|QIO_Reader *QIO_open_read(XML_MetaData *xml_file, char *filename,|\\
-                 & \verb| int volfmt, QIO_Layout *layout);|\\
+  Prototype      & \verb|QIO_Reader *QIO_open_read(XML_MetaData *xml_file,,|\\
+                 & \verb|  char *filename, int serpar, QIO_Layout *layout);|\\
   Purpose        & Opens a named file for writing and writes the file metadata. \\
 \hline
-  Example  & \verb|QIO_Reader *outfile;| \\
+  Example  & \verb|QDP_Reader *infile;| \\
            & \verb|QIO_Layout layout;| \\
            & \verb|infile = QIO_open_read(xml_file_in, filename, |\\
-           & \verb|  QDP_SINGLEFILE, QDP_SERIAL, &layout);| \\
+	   & \verb|  QDP_SERIAL, &layout);| \\
    \hline
  \end{tabular}
 \end{flushleft}
 %
+The volume format is auto-detected so is not specified by the calling
+program.  It is assumed that the user has prepared the \verb|layout|
+argument as described above.
 
 
 \paragraph{Close an output file}
@@ -602,105 +656,249 @@ It is assumed that the user has prepared the \verb|layout| argument as described
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QIO_write(QIO_Writer *out,|\QMDhandle\verb| *xml_record, |\\
-	    & \verb| void (*get)(char *buf, int coords[], void *arg),|\\
-            & \verb| int datum_size, void *arg);| \\
+  Prototype      & \verb|int QIO_write(QIO_Writer *out, |\\
+	    & \verb| QIO_RecordInfo *record_info,|\QMDhandle \verb|*xml_record, | \\
+            & \verb| void (*get)(char *buf, size_t index, size_t count, void *arg),|\\
+            & \verb| int datum_size, int word_size, void *arg);| \\
 \hline
-  Example  & \verb|QIO_write(outfile, xml_record, QDP_F_get_r, sizeof(QLA_Real),|\\
-           & \verb| (void *)field);|\\
+  Example  & \verb|QIO_RecordInfo *rec_info;| \\
+           & \verb|rec_info = QIO_create_record_info("QDP_F_Real","F",0,QLA_Ns,size,1);| \\
+           & \verb|QIO_write(outfile, rec_info, xml_record, QDP_F_get_R,|\\
+           & \verb| sizeof(QLA_Real), sizeof(QLA_Real), (void *)field);|\\
    \hline
  \end{tabular}
 \end{flushleft}
 %
-The third argument is a factory function that, in this example, is
+The input arguments are as follows:
+\begin{flushleft}
+\begin{tabular}{ll}
+ \verb|out| & The \verb|QIO_Writer| handle returned by \verb|QIO_open_write|. \\
+ \verb|record_info| & The private metadata for the record (see below). \\
+ \verb|xml_record|  & The user-constructed metadata for the record. \\
+ \verb|get|         & Factory function (see below). \\
+ \verb|datum_size|  & The total number of bytes required to serialize the datum. \\
+ \verb|word_size|   & The number of bytes in a datum word. \\
+ \verb|arg|         & Pass-through parameters for the factory function. \\
+\end{tabular}
+\end{flushleft}
+%
+The fourth argument is a factory function that, in this example, is
 invoked by QIO like this:
 %
 \begin{verbatim}
-  QDP_F_get_r(buf, coords, field);
+  QDP_F_get_R(buf, index, count, field);
 \end{verbatim}
 %
-The factory function \verb|get| is expected to fill the QIO-supplied
-buffer \verb|buf| with a byte-serialized copy of the field datum
-belonging to a single site of QIO's choosing, specified by its lattice
-coordinates.  Since the open operation has already registered a
-\verb|node_number| function, QIO knows to ask only for a site on the
-present node.  The factory function is not required to fetch data from
-a different node.  The fifth argument of \verb|QIO_write| is passed
-back as the third argument of the \verb|get| function.  It is used to
-identify the field.  If the write operation involves a single field,
-e.g. a \verb|QDP_ColorVector| field, the datum at a single site would
-be a single color vector.  If the write operation involves an array of
-fields, e.g. the four directional components of a gauge field, the
-datum at a single site would be an array of four color matrices.  The
-byte count is provided by the fourth argument of \verb|QIO_write| and
-must be the total number of bytes required to serialize the datum.
-The serialization must conform to requirements of the file layout.
+It is expected to fill the QIO-supplied buffer \verb|buf| with a
+byte-serialized copy of the field datum belonging to \verb|count|
+consecutive sites of QIO's choosing, starting with the storage order
+site index \verb|index|.  The byte ordering through the factory
+functions should be the native order of the architecture.  Any byte
+rearrangement needed to convert to and from standard file order is the
+responsibility of QIO.
 
+Since the open operation has already registered a \verb|node_number|
+function, QIO knows to ask only for a site on the present node.  The
+factory function is not required to fetch data from a different node.
+
+The seventh argument of \verb|QIO_write| is passed back as the fourth
+argument of the \verb|get| function.  It can be used to identify the
+field.  
+
+If the write operation involves a single field, e.g. a
+\verb|QDP_ColorVector| field, the datum at a single site would be a
+single color vector.  If the write operation involves an array of
+fields, e.g. the four directional components of a gauge field, the
+datum at a single site would be an array of four color matrices.  For
+possible byte-reversal the datum is viewed as a collection of words,
+all of the same length.  The \verb|word_size| is the number of bytes
+in a single such word.  The serialization must conform to requirements
+of the file layout and the data structure must obey word-size
+uniformity.
 
 \paragraph{Read a field}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QIO_read(QIO_Reader *in,|\QMDhandle\verb| *xml_record, |\\
+  Prototype      & \verb|int QIO_read(QIO_Reader *in,| \\
+            & \verb| QIO_RecordInfo *record_info,| \QMDhandle \verb|*xml_record, |\\
 	    & \verb| void (*put)(char *buf, int coords[], void *arg), |\\
             & \verb| int datum_size, void *arg);| \\
 \hline
-  Example  & \verb|QIO_read(infile, xml_record, QDP_F_put_r, sizeof(QLA_Real),|\\
-           & \verb| (void *)field);|\\
+  Example  & \verb|QIO_read(infile, rec_info, xml_record, QDP_F_put_r, |\\
+           & \verb| sizeof(QLA_Real), (void *)field);|\\
    \hline
  \end{tabular}
 \end{flushleft}
 %
-This operation is simply the inverse of the write operation described.
-The \verb|put| factory function does the reverse of the \verb|get|
-function.
+This operation is the inverse of the write operation described.  The
+\verb|put| factory function does the reverse of the \verb|get| function.
 
 \paragraph{Read only the record metadata}
 
+This utility makes it possible to examine only the header of the
+record in order to decide whether to continue reading.  The state of
+the file is remembered, so a subsequent call to \verb|QIO_read| reads
+the full record as though this call had not been made.
+%
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QIO_peek(QIO_Reader *in,| \QMDhandle\verb| *xml_record);| \\
+  Prototype      & \verb|int QIO_read_record_info(QIO_Reader *in,| \\
+                 & \verb| QIO_RecordInfo *record_info,| \QMDhandle \verb|*xml_record);| \\
 \hline
-  Example  & \verb|QIO_peek(infile, xml_record);|\\
+  Example  & \verb|QIO_read_record_info(infile, rec_info, xml_record);|\\
    \hline
  \end{tabular}
 \end{flushleft}
 %
 
-\paragraph{Skip the next record}
+\paragraph{Skip to the next record}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QIO_skip(QIO_Reader *in);| \\
+  Prototype      & \verb|int QIO_next_record(QIO_Reader *in);| \\
 \hline
-  Example  & \verb|QIO_skip(infile);|\\
+  Example  & \verb|QIO_next_record(infile);|\\
    \hline
  \end{tabular}
 \end{flushleft}
 %
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Private Record Metadata}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The private QIO record metadata is used for consistency checking.  It
+carries enough information to completely define the binary record
+format.  The \verb|QIO_RecordInfo| structure is opaque, but elements
+are accessed and manipulated through the following functions:
+
+\paragraph{Create the private record metadata structure}
+Before writing a record the calling program must create the private
+record metadata structure.  Before reading a record, the calling
+program must allocate space for the private record metadata structure
+using the same calling procedure.
+%
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|QIO_RecordInfo *QIO_create_record_info(char *datatype,,| \\
+                 & \verb| char *precision, int colors, int spins, int typesize,| \\
+                 & \verb| int datacount);| \\
+\hline
+  Example  & \verb|rec_info = QIO_create_record_info("QDP_F_Real","F",0,0,size,1);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The \verb|datatype| string is the name of one of the QLA datatypes.
+The \verb|precision| string is one of these:
+%
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+\hline
+    \verb|F| & single \\
+    \verb|D| & double \\
+    \verb|S| & random number generator state \\
+    \verb|I| & integer (currently only 32-bit is supported)\\
+\hline
+  \end{tabular}
+\end{flushleft}
+%
+The \verb|colors| and \verb|spins| arguments give the working value
+for these quantities, if they apply to the datatype.  Otherwise, they
+should be zero.  The \verb|typesize| specifies the number of bytes in
+the QLA datatype and the \verb|datacount| specifies the number of such
+datatypes per site.  So for a single precision SU(3) gauge field with
+four color matrices per site, the typesize is 72 and the datacount is
+4.
+
+It is not an error to create a structure with zeros for integer values
+and null string pointers.  Those data items are tagged as ``missing''.
+However, \verb|QIO_write| and \verb|QIO_read| will return with an
+error message, if the total byte count per site is inconsistent with
+the values in this structure.
+
+\paragraph{Destroy the private record metadata structure}
+%
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|void QIO_destroy_record_info(QIO_RecordInfo *record_info);| \\
+\hline
+  Example  & \verb|QIO_destroy_record_info(rec_info);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+\paragraph{Compare two private record metadata structures}
+To allow for verification that a record being read matches what is
+expected, the calling program may create the record information
+structure that it expects and compare it with the structure that
+was read from the file.
+
+%
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_compare_record_info(QIO_RecordInfo *found,|\\
+                 & \verb| QIO_RecordInfo *expect);| \\
+\hline
+  Example  & \verb|int ok = QIO_compare_record_info(rec_info, cmp_info);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The arguments are {\it not} symmetric.  Only those fields that are
+non-empty in the \verb|expect| structure are compared with fields in
+the \verb|found| structure.
+
+\paragraph{Extract individual values from the private record metadata structure}
+The following accessors perform self-evident functions:
+
+%
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|char *QIO_get_datatype(QIO_RecordInfo *record_info);| \\
+                 & \verb|char *QIO_get_precision(QIO_RecordInfo *record_info);| \\
+                 & \verb|int QIO_get_colors(QIO_RecordInfo *record_info);| \\
+                 & \verb|int QIO_get_spins(QIO_RecordInfo *record_info);| \\
+                 & \verb|int QIO_get_typesize(QIO_RecordInfo *record_info);| \\
+                 & \verb|int QIO_get_datacount(QIO_RecordInfo *record_info);| \\
+\hline
+ \end{tabular}
+\end{flushleft}
+%
+
+
+
+
  
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Appendix: Multidump format}
+\section{Appendix: Multifile format}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The principal file read by the master node contains most of the metadata:
 
 \begin{itemize}
-  \item File QIO metadata
-  \item File physics metadata
+  \item Private file QIO metadata
+  \item User file physics metadata
   \item Binary index of sites
-  \item Record 1 QIO metadata
-  \item Record 1 physics metadata
+  \item Record 1 private QIO metadata
+  \item Record 1 user physics metadata
   \item Record 1 binary data
-  \item Record 1 checksum
-  \item Record 2 QIO metadata
-  \item Record 2 physics metadata
+  \item Record 1 private checksum
+  \item Record 2 private QIO metadata
+  \item Record 2 user physics metadata
   \item Record 2 binary data
-  \item Record 2 checksum
+  \item Record 2 private checksum
   \item etc.
 \end{itemize}
 
