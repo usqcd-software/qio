@@ -6,7 +6,9 @@
 #include <stdarg.h>
 #include <string.h>
 
-#ifndef HAVE_QMP_ROUTE
+#if 1
+
+#warning Using DML GRID ROUTE
 
 /* Private implementation of route method */
 QMP_status_t DML_grid_route(void* buffer, size_t count,
@@ -18,6 +20,10 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   
   QMP_msgmem_t sendbufmm, recvbufmm; /* Message memory handles */
 
+  QMP_mem_t* sendbuf_qmp_mem_t;      /* These are the opaque blocks returned */
+  QMP_mem_t* recvbuf_qmp_mem_t;      /* by QMP memory allocation...          */
+
+  /* Now I have to use QMP_get_pointer for these */
   void *sendbuf;                   /* These are the actual comms buffers */
   void *recvbuf;                 
 
@@ -38,6 +44,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   size_t bufsize;
 
   size_t alignment = 8;
+
 
   /* Check to see if the logical topology is declared or not */
   /*
@@ -77,7 +84,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
     return QMP_NOMEM_ERR;
   }
 
-  /* Compute the displacement */
+  /* Compute the taxi driver displacement */
   for(i=0; i < ndim; i++) {
     l_disp_vec[i] = l_dst_coords[i] - l_src_coords[i];
   }
@@ -95,17 +102,21 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   }
 
   /* Will have to free these with QMP_free_memory */
-  sendbuf = QMP_allocate_aligned_memory(bufsize,alignment,0);
-  if( sendbuf == NULL ) { 
+  sendbuf_qmp_mem_t = (QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_COMMS);
+  if( sendbuf_qmp_mem_t == (QMP_mem_t *)NULL ) { 
     fprintf(stderr, "Unable to allocate sendbuf in QMP_route\n");
     return QMP_NOMEM_ERR;
   }
 
-  recvbuf = QMP_allocate_aligned_memory(bufsize,alignment,0);
-  if( recvbuf == NULL ) { 
+  recvbuf_qmp_mem_t =(QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_COMMS);
+  if( recvbuf_qmp_mem_t == (QMP_mem_t *)NULL ) { 
     fprintf(stderr ,"Unable to allocate recvbuf in QMP_route\n");
     return QMP_NOMEM_ERR;
   }
+
+  // Now I need the aligned pointers from these...
+  sendbuf = QMP_get_memory_pointer(sendbuf_qmp_mem_t);
+  recvbuf = QMP_get_memory_pointer(recvbuf_qmp_mem_t);
 
   /* To start with -- the first thing I have to do, is to copy
      the message into my sendbuf if I am the sender. Otherwise 
@@ -229,11 +240,12 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   /* We can now free a whole  bunch of stuff */
   QMP_free_msgmem(sendbufmm);
   QMP_free_msgmem(recvbufmm);
-  QMP_free_memory(sendbuf);
-  QMP_free_memory(recvbuf);
+  QMP_free_memory(sendbuf_qmp_mem_t);
+  QMP_free_memory(recvbuf_qmp_mem_t);
 
   /* Alloced with malloc */
   free(l_disp_vec);
+
 
   return(QMP_SUCCESS);
 }
