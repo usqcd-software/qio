@@ -16,7 +16,8 @@ void DML_peq_uint64_t(uint64_t *subtotal, uint64_t *addend)
 void DML_sum_uint64_t(uint64_t *ipt)
 {
   uint64_t work = *ipt;
-  QMP_binary_reduction(&work, sizeof(work), DML_peq_uint64_t);
+  QMP_binary_reduction((void *)(&work), sizeof(work), 
+		       (QMP_binary_func)DML_peq_uint64_t);
   *ipt = work;
 }
 

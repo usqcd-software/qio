@@ -43,7 +43,7 @@ void QIO_string_set(QIO_String *qs, const char *const string)
   } else {
     size_t len = strlen(string) + 1;
 
-    qs->string = realloc(qs->string, len);
+    qs->string = (char *)realloc(qs->string, len);
     memcpy(qs->string, string, len);
     qs->length = len;
   }
@@ -68,7 +68,7 @@ void QIO_string_copy(QIO_String *dest, QIO_String *src)
   if(dest == NULL)return;
 
   len = src->length;
-  dest->string = realloc(dest->string, len);
+  dest->string = (char *)realloc(dest->string, len);
   memcpy(dest->string, src->string, len);
   dest->length = len;
 }

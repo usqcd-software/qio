@@ -97,7 +97,7 @@ void check_scalar_layout(QIO_Layout *s_layout, QIO_Layout *layout)
    to the field */
 void QIO_scalar_put( char *s1 , size_t scalar_index, int count, void *s2 )
 {
-  get_put_arg *arg = s2;
+  get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   size_t datum_size = field->datum_size;
   char *dest = field->data + scalar_index*datum_size;
@@ -110,7 +110,7 @@ void QIO_scalar_put( char *s1 , size_t scalar_index, int count, void *s2 )
 void QIO_scalar_put_global( char *s1 , size_t scalar_index, 
 			    int count, void *s2 )
 {
-  get_put_arg *arg = s2;
+  get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   size_t datum_size = field->datum_size;
   char *dest = field->data;
@@ -124,7 +124,7 @@ void QIO_scalar_put_global( char *s1 , size_t scalar_index,
    to the field */
 void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
 {
-  get_put_arg *arg = s2;
+  get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   int ionode_node = arg->node;
   size_t datum_size = field->datum_size;
@@ -142,7 +142,7 @@ void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
    to the field */
 void QIO_part_put_global( char *s1 , size_t ionode_index, int count, void *s2 )
 {
-  get_put_arg *arg = s2;
+  get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   int node = arg->node;
   int master_io_node = arg->master_io_node;
@@ -159,7 +159,7 @@ void QIO_part_put_global( char *s1 , size_t ionode_index, int count, void *s2 )
    output buffer */
 void QIO_scalar_get( char *s1 , size_t ionode_index, int count, void *s2 )
 {
-  get_put_arg *arg = s2;
+  get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   int ionode_node = arg->node;
   size_t datum_size = field->datum_size;
@@ -173,7 +173,7 @@ void QIO_scalar_get( char *s1 , size_t ionode_index, int count, void *s2 )
 
 void QIO_part_get( char *s1 , size_t scalar_index, int count, void *s2 )
 {
-  get_put_arg *arg = s2;
+  get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   size_t datum_size = field->datum_size;
   char *src = field->data + scalar_index*datum_size;

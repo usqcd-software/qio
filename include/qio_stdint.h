@@ -9,7 +9,7 @@
 typedef __uint64_t  uint64_t;
 typedef __uint32_t  uint32_t;
 typedef __uint16_t  uint16_t;
-/* so fac QCDOC is the only excpetion so we will just go with the above */
+/* so fac QCDOC is the only exception so we will just go with the above */
 #if 0
 /* best guess for now */
 typedef unsigned long   uint64_t;
