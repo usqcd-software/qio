@@ -257,6 +257,8 @@ int QIO_defined_datacount(QIO_RecordInfo *record_info);
 
 QIO_FileInfo *QIO_create_file_info(int spacetime, int *dims, int multifile);
 void QIO_destroy_file_info(QIO_FileInfo *file_info);
+int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
+			  char *myname, int this_node);
 QIO_RecordInfo *QIO_create_record_info(char *datatype, char *precision, 
 					int colors, int spins, int typesize, 
 					int datacount);
