@@ -89,12 +89,13 @@ char *DML_allocate_buf(size_t size, size_t max_buf_sites, int this_node);
 size_t DML_write_buf_next(LRL_RecordWriter *lrl_record_out, size_t size,
 			  char *buf, size_t buf_sites, size_t max_buf_sites, 
 			  size_t isite, size_t max_dest_sites, size_t *nbytes,
-			  char *myname, int this_node);
+			  char *myname, int this_node, int *err);
 size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, int size,
 			 char *buf, size_t *buf_extract, size_t buf_sites, 
 			 size_t max_buf_sites, size_t isite, 
 			 size_t max_send_sites, 
-			 size_t *nbytes, char *myname, int this_node);
+			 size_t *nbytes, char *myname, int this_node,
+			 int *err);
 int DML_serial_out(LRL_RecordWriter *lrl_record_out, 
 	   void (*get)(char *buf, size_t index, size_t count, void *arg),
 	   size_t size, int word_size, void *arg, DML_Layout *layout,

@@ -33,13 +33,6 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
   /* Read user and private record XML if not already done */
   if(in->read_state == QIO_RECORD_XML_NEXT){
 
-    /* Allocate space for record info structure */
-    in->record_info = (QIO_RecordInfo *)malloc(sizeof(QIO_RecordInfo));
-    if(in->record_info == NULL){
-      printf("%s(%d) malloc of record_info failed\n",myname,this_node);
-      return 1;
-    }
-
     /* Allocate space for user record XML */
     in->xml_record = XML_string_create(0);
     
@@ -55,28 +48,28 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 	     XML_string_ptr(xml_record_private));
 #endif
       /* Decode the private record XML */
-      QIO_decode_record_info(in->record_info, xml_record_private);
+      QIO_decode_record_info(&(in->record_info), xml_record_private);
       printf("%s(%d) Datatype %s precision %s colors %d spins %d count %d\n",
 	     myname,this_node,
-	     QIO_get_datatype(in->record_info),
-	     QIO_get_precision(in->record_info),
-	     QIO_get_colors(in->record_info),
-	     QIO_get_spins(in->record_info),
-	     QIO_get_datacount(in->record_info));
+	     QIO_get_datatype(&(in->record_info)),
+	     QIO_get_precision(&(in->record_info)),
+	     QIO_get_colors(&(in->record_info)),
+	     QIO_get_spins(&(in->record_info)),
+	     QIO_get_datacount(&(in->record_info)));
 
       /* Free storage */
       XML_string_destroy(xml_record_private);
 
       /* Check for private values that QIO needs */
-      if(!in->record_info->typesize.occur ||
-	 !in->record_info->datacount.occur){
+      if(!in->record_info.typesize.occur ||
+	 !in->record_info.datacount.occur){
 	printf("%s(%d): bad private XML record\n",myname,this_node);
 	return 1;
       }
     }
     
     /* Broadcast the private record data to all nodes */
-    DML_broadcast_bytes((char *)in->record_info, 
+    DML_broadcast_bytes((char *)&(in->record_info), 
 			sizeof(QIO_RecordInfo));
 
 #ifdef DEBUG
@@ -108,7 +101,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
   }
 
   /* Copy record info on all calls */
-  *record_info = *(in->record_info);
+  *record_info = in->record_info;
   XML_string_copy(xml_record,in->xml_record);
 
 #ifdef DEBUG

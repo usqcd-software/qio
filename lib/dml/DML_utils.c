@@ -266,8 +266,10 @@ char *DML_allocate_buf(size_t size, size_t max_buf_sites, int this_node){
 size_t DML_write_buf_next(LRL_RecordWriter *lrl_record_out, size_t size,
 			  char *lbuf, size_t buf_sites, size_t max_buf_sites, 
 			  size_t isite, size_t max_dest_sites, size_t *nbytes,
-			  char *myname, int this_node){
+			  char *myname, int this_node, int *err){
   size_t new_buf_sites = buf_sites + 1;
+
+  *err = 0;
   
   /* write buffer when full or last site processed */
   if( (new_buf_sites == max_buf_sites) || (isite == max_dest_sites - 1))
@@ -275,7 +277,8 @@ size_t DML_write_buf_next(LRL_RecordWriter *lrl_record_out, size_t size,
       if(LRL_write_bytes(lrl_record_out,lbuf,new_buf_sites*size)
 	 != new_buf_sites*size){
 	printf("%s(%d) write error\n",myname,this_node);
-	return -1;
+	*err = -1;
+	return 0;
       }
       *nbytes += new_buf_sites*size;
       /* Reset buffer */
@@ -291,8 +294,11 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, int size,
 			 char *lbuf, size_t *buf_extract, size_t buf_sites, 
 			 size_t max_buf_sites, size_t isite, 
 			 size_t max_send_sites, 
-			 size_t *nbytes, char *myname, int this_node){
+			 size_t *nbytes, char *myname, int this_node,
+			 int *err){
   size_t new_buf_sites = buf_sites;
+
+  *err = 0;
 
   if(*buf_extract == buf_sites){  
     /* new buffer length  = remaining sites, but never bigger 
@@ -303,7 +309,8 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, int size,
     if( LRL_read_bytes(lrl_record_in, lbuf, new_buf_sites*size) 
 	!= new_buf_sites*size){
       printf("%s(%d) read error\n", myname,this_node); 
-      return -1;
+      *err = -1;
+      return 0;
     }
     *nbytes += new_buf_sites*size;
     *buf_extract = 0;  /* reset counter */
@@ -448,6 +455,7 @@ int DML_multifile_out(LRL_RecordWriter *lrl_record_out,
   char myname[] = "DML_multifile_out";
   char *lbuf, *buf;
   int *coords;
+  int err;
 
   /* Allocate buffer for writing */
   max_buf_sites = DML_max_buf_sites(size,1);
@@ -491,8 +499,8 @@ int DML_multifile_out(LRL_RecordWriter *lrl_record_out,
     buf_sites = DML_write_buf_next(lrl_record_out, size,
 				   lbuf, buf_sites, max_buf_sites, 
 				   isite, max_dest_sites, &nbytes,
-				   myname, this_node);
-    if(buf_sites < 0) return 0;
+				   myname, this_node, &err);
+    if(err < 0) return 0;
   } /* isite */
 
   free(lbuf);   free(coords);
@@ -530,6 +538,7 @@ int DML_parallel_out(LRL_RecordWriter *lrl_record_out,
   char myname[] = "DML_parallel_out";
   char *lbuf, *buf;
   int *coords;
+  int err;
   char *msg;
 
   printf("%s(%d) WARNING: THIS CODE HAS NOT BEEN DEBUGGED!\n",
@@ -667,8 +676,8 @@ int DML_parallel_out(LRL_RecordWriter *lrl_record_out,
 	  buf_sites = DML_write_buf_next(lrl_record_out, size,
 					 lbuf, buf_sites, max_buf_sites, 
 					 isite, max_dest_sites, &nbytes,
-					 myname, this_node);
-	  if(buf_sites < 0) return 0;
+					 myname, this_node, &err);
+	  if(err < 0) return 0;
 	} /* else if(this_node==destnode) */
       } /* isite */
     } /* destnode */
@@ -706,6 +715,7 @@ int DML_multifile_in(LRL_RecordReader *lrl_record_in,
   char myname[] = "DML_multifile_in";
   char *lbuf, *buf;
   int *coords;
+  int err;
 
   /* Allocate buffer for reading */
   max_buf_sites = DML_max_buf_sites(size,1);
@@ -737,8 +747,8 @@ int DML_multifile_in(LRL_RecordReader *lrl_record_in,
     buf_sites = DML_read_buf_next(lrl_record_in, size, lbuf, 
 				  &buf_extract, buf_sites, max_buf_sites, 
 				  isite, max_send_sites, &nbytes, 
-				  myname, this_node);
-    if(buf_sites < 0)return 0;
+				  myname, this_node, &err);
+    if(err < 0)return 0;
     
     /* Copy data directly from the buffer */
     buf = lbuf + size*buf_extract;
@@ -885,6 +895,7 @@ int DML_parallel_in(LRL_RecordReader *lrl_record_in,
   char *lbuf, *buf;
   int *coords;
   char *msg;
+  int err;
 
   printf("%s(%d) WARNING: THIS CODE HAS NOT BEEN DEBUGGED!\n",
 	 myname,this_node);
@@ -982,8 +993,8 @@ int DML_parallel_in(LRL_RecordReader *lrl_record_in,
 					  lbuf, &buf_extract, buf_sites,
 					  max_buf_sites, isite, 
 					  max_send_sites, &nbytes,
-					  myname, this_node);
-	    if(buf_sites < 0)return 0;
+					  myname, this_node, &err);
+	    if(err < 0)return 0;
 	    
 	    /* Sending node does byte reversal and accumulates checksums
 	       as the values are sent from its buffer */

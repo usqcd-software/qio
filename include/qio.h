@@ -61,7 +61,7 @@ typedef struct {
   DML_SiteRank *sitelist;
   int read_state;
   XML_String *xml_record;
-  QIO_RecordInfo *record_info;
+  QIO_RecordInfo record_info;
 } QIO_Reader;
 
 /* API */

@@ -41,11 +41,12 @@ int QIO_read_record_data(QIO_Reader *in,
   /* Require consistency between the byte count specified in the
      private record metadata and the byte count per site to be read */
   if(datum_size != 
-     QIO_get_typesize(in->record_info) * QIO_get_datacount(in->record_info)){
+     QIO_get_typesize(&(in->record_info)) *
+     QIO_get_datacount(&(in->record_info))){
     printf("%s(%d): bytes per site mismatch %d != %d * %d\n",
 	   myname,this_node,datum_size,
-	   QIO_get_typesize(in->record_info),
-	   QIO_get_datacount(in->record_info));
+	   QIO_get_typesize(&(in->record_info)),
+	   QIO_get_datacount(&(in->record_info)));
     return 1;
   }
 
@@ -62,8 +63,8 @@ int QIO_read_record_data(QIO_Reader *in,
 #endif
   
   /* Verify byte count per site */
-  datum_size_info = QIO_get_typesize(in->record_info) * 
-    QIO_get_datacount(in->record_info);
+  datum_size_info = QIO_get_typesize(&(in->record_info)) * 
+    QIO_get_datacount(&(in->record_info));
   if(datum_size != datum_size_info){
     printf("%s(%d): byte count per site mismatch request %d != actual %d\n",
 	   myname, this_node, datum_size, datum_size_info);

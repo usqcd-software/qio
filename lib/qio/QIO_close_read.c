@@ -19,7 +19,6 @@ int QIO_close_read(QIO_Reader *in){
   free(in->layout);
   if(!in->sitelist)free(in->sitelist);
   XML_string_destroy(in->xml_record);
-  free(in->record_info);
   free(in);
   return status;
 }

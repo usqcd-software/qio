@@ -5,6 +5,7 @@ LRL
 -- Modes for writing (CREAT OPEN APPEND) ??
 
 DML
+-- Correct size_t = -1
 -- Debug parallel reads and writes
 -- Add multifile capability for one disk per partition (as opposed to
    the current one disk per node)
