@@ -121,7 +121,7 @@ target_alias = @target_alias@
 
 INCFLAGS = -I@top_srcdir@/include -I@top_srcdir@/other_libs/c-dime/include
 
-AM_CFLAGS = $(INCFLAGS) @CFLAGS@ @QMP_CFLAGS@
+AM_CFLAGS = $(INCFLAGS) @QMP_CFLAGS@
 
 HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h dime.h config.h
 
