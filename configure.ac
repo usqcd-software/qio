@@ -196,6 +196,5 @@ AC_CONFIG_FILES([Makefile
 		 examples/Makefile
                  include/Makefile
                  lib/Makefile
-                 other_libs/Makefile
-                 other_libs/c-lime/Makefile])
+                 other_libs/Makefile])
 AC_OUTPUT
