@@ -123,7 +123,7 @@ INCFLAGS = -I@top_srcdir@/include -I@top_srcdir@/other_libs/c-lime/include
 
 AM_CFLAGS = $(INCFLAGS) @QMP_CFLAGS@
 
-HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h lime.h config.h qio_config.h
+HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h lime.h qio_config.h
 
 lib_LIBRARIES = libqio.a
 
