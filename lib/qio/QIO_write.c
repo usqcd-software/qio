@@ -24,6 +24,17 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   int this_node = out->layout->this_node;
   char myname[] = "QIO_write";
 
+  /* Require consistency between the byte count specified in the
+     private record metadata and the byte count per site to be written */
+  if(datum_size != 
+     QIO_get_typesize(record_info) * QIO_get_datacount(record_info)){
+    printf("%s(%d): bytes per site mismatch %d != %d * %d\n",
+	   myname,this_node,datum_size,
+	   QIO_get_typesize(record_info),
+	   QIO_get_datacount(record_info));
+    return 1;
+  }
+
   /* Create private record XML */
   xml_record_private = XML_string_create(0);
   QIO_encode_record_info(xml_record_private, record_info);

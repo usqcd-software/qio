@@ -38,6 +38,17 @@ int QIO_read_record_data(QIO_Reader *in,
     return 1;
   }
 
+  /* Require consistency between the byte count specified in the
+     private record metadata and the byte count per site to be read */
+  if(datum_size != 
+     QIO_get_typesize(in->record_info) * QIO_get_datacount(in->record_info)){
+    printf("%s(%d): bytes per site mismatch %d != %d * %d\n",
+	   myname,this_node,datum_size,
+	   QIO_get_typesize(in->record_info),
+	   QIO_get_datacount(in->record_info));
+    return 1;
+  }
+
 #ifdef DO_BINX
   /* Master node reads the BinX record. This may be dropped. */
   /* We assume the BinX_record was created by the caller */
