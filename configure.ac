@@ -171,6 +171,23 @@ AC_CHECK_HEADERS([malloc.h])
 # Checks for library functions.
 ## AC_FUNC_MALLOC
 
+# Check for QMP route on parscalar
+if test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX" ; then 
+   QMP_BKUP_CFLAGS="${CFLAGS}"
+   QMP_BKUP_LDFLAGS="${LDFLAGS}"
+   QMP_BKUP_LIBS="${LIBS}"
+   AC_LANG_SAVE
+   CFLAGS="${CFLAGS} ${QMP_CFLAGS}"
+   LDFLAGS="${LDFLAGS} ${QMP_LDFLAGS}"
+   LIBS="${LIBS} ${QMP_LIBS}"
+   AC_CHECK_FUNCS(QMP_route)
+   CFLAGS="${QMP_BKUP_CFLAGS}"
+   LDFLAGS="${QMP_BKUP_LDFLAGS}"
+   LIBS="${LIBS}"
+   AC_LANG_RESTORE
+fi
+
+
 # Turn on parallel-io flag
 if test ${ac_parallel_io} -eq 1; then
   AC_DEFINE_UNQUOTED(QIO_USE_PARALLEL_READ, ${ac_parallel_io}, [Enable parallel file-system read])
@@ -181,6 +198,7 @@ fi
 
 # Parscalar build has an extra source file: DML_route.c
 # this is only compiled in parscalar mode
+# also it is only non empty if QMP_route has not been found
 
 # Now have all the options... Do some configuration 
 #
