@@ -1,3 +1,11 @@
+
+INCFLAGS=-I@top_srcdir@/src/dml -I@top_srcdir@/dml 
+
+AM_CFLAGS = -I@top_srcdir@/src/
+
+HDRS = 
+
+
 OBJECTS = \
   DML_get_sitelist.o \
   DML_stream_in.o \
