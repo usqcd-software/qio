@@ -11,6 +11,24 @@ dnl
 dnl
 dnl --with-xxxx and --enable-xxxx switches 
 dnl
+AC_ARG_ENABLE(qio, 
+  AC_HELP_STRING([--enable-qio],
+		 [ Enable QIO Subsystem (default on)]),
+  [ QIO_ENABLED=$enableval ],
+  [ QIO_ENABLED="yes"] 
+)
+
+if test "X${QIO_ENABLED}X" = "XyesX" ; then
+  AC_MSG_NOTICE([ Building QIO ])
+else 
+  if test "X${QIO_ENABLED}X" = "XnoX" ; then
+     AC_MSG_NOTICE([ NOT Building full QIO - Only DIME ])
+  else
+     AC_MSG_ERROR([ Error: Incorrect value for QIO_ENABLED: ${QIO_ENABLED}. Check --enable-qio ])
+  fi
+fi
+
+AM_CONDITIONAL(BUILD_QIO, [ test "X${QIO_ENABLED}X" = "XyesX" ])
 
 dnl --enable-parallel-arch argument
 AC_ARG_ENABLE(parallel-arch,
