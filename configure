@@ -850,6 +850,8 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-qio            Enable QIO Subsystem (default on)
+  --enable-parallel-io    Only supported for parallel file systems with a
+                          parallel fseek
   --enable-parallel-arch=<arch>
                           Build QDP++ for parallel architecture <arch>
   --disable-dependency-tracking Speeds up one-time builds
@@ -1715,6 +1717,17 @@ else
   BUILD_QIO_TRUE='#'
   BUILD_QIO_FALSE=
 fi
+
+
+
+# Check whether --enable-parallel-io or --disable-parallel-io was given.
+if test "${enable_parallel_io+set}" = set; then
+  enableval="$enable_parallel_io"
+  ac_parallel_io=1
+else
+  ac_parallel_io=0
+
+fi;
 
 
 # Check whether --enable-parallel-arch or --disable-parallel-arch was given.
@@ -4584,6 +4597,24 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 fi
+
+
+# Turn on parallel-io flag
+if test ${ac_parallel_io} -eq 1; then
+
+cat >>confdefs.h <<_ACEOF
+#define QIO_USE_PARALLEL_READ ${ac_parallel_io}
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define QIO_USE_PARALLEL_WRITE ${ac_parallel_io}
+_ACEOF
+
+  { echo "$as_me:$LINENO: Parallel file-system extensions enabled" >&5
+echo "$as_me: Parallel file-system extensions enabled" >&6;};
+fi
+
 
 # Parscalar build has an extra source file: DML_route.c
 # this is only compiled in parscalar mode
