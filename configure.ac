@@ -34,6 +34,7 @@ AC_ARG_ENABLE(qmp-route,
   [ ac_qmp_route="yes"] 
 )
 
+
 dnl
 dnl --with-qmp=
 dnl
@@ -45,6 +46,14 @@ AC_ARG_WITH(qmp,
   [QMP_HOME="${with_qmp}"]
 )
 
+dnl Safe QMP route workaround
+AC_ARG_ENABLE(slow-route,
+   AC_HELP_STRING(
+     [ --enable-slow-route ],
+     [ When not using QMP_route, use the slow version of DML route ]
+   ),
+   [ AC_DEFINE([QIO_USE_SLOW_ROUTE],[], [Enable Balints Slow DML route]) ],
+)
 
 dnl
 dnl QIO only supports scalar and parscalar (basically, not-parallel and parallel)

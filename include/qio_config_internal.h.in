@@ -69,6 +69,9 @@
 /* Enable QMP_route if it exists */
 #undef QIO_USE_QMP_ROUTE
 
+/* Enable Balints Slow DML route */
+#undef QIO_USE_SLOW_ROUTE
+
 /* The size of a `unsigned char', as computed by sizeof. */
 #undef SIZEOF_UNSIGNED_CHAR
 
