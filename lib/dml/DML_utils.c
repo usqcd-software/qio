@@ -322,7 +322,7 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt,
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
 		      LIME_type *lime_type){
-  size_t check, announced_rec_size;
+  off_t check, announced_rec_size;
   int this_node = layout->this_node;
   LRL_RecordReader *lrl_record_in;
   DML_SiteRank *inputlist;

@@ -62,7 +62,7 @@ int QIO_write_string(QIO_Writer *out,
 {
   LRL_RecordWriter *lrl_record_out;
   char *buf;
-  size_t actual_rec_size, planned_rec_size;
+  off_t actual_rec_size, planned_rec_size;
   char myname[] = "QIO_write_string";
 
   buf = QIO_string_ptr(xml);
@@ -123,8 +123,8 @@ DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt){
 int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end, 
 		       const LIME_type lime_type){
   LRL_RecordWriter *lrl_record_out;
-  size_t nbytes;
-  size_t rec_size;
+  off_t nbytes;
+  off_t rec_size;
   DML_SiteRank *outputlist;
   DML_SiteList *sites = out->sites;
   int volfmt = out->volfmt;
@@ -191,7 +191,7 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 	    const LIME_type lime_type){
   
   LRL_RecordWriter *lrl_record_out = NULL;
-  size_t planned_rec_size;
+  off_t planned_rec_size;
   int this_node = out->layout->this_node;
   int do_output;
   char myname[] = "QIO_write_field";
@@ -262,9 +262,9 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 
 int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type *lime_type){
   char *buf;
-  size_t buf_size;
+  off_t buf_size;
   LRL_RecordReader *lrl_record_in;
-  size_t actual_rec_size,expected_rec_size;
+  off_t actual_rec_size,expected_rec_size;
   int status;
   char myname[] = "QIO_read_string";
 
@@ -344,7 +344,7 @@ int QIO_read_field(QIO_Reader *in, int globaldata,
 
   LRL_RecordReader *lrl_record_in=NULL;
   DML_SiteList *sites = in->sites;
-  size_t announced_rec_size, expected_rec_size;
+  off_t announced_rec_size, expected_rec_size;
   int this_node = in->layout->this_node;
   int status;
   int do_open;

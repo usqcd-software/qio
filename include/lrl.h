@@ -42,16 +42,16 @@ typedef struct {
 
 LRL_FileReader *LRL_open_read_file(const char *filename);
 LRL_FileWriter *LRL_open_write_file(const char *filename);
-LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size, 
+LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, off_t *rec_size, 
 				       LIME_type *lime_type, int *status);
 LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, 
 					int msg_begin, int msg_end, 
-					size_t *rec_size, 
+					off_t *rec_size, 
 					LIME_type lime_type);
-size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, 
-		       size_t nbytes);
-size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, 
-		      size_t nbytes);
+off_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, 
+		       off_t nbytes);
+off_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, 
+		      off_t nbytes);
 int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset);
 int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset);
 int LRL_next_record(LRL_FileReader *fr);

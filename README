@@ -1,0 +1,17 @@
+Building the QIO package also builds LIME.  
+
+The QIO package requires the QMP package, which must be built and
+installed first.
+
+If you like to build QIO in a separate, sibling build directory,
+create the build directory and then from that directory, run (for
+example)
+
+../qio-1.1.5/configure \
+     --prefix=$HOME/scidac/qio/local \
+     CC=gcc \
+     CFLAGS="-O3" \
+     QMP_CFLAGS=-I$QMPPREFIX/include \
+     QMP_LDFLAGS=-L$QMPPREFIX/lib \
+     QMP_LIBS=-lqmp
+

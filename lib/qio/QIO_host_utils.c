@@ -9,7 +9,7 @@
 
 /* Table of size "number_of_nodes" maps node to io_node rank 
    i.e. it inverts the io_node table */
-static size_t *QIO_ionode_to_rank;
+static int *QIO_ionode_to_rank;
 
 /* Table of size "number_of_nodes" maps node to node_index offset 
    needed for the fake ionode layout functions */
@@ -39,7 +39,7 @@ static int QIO_fake_ionode_layout = 0;
 /* Answer is the last node number in the family "io_node_rank" whose
    node_index offset is greater than or equal to the given node_index
    "seek" */
-int QIO_offset_lookup(int seek, int io_node_rank){
+int QIO_offset_lookup(size_t seek, int io_node_rank){
   int k,ans,del;
   int *nodelist = QIO_io_family[io_node_rank].node_number;
   int n = QIO_io_family[io_node_rank].n;
@@ -167,7 +167,7 @@ int QIO_create_io_node_table(){
   DML_SiteRank site_rank;
 
   /* Create array for the inverse of the fs->io_node table */
-  QIO_ionode_to_rank = (size_t *)calloc(number_of_nodes, sizeof(size_t));
+  QIO_ionode_to_rank = (int *)calloc(number_of_nodes, sizeof(int));
   if(!QIO_ionode_to_rank){
     printf("%s Can't malloc QIO_ionode_to_rank\n",myname);
     return 1;

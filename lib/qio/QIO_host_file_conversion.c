@@ -23,9 +23,10 @@ typedef struct
 
 int QIO_init_scalar_field(s_field *field,int vol,size_t datum_size)
 {
+  size_t bytes;
   field->datum_size = datum_size;
   field->volume = vol;
-  size_t bytes = datum_size*vol;
+  bytes = datum_size*vol;
 
   field->data = (char *) malloc(bytes);
   if(!field->data){
@@ -164,10 +165,11 @@ void QIO_scalar_get( char *s1 , size_t ionode_index, int count, void *s2 )
   int ionode_node = arg->node;
   size_t datum_size = field->datum_size;
   int scalar_index;
+  char *src;
 
   /* Convert ionode_index to scalar_index */
   scalar_index = QIO_ionode_to_scalar_index(ionode_node,ionode_index);
-  char *src = field->data + scalar_index*datum_size;
+  src = field->data + scalar_index*datum_size;
   memcpy(s1,src,datum_size);
 }
 

@@ -42,6 +42,8 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   const int *machine_size;    /* size of machine */
   int ndim, me, i;
   int on_path, path_leg;
+  QMP_mem_t *mem;
+  QMP_msgmem_t msgmem;
 
   /* Check to see if the logical topology is declared or not */
   if(QMP_logical_topology_is_declared() == QMP_FALSE) {
@@ -137,8 +139,6 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
       send_axis = i;
     }
 
-    QMP_mem_t *mem;
-    QMP_msgmem_t msgmem;
     if((recv_axis<0)||(send_axis<0)) {
       mem = NULL;
       msgmem = QMP_declare_msgmem(buffer, count);
