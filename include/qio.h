@@ -22,7 +22,7 @@
 
 /* Does the architecture support parallel reads and writes? */
 /* Should be obtained from system call or a config.h */
-#define PARALLEL_READ 1
+#define PARALLEL_READ 0
 #define PARALLEL_WRITE 0
 
 #ifdef __cplusplus
