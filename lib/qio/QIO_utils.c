@@ -20,6 +20,7 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
   /* No change if a single file or on the master node */
   if(volfmt == QIO_SINGLEFILE || this_node == QIO_MASTER_NODE){
     strncpy(newfilename,filename,strlen(filename));
+    newfilename[strlen(filename)] = '\0';
     return newfilename;
   }
   if(!newfilename){

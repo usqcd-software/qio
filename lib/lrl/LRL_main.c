@@ -287,10 +287,11 @@ int LRL_next_record(LRL_FileReader *fr){
 int LRL_close_write_record(LRL_RecordWriter *wr){
   int status;
 
+  if(wr == NULL)return 1;
   status = limeWriterCloseRecord(wr->fr->dg);
   free(wr);
   if(status != LIME_SUCCESS)return 1;
-  else return 1;
+  else return 0;
 }
 
 /**
