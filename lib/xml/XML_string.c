@@ -6,7 +6,7 @@
 #include <malloc.h>
 
 /* Size of string in XML */
-size_t XML_string_bytes(XML_string *xml)
+size_t XML_string_bytes(const XML_string *const xml)
 {
   return xml->length;
 }
@@ -70,7 +70,7 @@ XML_string* XML_string_realloc(XML_string *xml, int length)
 /* dummy for inserting values into an XML structure */
 /* Just point to the given string for now and hope it is invariant */
 
-void XML_string_set(XML_string *xml, const char *string)
+void XML_string_set(XML_string *xml, const char *const string)
 {
   strncpy(xml->string, string, xml->length);
 }
