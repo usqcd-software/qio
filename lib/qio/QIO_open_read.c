@@ -153,15 +153,19 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
   if(volfmt == QIO_SINGLEFILE)
     {
       /* One file for all nodes */
-      printf("%s(%d): opened %s for reading in singlefile mode\n",
-	     myname,this_node,filename);fflush(stdout);
+      if(this_node == dml_layout->master_io_node){
+	printf("%s(%d): opened %s for reading in singlefile mode\n",
+	       myname,this_node,filename);fflush(stdout);
+      }
       qio_in->volfmt = QIO_SINGLEFILE;
     }
   else if(volfmt == QIO_PARTFILE)
     {
       /* One file per machine partition in lexicographic order */
-      printf("%s(%d): opened %s for reading in partfile mode\n",
-	     myname,this_node,filename);fflush(stdout);
+      if(this_node == dml_layout->master_io_node){
+	printf("%s(%d): opened %s for reading in partfile mode\n",
+	       myname,this_node,filename);fflush(stdout);
+      }
       qio_in->volfmt = QIO_PARTFILE;
 
       /* All the partition I/O nodes open their files.  */
@@ -180,8 +184,10 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
   else if(volfmt == QIO_MULTIFILE)
     {
       /* One file per node */
-      printf("%s(%d): opened %s for reading in multifile mode\n",
-	     myname,this_node,filename);fflush(stdout);
+      if(this_node == dml_layout->master_io_node){
+	printf("%s(%d): opened %s for reading in multifile mode\n",
+	       myname,this_node,filename);fflush(stdout);
+      }
       qio_in->volfmt = QIO_MULTIFILE;
       /* The non-master nodes open their files */
       if(this_node != dml_layout->master_io_node){
