@@ -13,7 +13,7 @@
 #include <string.h>
 #endif
 
-static int QIO_verbosity_level = QIO_VERB_REG;
+static int QIO_verbosity_level = QIO_VERB_OFF;
 
 /* Set verbosity level. */
 int QIO_verbose (int level)

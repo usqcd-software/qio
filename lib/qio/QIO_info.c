@@ -1222,8 +1222,9 @@ int QIO_compare_checksum_info(QIO_ChecksumInfo *found,
     return QIO_CHECKSUM_MISMATCH;
   }
   else
-    printf("%s(%d): Checksums %x %x OK\n",myname,this_node,
-	   QIO_get_suma(found),QIO_get_sumb(found));
+    if(QIO_verbosity() >= QIO_VERB_DEBUG)
+      printf("%s(%d): Checksums %x %x OK\n",myname,this_node,
+	     QIO_get_suma(found),QIO_get_sumb(found));
 
   return QIO_SUCCESS;
 }
