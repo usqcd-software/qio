@@ -1,5 +1,5 @@
 
-INCFLAGS=-I@top_srcdir@/include
+INCFLAGS=-I@top_srcdir@/include 
 
 AM_CFLAGS = $(INCFLAGS) @CFLAGS@
 VPATH = @top_srcdir@/lib
@@ -10,7 +10,7 @@ VPATH += @top_srcdir@/lib/lrl
 VPATH += @top_srcdir@/lib/xml
 VPATH += @top_srcdir@/lib/lrl/c-dime/include
 
-HDRS = qio.h dml.h lrl.h xml.h
+HDRS = qio.h dml.h lrl.h xml.h dime.h
 
 lib_LIBRARIES = libqio.a
 
