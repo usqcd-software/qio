@@ -131,14 +131,14 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout);
 int QIO_part_to_single( const char const filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout);
-int QIO_get_reader_latdim(QIO_Reader *in);
-int *QIO_get_reader_latsize(QIO_Reader *in);
 
 /* MPP API */
 QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename, 
 			   int volfmt, QIO_Layout *layout, QIO_ioflag oflag);
 QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename, 
 			   QIO_Layout *layout, QIO_ioflag iflag);
+int QIO_get_reader_latdim(QIO_Reader *in);
+int *QIO_get_reader_latsize(QIO_Reader *in);
 
 int QIO_close_write(QIO_Writer *out);
 int QIO_close_read(QIO_Reader *in);

@@ -485,13 +485,27 @@ int QIO_part_to_single( const char const filename[], QIO_Filesystem *fs,
   char *newfilename;
   s_field field_in;
   get_put_arg arg;
+  FILE *check;
   char myname[] = "QIO_part_to_single";
 
+  /* Sanity checks */
 
+  /* No conversion if the number of nodes is not greater than 1 */
   if(number_io_nodes <= 1){
    printf("%s: No conversion since number_io_nodes %d <= 1\n",
 	  myname,number_io_nodes);
    return 1;
+  }
+
+  /* The single file target must not exist.  Otherwise, QIO_open_read
+     confuses it with the input partition file. */
+  
+  check = fopen(filename,"r");
+  if(check){
+    printf("%s: No conversion since the file %s already exists\n",
+	   myname, filename);
+    fclose(check);
+    return 1;
   }
 
   /* Create scalar layout structure */
