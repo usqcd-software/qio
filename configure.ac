@@ -30,6 +30,16 @@ fi
 
 AM_CONDITIONAL(BUILD_QIO, [ test "X${QIO_ENABLED}X" = "XyesX" ])
 
+
+dnl --enable-parallel-io
+AC_ARG_ENABLE(parallel-io,
+  AC_HELP_STRING([--enable-parallel-io],
+    [Only supported for parallel file systems with a parallel fseek]),
+  [ac_parallel_io=1],
+  [ac_parallel_io=0]
+)
+
+
 dnl --enable-parallel-arch argument
 AC_ARG_ENABLE(parallel-arch,
   AC_HELP_STRING([--enable-parallel-arch=<arch>],
@@ -176,6 +186,15 @@ if test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX" ; then
    LIBS="${LIBS}"
    AC_LANG_RESTORE
 fi
+
+
+# Turn on parallel-io flag
+if test ${ac_parallel_io} -eq 1; then
+  AC_DEFINE_UNQUOTED(QIO_USE_PARALLEL_READ, ${ac_parallel_io}, [Enable parallel file-system read])
+  AC_DEFINE_UNQUOTED(QIO_USE_PARALLEL_WRITE, ${ac_parallel_io}, [Enable parallel file-system write])
+  AC_MSG_NOTICE([Parallel file-system extensions enabled]);
+fi
+
 
 # Parscalar build has an extra source file: DML_route.c
 # this is only compiled in parscalar mode
