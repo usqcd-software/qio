@@ -4,3 +4,4 @@
 #
 SUBDIRS = lib include other_libs examples
 
+DISTCHECK_CONFIGURE_FLAGS = @DISTCHECK_CONFIGURE_FLAGS@

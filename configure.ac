@@ -21,7 +21,7 @@ AC_ARG_ENABLE(parallel-io,
 dnl --enable-parallel-arch argument
 AC_ARG_ENABLE(parallel-arch,
   AC_HELP_STRING([--enable-parallel-arch=<arch>],
-    [Build QDP++ for parallel architecture <arch>]),
+    [Build QIO for parallel architecture <arch>]),
   AC_SUBST(PARALLEL_ARCH, [$enableval]),
   AC_SUBST(PARALLEL_ARCH, [parscalar])
 )
@@ -191,6 +191,13 @@ fi
 # Now have all the options... Do some configuration 
 AM_CONDITIONAL(ARCH_SCALAR,    [test "X${LOCAL_PARALLEL_ARCH}X" = "XscalarX"])
 AM_CONDITIONAL(ARCH_PARSCALAR, [test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX"])
+
+# pass configuration to distcheck target
+DISTCHECK_CONFIGURE_FLAGS="--enable-parallel-arch=$PARALLEL_ARCH"
+if test -n "$QMP_HOME"; then
+  DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-qmp=$QMP_HOME"
+fi
+AC_SUBST(DISTCHECK_CONFIGURE_FLAGS)
 
 # export CC and CFLAGS so that the other_libs will use the same
 export CC CFLAGS

@@ -312,7 +312,7 @@ ac_includes_default="\
 #endif"
 
 ac_subdirs_all="$ac_subdirs_all other_libs/c-lime"
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO AMTAR install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot PARALLEL_ARCH LOCAL_PARALLEL_ARCH ARCHDEF_SUBSTITUTION QMP_CFLAGS QMP_LDFLAGS QMP_LIBS QMP_CONFIG CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE RANLIB ac_ct_RANLIB QDP_CFLAGS QDP_LDFLAGS QLA_CFLAGS QLA_LDFLAGS CPP EGREP ARCH_SCALAR_TRUE ARCH_SCALAR_FALSE ARCH_PARSCALAR_TRUE ARCH_PARSCALAR_FALSE subdirs LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA CYGPATH_W PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO AMTAR install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM mkdir_p AWK SET_MAKE am__leading_dot PARALLEL_ARCH LOCAL_PARALLEL_ARCH ARCHDEF_SUBSTITUTION QMP_CFLAGS QMP_LDFLAGS QMP_LIBS QMP_CONFIG CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE am__fastdepCC_TRUE am__fastdepCC_FALSE RANLIB ac_ct_RANLIB QDP_CFLAGS QDP_LDFLAGS QLA_CFLAGS QLA_LDFLAGS CPP EGREP ARCH_SCALAR_TRUE ARCH_SCALAR_FALSE ARCH_PARSCALAR_TRUE ARCH_PARSCALAR_FALSE DISTCHECK_CONFIGURE_FLAGS subdirs LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -853,7 +853,7 @@ Optional Features:
   --enable-parallel-io    Only supported for parallel file systems with a
                           parallel fseek
   --enable-parallel-arch=<arch>
-                          Build QDP++ for parallel architecture <arch>
+                          Build QIO for parallel architecture <arch>
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
 
@@ -4064,6 +4064,13 @@ else
 fi
 
 
+# pass configuration to distcheck target
+DISTCHECK_CONFIGURE_FLAGS="--enable-parallel-arch=$PARALLEL_ARCH"
+if test -n "$QMP_HOME"; then
+  DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-qmp=$QMP_HOME"
+fi
+
+
 # export CC and CFLAGS so that the other_libs will use the same
 export CC CFLAGS
 # Configure subdir packages
@@ -4785,6 +4792,7 @@ s,@ARCH_SCALAR_TRUE@,$ARCH_SCALAR_TRUE,;t t
 s,@ARCH_SCALAR_FALSE@,$ARCH_SCALAR_FALSE,;t t
 s,@ARCH_PARSCALAR_TRUE@,$ARCH_PARSCALAR_TRUE,;t t
 s,@ARCH_PARSCALAR_FALSE@,$ARCH_PARSCALAR_FALSE,;t t
+s,@DISTCHECK_CONFIGURE_FLAGS@,$DISTCHECK_CONFIGURE_FLAGS,;t t
 s,@subdirs@,$subdirs,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t
 s,@LTLIBOBJS@,$LTLIBOBJS,;t t
