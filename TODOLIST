@@ -13,9 +13,6 @@ DML
 	with QMP
 -- Vectorize the multifile in/out
 
-General
--- Create config.h automatically during build.
-
 Additions
 -- stdin, stdout, stderr: Global broadcast scanf and printf 
 -- Pure XML I/O
