@@ -226,8 +226,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   if(this_node != QIO_MASTER_NODE){
     XML_string_realloc(xml_file,length);
   }
-  /* length+1 to get the terminating \0 */
-  DML_broadcast_bytes(XML_string_ptr(xml_file),length+1);
+  DML_broadcast_bytes(XML_string_ptr(xml_file),length);
   
 #ifdef DEBUG
   printf("%s(%d): Done with user file XML\n",myname,this_node);fflush(stdout);

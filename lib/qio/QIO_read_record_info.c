@@ -98,11 +98,10 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
     DML_broadcast_bytes((char *)&length,sizeof(int));
 
     /* Receiving nodes resize their strings */
-    /* length+1 to allow for the terminating \0 */
     if(this_node != QIO_MASTER_NODE){
-      XML_string_realloc(in->xml_record,length+1);
+      XML_string_realloc(in->xml_record,length);
     }
-    DML_broadcast_bytes(XML_string_ptr(in->xml_record),length+1);
+    DML_broadcast_bytes(XML_string_ptr(in->xml_record),length);
 
     /* Set state in case record is reread */
     in->read_state = QIO_RECORD_DATA_NEXT;
