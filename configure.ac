@@ -37,9 +37,11 @@ dnl QIO only supports scalar and parscalar (basically, not-parallel and parallel
 dnl for other cases, map it to one of these
 case ${PARALLEL_ARCH} in
   scalarvec)
+    AC_MSG_NOTICE([Mapping architecture ${PARALLEL_ARCH} to  scalar])
     AC_SUBST(LOCAL_PARALLEL_ARCH, [scalar])
     ;;
   parscalarvec)
+    AC_MSG_NOTICE([Mapping architecture ${PARALLEL_ARCH} to  parscalar])
     AC_SUBST(LOCAL_PARALLEL_ARCH, [parscalar])
     ;;
   *)
