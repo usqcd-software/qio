@@ -2,6 +2,7 @@
 #define LRL_H
 
 #include <stdio.h>
+#include <sys/types.h>
 #include "dime.h"
 
 #ifdef __cplusplus
@@ -42,11 +43,13 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size,
 					DIME_type dime_type);
 size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, size_t nbytes);
 size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes);
+int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset);
+int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset);
+int LRL_next_record(LRL_FileReader *fr);
 int LRL_close_read_record(LRL_RecordReader *rr);
 int LRL_close_write_record(LRL_RecordWriter *rr);
 int LRL_close_read_file(LRL_FileReader *fr);
 int LRL_close_write_file(LRL_FileWriter *fr);
-
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,3 @@
-/* LRL_read_bytes.c */
-
 #include <lrl.h>
 #include <stdio.h>
 #ifdef HAVE_MALLOC_H
@@ -24,8 +22,7 @@ LRL_FileReader *LRL_open_read_file(const char *filename)
 
   /*** Ignore mode for now ***/
   fr->file = fopen(filename,"r");
-  if (fr->file == NULL)
-    return NULL;
+  if (fr->file == NULL)return NULL;
 
   fr->dr = dimeCreateReader(fr->file);
   if (fr->dr == (DimeReader *)NULL)
@@ -52,6 +49,7 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
 
   /*** Ignore mode for now ***/
   /*** (RGE) - what do we do with mode ??? */
+  /*** (CD)  mode = write (from beginning with truncation) or append to end */
   fr->file = fopen(filename,"w");
   if (fr->file == NULL)
     return NULL;
@@ -82,8 +80,10 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
     return NULL;
 
   rr = (LRL_RecordReader *)malloc(sizeof(LRL_RecordReader));
-  if (rr == NULL)
+  if (rr == NULL){
+    printf("LRL_open_read_record: Can't malloc reader\n");
     return NULL;
+  }
   rr->fr = fr;
   
   /* Check if last record */
@@ -127,8 +127,10 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size,
 
 
   rr = (LRL_RecordWriter *)malloc(sizeof(LRL_RecordWriter));
-  if (rr == NULL)
+  if (rr == NULL){
+    printf("LRL_open_write_record: Can't malloc writer\n");
     return NULL;
+  }
   rr->fr = fr;
 
   /* Write record */
@@ -210,6 +212,60 @@ size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes)
   return nbyt;
 }
 
+
+/* For skipping ahead offset bytes from the current position in the record
+   payload.  We are not allowed to go beyond the end of the
+   payload. */
+
+int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset){
+  int status;
+
+  if (rr == NULL || rr->fr == NULL)return -1;
+ status = dimeWriterSeek(rr->fr->dg, offset, SEEK_CUR);
+
+  if( status != DIME_SUCCESS ) 
+  { 
+    fprintf(stderr, "LRL_seek_write_record: some error has occurred. status is: %d\n", status);
+    exit(EXIT_FAILURE);
+  }
+  return 0;
+}
+
+/* For skipping ahead offset bytes from the current position in the record
+   payload.  We are not allowed to go beyond the end of the
+   payload. */
+
+int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset){
+  int status;
+
+  if (rr == NULL || rr->fr == NULL)return -1;
+  status = dimeReaderSeek(rr->fr->dr, offset, SEEK_CUR);
+
+  if( status != DIME_SUCCESS ) 
+  { 
+    fprintf(stderr, "LRL_seek_read_record: some error has occurred. status is: %d\n", status);
+    exit(EXIT_FAILURE);
+  }
+  return 0;
+}
+
+/* For skipping to the beginning of the next logical record */
+
+int LRL_next_record(LRL_FileReader *fr){
+  int status;
+
+  if(fr == NULL)return 1;
+  status = dimeReaderNextRecord(fr->file);
+
+  if( status != DIME_SUCCESS ) 
+  { 
+    fprintf(stderr, "LRL_skip_record: some error has occurred. status is: %d\n", status);
+    exit(EXIT_FAILURE);
+  }
+  return 0;
+}
+
+
 int LRL_close_read_record(LRL_RecordReader *rr)
 {
   free(rr);
@@ -259,4 +315,3 @@ int LRL_close_write_file(LRL_FileWriter *fr)
 
   return 0;
 }
-

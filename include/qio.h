@@ -1,9 +1,11 @@
 #ifndef QIO_H
 #define QIO_H
 
-#include <xml.h>
+#include <qioxml.h>
+#include <xml_string.h>
 #include <lrl.h>
 #include <dml.h>
+#include <config.h>
 
 #define QIO_MASTER_NODE DML_MASTER_NODE
 
@@ -11,6 +13,7 @@
 #define QIO_PARALLEL   DML_PARALLEL   
 #define QIO_LEX_ORDER  DML_LEX_ORDER  
 #define QIO_NAT_ORDER  DML_NAT_ORDER  
+#define QIO_LIST_ORDER DML_LIST_ORDER
 #define QIO_SINGLEFILE DML_SINGLEFILE 
 #define QIO_MULTIFILE  DML_MULTIFILE  
 
@@ -19,24 +22,22 @@
 #define QIO_TRUNCATE   1
 #define QIO_APPEND     2
 
-/* Does the architecture support parallel reads and writes? */
-/* Should be obtained from system call or a config.h */
-#define PARALLEL_READ 0
-#define PARALLEL_WRITE 0
-
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
+  
 /* For collecting and passing layout information */
 typedef struct {
   int (*node_number)(const int coords[]);
+  int (*node_index)(const int coords[]);
+  void (*get_coords)(int coords[], int node, int index);
   int *latsize;
   int latdim;
   size_t volume;
+  size_t sites_on_node;
   int this_node;
+  int number_of_nodes;
 } QIO_Layout;
 
 typedef struct {
@@ -44,9 +45,11 @@ typedef struct {
   int serpar;
   int volfmt;
   DML_Layout *layout;
-  int siteorder;
-  size_t *sitelist;
+  DML_SiteRank *sitelist;
 } QIO_Writer;
+
+#define QIO_RECORD_XML_NEXT 0
+#define QIO_RECORD_DATA_NEXT 1
 
 typedef struct {
   LRL_FileReader *lrl_file_in;
@@ -54,41 +57,53 @@ typedef struct {
   int volfmt;
   DML_Layout *layout;
   int siteorder;
-  size_t *sitelist;
+  DML_SiteRank *sitelist;
+  int read_state;
+  XML_String *xml_record;
+  QIO_RecordInfo *record_info;
 } QIO_Reader;
 
-QIO_Writer *QIO_open_write(XML_string *xml_file, const char *filename, 
-			   int volfmt, int siteorder, int mode,
+/* API */
+QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename, 
+			   int serpar, int volfmt, int mode, 
 			   QIO_Layout *layout);
-
-QIO_Reader *QIO_open_read(XML_string *xml_file, const char *filename, int volfmt,
-			  QIO_Layout *layout);
+QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename, 
+			   int serpar, QIO_Layout *layout);
 
 int QIO_close_write(QIO_Writer *out);
 int QIO_close_read(QIO_Reader *in);
 
-int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
-	      void (*get)(char *buf, const int coords[], void *arg),
-	      int datum_size, void *arg);
-
-int QIO_read(QIO_Reader *out, XML_string *xml_record, XML_string *BinX,
-	     void (*put)(char *buf, const int coords[], void *arg),
-	     int datum_size, void *arg);
+int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
+	      XML_String *xml_record, 
+	      void (*get)(char *buf, size_t index, size_t count, void *arg),
+	      size_t datum_size, int word_size, void *arg);
+int QIO_read(QIO_Reader *in, QIO_RecordInfo *record_info,
+	     XML_String *xml_record, 
+	     void (*put)(char *buf, size_t index, size_t count, void *arg),
+	     size_t datum_size, int word_size, void *arg);
+int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
+			 XML_String *xml_record);
+int QIO_read_record_data(QIO_Reader *in, 
+		 void (*put)(char *buf, size_t index, size_t count, void *arg),
+		 size_t datum_size, int word_size, void *arg);
+int QIO_next_record(QIO_Reader *in);
 
 /* Internal utilities  */
-int QIO_write_string(QIO_Writer *out_file_out, XML_string *xml, 
+char *QIO_filename_edit(const char *filename, int volfmt, int this_node);
+int QIO_write_string(QIO_Writer *out_file_out, XML_String *xml,
 		     const DIME_type dime_type);
-
-int QIO_write_field(QIO_Writer *out, int volfmt, XML_string *xml_record, 
-		    void (*get)(char *buf, const int coords[], void *arg),
-		    size_t datum_size, void *arg, 
+int QIO_write_field(QIO_Writer *out, XML_String *xml_record, 
+	    void (*get)(char *buf, size_t index, size_t count, void *arg),
+	    size_t datum_size, int word_size, void *arg, 
 		    DML_Checksum *checksum,
 		    const DIME_type dime_type);
 
-size_t QIO_read_string(QIO_Reader *in, XML_string *xml, DIME_type dime_type);
-size_t QIO_read_field(QIO_Reader *in, int volfmt, XML_string *xml_record, 
-		   void (*put)(char *buf, const int coords[], void *arg),
-		   int datum_size, void *arg, 
+int QIO_read_string(QIO_Reader *in, XML_String *xml, DIME_type dime_type);
+int QIO_read_sitelist(QIO_Reader *in, DIME_type dime_type);
+int QIO_write_sitelist(QIO_Writer *out, const DIME_type dime_type);
+int QIO_read_field(QIO_Reader *in, 
+	   void (*put)(char *buf, size_t index, size_t count, void *arg),
+	   size_t datum_size, int word_size, void *arg, 
 		   DML_Checksum *checksum,
 		   DIME_type dime_type);
 

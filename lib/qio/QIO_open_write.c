@@ -3,28 +3,32 @@
 #include <qio.h>
 #include <lrl.h>
 #include <dml.h>
-#include <xml.h>
+#include <xml_string.h>
+#include <qioxml.h>
 #include <stdio.h>
-#ifdef HAVE_MALLOC_H
 #include <malloc.h>
-#endif
 
-/* Dummy for now */
+/* Opens a file for writing */
+/* Writes the private file XML record */
+/* Writes the site list if multifile format */
+/* Writes the user file XML record */
 
-char file_private_output[] = "<?xml version=\"1.0\">\n\t<FilePrivate/>";
-
-QIO_Writer *QIO_open_write(XML_string *xml_file, const char *filename, 
-			   int serpar, int siteorder, int mode,
+QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename, 
+			   int serpar, int volfmt, int mode,
 			   QIO_Layout *layout)
 {
   QIO_Writer *qio_out;
   LRL_FileWriter *lrl_file_out;
-  XML_string *xml_file_private;
+  XML_String *xml_file_private;
   DML_Layout *dml_layout;
   int *latsize;
   int latdim = layout->latdim;
   int this_node = layout->this_node;
   int i;
+  char *newfilename;
+  QIO_FileInfo *file_info;
+  int multifile;
+  char myname[] = "QIO_open_write";
 
   /* Make a local copy of lattice size */
   latsize = (int *)malloc(sizeof(int)*latdim);
@@ -33,62 +37,94 @@ QIO_Writer *QIO_open_write(XML_string *xml_file, const char *filename,
 
   /* Construct the layout data from the QIO_Layout structure*/
   dml_layout = (DML_Layout *)malloc(sizeof(QIO_Layout));
-  if (layout == NULL)
+  if (!layout){
+    printf("%s(%d): can't malloc dml_layout\n",myname,this_node);
     return NULL;
+  }
 
-  dml_layout->node_number = layout->node_number;
-  dml_layout->latsize     = latsize;
-  dml_layout->latdim      = layout->latdim;
-  dml_layout->volume      = layout->volume;
-  dml_layout->this_node   = layout->this_node;
+  dml_layout->node_number     = layout->node_number;
+  dml_layout->node_index      = layout->node_index;
+  dml_layout->get_coords      = layout->get_coords;
+  dml_layout->latsize         = latsize;
+  dml_layout->latdim          = layout->latdim;
+  dml_layout->volume          = layout->volume;
+  dml_layout->sites_on_node   = layout->sites_on_node;
+  dml_layout->this_node       = layout->this_node;
+  dml_layout->number_of_nodes = layout->number_of_nodes;
 
   /* Construct the writer handle */
   qio_out = (QIO_Writer *)malloc(sizeof(QIO_Writer));
   if(qio_out == NULL)return NULL;
   qio_out->lrl_file_out = NULL;
-  qio_out->serpar = serpar;
-  qio_out->siteorder = siteorder;
-  qio_out->layout = dml_layout;
-  qio_out->volfmt = QIO_SINGLEFILE;
+  qio_out->serpar       = serpar;
+  qio_out->volfmt       = volfmt;
+  qio_out->layout       = dml_layout;
 
-  /* If parallel, all nodes open the file.  Otherwise, only master does.*/
+  /* If the system handles parallel writes and the user requests it,
+     or if writing in multifile, all nodes open the file.  Otherwise,
+     only master does. */
+
   if((PARALLEL_WRITE && serpar == QIO_PARALLEL)
+     || volfmt == QIO_MULTIFILE
      || this_node == QIO_MASTER_NODE){
-    lrl_file_out = LRL_open_write_file(filename, mode);
+    /* Modify filename for multifile writes */
+    newfilename = QIO_filename_edit(filename, volfmt, layout->this_node);
+    lrl_file_out = LRL_open_write_file(newfilename, mode);
     qio_out->lrl_file_out = lrl_file_out;
+    free(newfilename);
   }
- 
 
-  /* This is a dummy for now, but we need to write at least
-     QIO version number, lattice dimensions, and the volume format */
-  xml_file_private = XML_string_create(strlen(file_private_output)+1);
-  XML_string_set(xml_file_private, file_private_output);
+  /* Load the private file info structure */
+  /* Multifile flag */
+  if(volfmt == QIO_SINGLEFILE)multifile = 1;
+  else multifile = dml_layout->number_of_nodes;
+
+  /* Lattice dimensions */
+  file_info = QIO_create_file_info(dml_layout->latdim,
+				   dml_layout->latsize,multifile);
+  if(!file_info){
+    printf("%s(%d): Can't create file info structure\n",myname,this_node);
+    return NULL;
+  }
+
+  /* Encode the private file XML */
+  xml_file_private = XML_string_create(QIO_STRINGALLOC);
+  QIO_encode_file_info(xml_file_private, file_info);
+  QIO_destroy_file_info(file_info);
   
   /* Master node writes the private file XML record */
   if(this_node == QIO_MASTER_NODE){
     if(QIO_write_string(qio_out,xml_file_private, (const DIME_type)"application/scidac-private-file-xml")){
-      printf("QIO_open_write: error writing private file XML\n");
+      printf("%s(%d): error writing private file XML\n",
+	     myname,this_node);
       return NULL;
     }
-    printf("QIO_open_write: private file XML = %s\n",
-	   XML_string_ptr(xml_file_private));
+    /* Debug */
+    printf("%s(%d): private file XML = %s\n",
+	   myname,this_node,XML_string_ptr(xml_file_private));
   }
 
   /* Free storage */
   XML_string_destroy(xml_file_private);
-  printf("QIO write string of xml_file_private done\n");
+
+  /* All nodes write a site list if multifile format */
+  if(volfmt == QIO_MULTIFILE){
+    QIO_write_sitelist(qio_out, 
+		       (const DIME_type)"application/scidac-sitelist");
+  }
 
   /* Master node writes the user file XML record */
   if(this_node == QIO_MASTER_NODE){
-    printf("About to do QIO_write_string(qio_out, xml_file)\n");
-    if(QIO_write_string(qio_out,xml_file, (const DIME_type)"application/scidac-file-xml")){
-      printf("QIO_open_write: error writing user file XML\n");
+    if(QIO_write_string(qio_out,xml_file, 
+			(const DIME_type)"application/scidac-file-xml")){
+      printf("%s(%d): error writing user file XML\n",
+	     myname,this_node);
       return NULL;
     }
-    printf("QIO_open_write: user file XML  = %s\n",
-	   XML_string_ptr(xml_file));
+    /* Debug */
+    printf("%s(%d): user file XML  = %s\n",
+	   myname,this_node, XML_string_ptr(xml_file));
   }
-  printf("QIO write string of xml_file done\n");
+
   return qio_out;
 }
-

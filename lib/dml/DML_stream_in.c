@@ -6,27 +6,27 @@
 #include <lrl.h>
 #include <dml.h>
 
-int DML_stream_in(LRL_RecordReader *lrl_record_in, 
-		  void (*put)(char *buf, const int coords[], void *arg),
-		  size_t size, void *arg, DML_Layout *layout,
-		  int serpar, int siteorder, size_t sitelist[],
-		  int volfmt, DML_Checksum *checksum){
+size_t DML_stream_in(LRL_RecordReader *lrl_record_in, 
+	     void (*put)(char *buf, size_t index, size_t count, void *arg),
+	     size_t size, int word_size, void *arg, DML_Layout *layout,
+	     int serpar, int siteorder, size_t sitelist[],
+	     int volfmt, DML_Checksum *checksum){
   
-  /* Multidump format. Site order is always native */
+  /* Multifile format. Site order specified by sitelist */
   if(volfmt == DML_MULTIFILE){
-    return DML_multidump_in(lrl_record_in, sitelist, 
-			    put, size, arg, layout, checksum);
+    return DML_multifile_in(lrl_record_in, sitelist, 
+			    put, size, word_size, arg, layout, checksum);
   }
 
-  /* Serial read.  Site order determined by file. */
+  /* Serial read.  Site order always lexicographic. */
   else if(serpar == DML_SERIAL){
-    return DML_serial_in(lrl_record_in, siteorder, sitelist, 
-			 put, size, arg, layout, checksum);
+    return DML_serial_in(lrl_record_in, 
+			 put, size, word_size, arg, layout, checksum);
   }
 
-  /* Parallel read.  Site order determined by file. */
+  /* Parallel read.  Site order always lexicographic. */
   else {
-    return DML_parallel_in(lrl_record_in, siteorder, sitelist, 
-			   put, size, arg, layout, checksum);
+    return DML_parallel_in(lrl_record_in, 
+			   put, size, word_size, arg, layout, checksum);
   }
 }

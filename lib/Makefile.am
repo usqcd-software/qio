@@ -6,14 +6,29 @@ VPATH = @top_srcdir@/lib
 VPATH += @top_srcdir@/include
 VPATH += @top_srcdir@/other_libs/c-dime/include
 
-HDRS = qio.h dml.h lrl.h xml.h dime.h
+HDRS = qio.h qioxml.h dml.h lrl.h xml_string.h dime.h config.h
 
 lib_LIBRARIES = libqio.a
 
-QIO_SRCS = qio/QIO_close_read.c qio/QIO_close_write.c qio/QIO_open_read.c \
-     qio/QIO_open_write.c qio/QIO_read.c qio/QIO_utils.c qio/QIO_write.c
+QIO_SRCS = \
+   qio/QIO_close_read.c \
+   qio/QIO_close_write.c \
+   qio/QIO_info.c \
+   qio/QIO_next_record.c \
+   qio/QIO_open_read.c \
+   qio/QIO_open_write.c \
+   qio/QIO_read.c \
+   qio/QIO_read_record_data.c \
+   qio/QIO_read_record_info.c \
+   qio/QIO_utils.c \
+   qio/QIO_write.c
 
-DML_GENERIC = dml/DML_get_sitelist.c dml/DML_stream_in.c dml/DML_stream_out.c dml/DML_utils.c
+DML_GENERIC = \
+   dml/DML_crc32.c \
+   dml/DML_stream_in.c \
+   dml/DML_stream_out.c \
+   dml/DML_utils.c
+
 DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c
 DML_SCALAR = ${OBJECTS} dml/DML_scalar.c
 

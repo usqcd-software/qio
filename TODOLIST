@@ -1,0 +1,23 @@
+QIO package
+
+LRL
+-- LRL/dime seeks for writes and reads (and check skip to next record)
+-- Modes for writing (CREAT OPEN APPEND) ??
+
+DML
+-- Debug parallel reads and writes
+-- Add multifile capability for one disk per partition (as opposed to
+   the current one disk per node)
+-- Coordinate the parallel read block size parameter dml.h:DML_COMM_BLOCK 
+	with QMP
+-- Vectorize the multifile in/out
+
+General
+-- Create config.h automatically during build.
+
+Additions
+-- stdin, stdout, stderr: Global broadcast scanf and printf 
+-- Pure XML I/O
+-- QLA I/O
+-- Integrate XML_string handling with XML package if necessary
+

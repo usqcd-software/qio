@@ -75,6 +75,21 @@ size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes){
   return fread(buf, 1, nbytes, rr->fr->file);
 }
 
+int LRL_seek_write_record(LRL_FileWriter *fr, size_t offset){
+  if (fr == NULL)return -1;
+  return fseeko(fr->file, offset, SEEK_CUR);
+}
+
+int LRL_seek_read_record(LRL_FileReader *fr, size_t offset){
+  if (fr == NULL)return -1;
+  return fseeko(fr->file, offset, SEEK_CUR);
+}
+
+int LRL_next_record(LRL_FileReader *fr){
+  printf("LRL_next_record: not implemented\n");
+  return 1;
+}
+
 int LRL_close_read_record(LRL_RecordReader *rr){
   free(rr);
   return 0;

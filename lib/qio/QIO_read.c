@@ -3,83 +3,46 @@
 #include <qio.h>
 #include <lrl.h>
 #include <dml.h>
-#include <xml.h>
+#include <xml_string.h>
+#include <qioxml.h>
 #include <stdio.h>
 #include <string.h>
 
-int QIO_read(QIO_Reader *in, XML_string *xml_record, XML_string *BinX,
-	     void (*put)(char *buf, const int coords[], void *arg),
-	     int datum_size, void *arg){
-  /* Return status 0 for success, 1 for failure */
+#define DEBUG
 
-  XML_string *xml_record_private;
-  DML_Checksum checksum;
-  XML_string *xml_checksum;
-  size_t check;
+/* Reads a lattice field from a record.  Includes XML and checksum */
+/* Calls QIO_read_record_info and QIO_read_record_data */
+
+/* Return 0 success.  1 failure */
+
+int QIO_read(QIO_Reader *in, QIO_RecordInfo *record_info,
+	     XML_String *xml_record, 
+	     void (*put)(char *buf, size_t index, size_t count, void *arg),
+	     size_t datum_size, int word_size, void *arg){
+
+  /* Caller must allocate *record_info, *xml_record and *BinX.
+     Return status 0 for success, 1 for failure.
+     Caller must signal abort to all nodes upon failure. */
+
+  int status;
   int this_node = in->layout->this_node;
-  size_t buf_size = datum_size * in->layout->volume;
-  DIME_type dime_type=NULL;
+  char myname[] = "QIO_read";
 
-  /* Initialize private record XML - will be allocated by read_string */
-  xml_record_private = XML_string_create(0);
-  
-  /* Master node reads the private record XML record */
-  if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_string(in, xml_record_private, dime_type ))return 1;
-    printf("QIO_read: private XML = %s\n",XML_string_ptr(xml_record_private));
-  }
-
-  /* Interpret the private record XML */
-  /* We need the site order and the site list if applicable */
-  /*** OMITTED FOR NOW ***/
-  in->siteorder = QIO_LEX_ORDER;
-  in->sitelist = NULL;
-
-  /* Free storage */
-  XML_string_destroy(xml_record_private);
-
-  /* Master node reads the user file XML record */
-  /* Assume xml_record created by caller */
-  if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_string(in, xml_record, dime_type)) return 1;
-    printf("QIO_read: user XML = %s\n",XML_string_ptr(xml_record));
-  }
-
-  /* Master node reads the BinX record */
-  /* Assume xml_record created by caller */
-  if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_string(in, BinX, dime_type)) return 1;
-    printf("QIO_read: BinX = %s\n",XML_string_ptr(BinX));
-  }
-  
-  /* Nodes read the field */
-  check = QIO_read_field(in, QIO_SINGLEFILE, xml_record, 
-			 put, datum_size, arg, &checksum, dime_type);
-
-#if 0
-  /* Check no errors on reading field */
-  /* NOTE: HOW ARE ERRORS SUPPOSE TO WORK IN PARALLEL??? */
-  if(check != buf_size){
-    printf("QIO_read: error reading field: expected %d bytes but found %d bytes\n",
-	   buf_size, check);
-    return 1;
-  }
+  /* Read info if not already done */
+  status = QIO_read_record_info(in, record_info, xml_record);
+#ifdef DEBUG
+  printf("%s(%d): QIO_read_record_info returned %d\n",
+	 myname,this_node,status);
 #endif
+  if(status)return 1;
 
-  /* Master node reads the checksum */
-  xml_checksum = XML_string_create(0);
-  if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_string(in, xml_checksum, dime_type)) return 1;
-    printf("QIO_read: checksum = %s\n",XML_string_ptr(xml_checksum));
-  }
-  /* Need to extract checksum */
-
-  /* Free storage */
-  XML_string_destroy(xml_checksum);
-
-  /* Compare checksums */
-  /*** OMITTED FOR NOW ***/
+  /* Read data */
+  status = QIO_read_record_data(in, put, datum_size, word_size, arg);
+#ifdef DEBUG
+  printf("%s(%d): QIO_read_record_data returned %d\n",
+	 myname,this_node,status);
+#endif
+  if(status)return 1;
 
   return 0;
 }
-
