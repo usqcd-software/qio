@@ -34,7 +34,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-VPATH = @top_srcdir@ @top_srcdir@/include
+VPATH = @top_srcdir@ @top_srcdir@/include @top_builddir@/include
 ACLOCAL = @ACLOCAL@
 AMDEP_FALSE = @AMDEP_FALSE@
 AMDEP_TRUE = @AMDEP_TRUE@
@@ -119,7 +119,7 @@ subdirs = @subdirs@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 
-include_HEADERS = qio.h qioxml.h dml.h lrl.h xml_string.h type32.h config.h
+include_HEADERS = qio.h qioxml.h dml.h lrl.h xml_string.h type32.h config.h qio_config.h
 subdir = include
 mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
 CONFIG_HEADER = qio_config.h
