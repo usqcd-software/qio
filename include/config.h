@@ -5,7 +5,7 @@
 
 /* Are 32 bit integers and floats stored in big endian on this
    architecture?  Our files are always big endian. */
-#define BIG_ENDIAN 0
+#define QIO_BIG_ENDIAN 0
 
 /* Does the architecture support parallel reads and writes? */
 #define PARALLEL_READ 0

@@ -341,7 +341,7 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
   /* Barrier */
   DML_sync();
 
-#if(BIG_ENDIAN != 1)
+#if(QIO_BIG_ENDIAN != 1)
   printf("%s(%d): byte reversing %d\n",myname,this_node,word_size);
 #endif
 
@@ -382,7 +382,7 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
       }
       
       /* Do byte reordering before checksum */
-#if(BIG_ENDIAN != 1)
+#if(QIO_BIG_ENDIAN != 1)
       DML_byterevn(buf, size, word_size);
 #endif
       
@@ -463,7 +463,7 @@ int DML_multifile_out(LRL_RecordWriter *lrl_record_out,
     /* Accumulate checksums as the values are inserted into the buffer */
     
     /* Do byte reversal if needed */
-#if(BIG_ENDIAN != 1)
+#if(QIO_BIG_ENDIAN != 1)
     DML_byterevn(buf, size, word_size);
 #endif
     
@@ -540,7 +540,7 @@ int DML_parallel_out(LRL_RecordWriter *lrl_record_out,
   /* Barrier */
   DML_sync();
 
-#if(BIG_ENDIAN != 1)
+#if(QIO_BIG_ENDIAN != 1)
   printf("%s(%d): byte reversing %d\n",myname,this_node,word_size);
 #endif
 
@@ -639,7 +639,7 @@ int DML_parallel_out(LRL_RecordWriter *lrl_record_out,
 	     buffer at the receiving node */
 
 	  /* Do byte reversal if needed */
-#if(BIG_ENDIAN != 1)
+#if(QIO_BIG_ENDIAN != 1)
 	  DML_byterevn(buf, size, word_size);
 #endif
 	  DML_checksum_accum(checksum, chk_rank, buf, size);
@@ -728,7 +728,7 @@ int DML_multifile_in(LRL_RecordReader *lrl_record_in,
     DML_checksum_accum(checksum, rank, buf, size);
     
     /* Do byte reversal after checksum if needed */
-#if(BIG_ENDIAN != 1)
+#if(QIO_BIG_ENDIAN != 1)
     DML_byterevn(buf, size, word_size);
 #endif
     put(buf, isite, 1, arg);
@@ -780,7 +780,7 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in,
   /* Unlimited barrier */
   DML_sync();
 
-#if(BIG_ENDIAN != 1)
+#if(QIO_BIG_ENDIAN != 1)
   printf("%s(%d): byte reversing %d\n",myname,this_node,word_size);
 #endif
 
@@ -820,7 +820,7 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in,
 	DML_checksum_accum(checksum, rcv_coords, buf, size);
 
 	/* Do byte reversal if necessary */
-#if(BIG_ENDIAN != 1)
+#if(QIO_BIG_ENDIAN != 1)
 	DML_byterevn(buf, size, word_size);
 #endif
 	/* Store the data */
@@ -888,7 +888,7 @@ int DML_parallel_in(LRL_RecordReader *lrl_record_in,
   /* Barrier */
   DML_sync();
 
-#if(BIG_ENDIAN != 1)
+#if(QIO_BIG_ENDIAN != 1)
   printf("%s(%d): byte reversing %d\n",myname,this_node,word_size);
 #endif
 
@@ -964,7 +964,7 @@ int DML_parallel_in(LRL_RecordReader *lrl_record_in,
 	       as the values are sent from its buffer */
 	    buf = lbuf + size*buf_extract;
 	    DML_checksum_accum(checksum, rank, buf, size);
-#if(BIG_ENDIAN != 1)
+#if(QIO_BIG_ENDIAN != 1)
 	    DML_byterevn(buf, size, word_size);
 #endif
 	    if(destnode==sendnode){

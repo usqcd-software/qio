@@ -91,7 +91,7 @@ int QIO_write_sitelist(QIO_Writer *out, const DIME_type dime_type){
   }
 
   /* Byte reordering for entire sitelist */
-#if(!BIG_ENDIAN)
+#if(!QIO_BIG_ENDIAN)
   DML_byterevn((char *)sitelist, rec_size, sizeof(DML_SiteRank));
 #endif
 
@@ -240,7 +240,7 @@ int QIO_read_sitelist(QIO_Reader *in, DIME_type dime_type){
   }
 
   /* Byte reordering for entire sitelist */
-#if(!BIG_ENDIAN)
+#if(!QIO_BIG_ENDIAN)
   DML_byterevn(buf, rec_size, sizeof(DML_SiteRank));
 #endif
 
