@@ -94,7 +94,7 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   }
 
   /* Copy most recent node checksum into reader */
-  in->last_checksum = *checksum;
+  memcpy(&(in->last_checksum), checksum, sizeof(DML_Checksum));
 
   if(this_node == in->layout->master_io_node){
     if(QIO_verbosity() >= QIO_VERB_REG){
@@ -216,7 +216,7 @@ int QIO_read_record_data(QIO_Reader *in,
   DML_checksum_combine(&checksum);
 
   /* Copy most recent combined checksum into reader */
-  in->last_checksum = checksum;
+  memcpy(&(in->last_checksum), &checksum, sizeof(DML_Checksum));
 
   checksum_info_expect = QIO_read_checksum(in);
   if(this_node == in->layout->master_io_node)
