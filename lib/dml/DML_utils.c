@@ -381,7 +381,7 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
     /* Send result to Master node. Avoid Master node sending to itself. */
     if (current_node != DML_MASTER_NODE) 
     {
-#if defined(HAVE_QMP_ROUTE)
+#if 1
       DML_route_bytes(buf,size,current_node,DML_MASTER_NODE);
 #else
       /* Data from any other node is received in the Master node write buffer */
@@ -815,7 +815,7 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in,
       /* Send result to destination node. Avoid Master node sending to itself. */
       if (dest_node != DML_MASTER_NODE)
       {
-#if defined(HAVE_QMP_ROUTE)
+#if 1
 	DML_route_bytes(buf,size,DML_MASTER_NODE,dest_node);
 #else
 	/* If destination elsewhere, send it */
