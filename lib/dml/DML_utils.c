@@ -15,6 +15,8 @@
 #include <crc32.h>
 #include <sys/types.h>
 
+#undef DEBUG
+
 /* Iterators for lexicographic order */
 
 void DML_lex_init(int *dim, int coords[], int latdim, int latsize[])
@@ -346,8 +348,10 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
   /* Barrier */
   DML_sync();
 
+#ifdef DEBUG
 #if(QIO_BIG_ENDIAN != 1)
   printf("%s(%d): byte reversing %d\n",myname,this_node,word_size);
+#endif
 #endif
 
   /* Allocate coordinate counter */
