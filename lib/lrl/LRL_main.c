@@ -119,6 +119,7 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, int do_write,
   LRL_RecordWriter *rr;
   LimeRecordHeader *h;
   int status;
+  char myname[] = "LRL_open_write_record";
   
   if (fr == NULL)
     return NULL;
@@ -126,7 +127,7 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, int do_write,
 
   rr = (LRL_RecordWriter *)malloc(sizeof(LRL_RecordWriter));
   if (rr == NULL){
-    printf("LRL_open_write_record: Can't malloc writer\n");
+    printf("%s: Can't malloc writer\n",myname);
     return NULL;
   }
   rr->fr = fr;
@@ -137,7 +138,7 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, int do_write,
 
   if (status < 0)
   { 
-    fprintf(stderr, "Oh dear some horrible error has occurred. status is: %d\n", status);
+    fprintf(stderr, "%s: fatal error. status is: %d\n", myname, status);
     exit(EXIT_FAILURE);
   }
 
@@ -209,7 +210,8 @@ size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes)
    payload.  We are not allowed to go beyond the end of the
    payload. */
 
-int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset){
+int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset)
+{
   int status;
 
   if (rr == NULL || rr->fr == NULL)return LRL_ERR_SEEK;
@@ -227,7 +229,8 @@ int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset){
    payload.  We are not allowed to go beyond the end of the
    payload. */
 
-int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset){
+int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset)
+{
   int status;
 
   if (rr == NULL || rr->fr == NULL)return LRL_ERR_SEEK;
@@ -243,7 +246,8 @@ int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset){
 
 /* For skipping to the beginning of the next message */
 
-int LRL_next_message(LRL_FileReader *fr){
+int LRL_next_message(LRL_FileReader *fr)
+{
   int status;
   int msg_begin = 0;
 
@@ -262,7 +266,8 @@ int LRL_next_message(LRL_FileReader *fr){
 
 /* For skipping to the beginning of the next record - DO WE NEED THIS? */
 
-int LRL_next_record(LRL_FileReader *fr){
+int LRL_next_record(LRL_FileReader *fr)
+{
   int status;
 
   if(fr == NULL)return LRL_ERR_SKIP;
@@ -283,7 +288,8 @@ int LRL_next_record(LRL_FileReader *fr){
  *
  */
 
-int LRL_close_write_record(LRL_RecordWriter *wr){
+int LRL_close_write_record(LRL_RecordWriter *wr)
+{
   int status;
 
   if(wr == NULL)return LRL_ERR_CLOSE;
