@@ -121,6 +121,7 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size,
   if (fr == NULL)
     return NULL;
 
+
   rr = (LRL_RecordWriter *)malloc(sizeof(LRL_RecordWriter));
   if (rr == NULL)
     return NULL;
@@ -167,6 +168,7 @@ size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, size_t nbytes)
     return 0;
 
   status = dimeWriteRecordData(buf, &nbyt, rr->fr->dg);
+
   if( status != DIME_SUCCESS ) 
   { 
     fprintf(stderr, "LRL_write_bytes: some error has occurred. status is: %d\n", status);

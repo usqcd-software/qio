@@ -18,7 +18,7 @@ int QIO_write_string(QIO_Writer *out, XML_string *xml)
   size_t rec_size;
 
   buf = XML_string_ptr(xml);
-  rec_size = strlen(buf) + 1;  /* Include terminating null */
+  rec_size = strlen(buf)+1;  /* Include terminating null */
 
   lrl_record_out = LRL_open_write_record(out->lrl_file_out, &rec_size, 
 					 dime_XML);
