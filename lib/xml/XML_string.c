@@ -1,5 +1,6 @@
 /* Strings for XML */
 
+#include <qio_config.h>
 #include <xml_string.h>
 #include <string.h>
 #include <stdio.h>
