@@ -102,8 +102,8 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 
   /* Don't need these anymore */
   /* QMP_get_logical_coordinates_from ought to have used malloc to get these */
-  free(l_src_coords);
-  free(l_dst_coords);
+  /* free(l_src_coords);
+     free(l_dst_coords); */
 
   /* Pad the buffers so that their lengths are always divisible by 8 */
   /* This is a funky QCDOC-ism -- maybe */
@@ -113,13 +113,13 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   }
 
   /* Will have to free these with QMP_free_memory */
-  sendbuf_qmp_mem_t = (QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_DEFAULT);
+  sendbuf_qmp_mem_t = (QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_COMMS);
   if( sendbuf_qmp_mem_t == (QMP_mem_t *)NULL ) { 
     fprintf(stderr, "Unable to allocate sendbuf in QMP_route\n");
     return QMP_NOMEM_ERR;
   }
 
-  recvbuf_qmp_mem_t =(QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_DEFAULT);
+  recvbuf_qmp_mem_t =(QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_COMMS);
   if( recvbuf_qmp_mem_t == (QMP_mem_t *)NULL ) { 
     fprintf(stderr ,"Unable to allocate recvbuf in QMP_route\n");
     return QMP_NOMEM_ERR;
