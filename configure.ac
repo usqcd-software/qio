@@ -32,7 +32,23 @@ AC_ARG_WITH(qmp,
   [QMP_HOME="${with_qmp}"]
 )
 
+dnl
+dnl QIO only supports scalar and parscalar (basically, not-parallel and parallel)
+dnl for other cases, map it to one of these
 case ${PARALLEL_ARCH} in
+  scalarvec)
+    AC_SUBST(LOCAL_PARALLEL_ARCH, [scalar])
+    ;;
+  parscalarvec)
+    AC_SUBST(LOCAL_PARALLEL_ARCH, [parscalar])
+    ;;
+  *)
+    AC_SUBST(LOCAL_PARALLEL_ARCH, PARALLEL_ARCH)
+    ;;
+esac
+
+dnl Now check appropriate cases
+case ${LOCAL_PARALLEL_ARCH} in
   scalar)
     AC_SUBST(ARCHDEF_SUBSTITUTION, ARCH_SCALAR)
     AC_MSG_NOTICE([ Scalar Build! Not checking for QMP ])
@@ -81,7 +97,7 @@ PAC_QMP_LINK_CC_FUNC(
 )
 
 AC_MSG_CHECKING([if we can compile/link of a simple QMP C program])
-case ${PARALLEL_ARCH} in
+case ${LOCAL_PARALLEL_ARCH} in
   parscalar)
     if test "X${qmp_link_ok}X" = "XyesX" ; then
       AC_MSG_RESULT(yes)
@@ -121,8 +137,8 @@ AC_PROG_RANLIB
 #
 # Now have all the options... Do some configuration 
 #
-AM_CONDITIONAL(ARCH_SCALAR,    [test "X${PARALLEL_ARCH}X" = "XscalarX"])
-AM_CONDITIONAL(ARCH_PARSCALAR, [test "X${PARALLEL_ARCH}X" = "XparscalarX"])
+AM_CONDITIONAL(ARCH_SCALAR,    [test "X${LOCAL_PARALLEL_ARCH}X" = "XscalarX"])
+AM_CONDITIONAL(ARCH_PARSCALAR, [test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX"])
 
 # Configure subdir packages
 AC_CONFIG_SUBDIRS(other_libs/c-dime)
