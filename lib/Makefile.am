@@ -1,5 +1,5 @@
 
-INCFLAGS=-I@top_srcdir@/include 
+INCFLAGS=-I@top_srcdir@/include -I@top_srcdir@/lib/lrl/c-dime/include
 
 AM_CFLAGS = $(INCFLAGS) @CFLAGS@
 VPATH = @top_srcdir@/lib
