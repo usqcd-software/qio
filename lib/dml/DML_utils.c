@@ -1078,8 +1078,8 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
     /* Send result to destination node. Avoid I/O node sending to itself. */
     if (dest_node != my_io_node)
       {
-#if 0
-	DML_route_bytes(buf,size,this_node,dest_node);
+#if 1
+	DML_route_bytes(buf,size,my_io_node,dest_node);
 #else
 	/* If destination elsewhere, send it */
 	if(this_node == my_io_node){
