@@ -29,7 +29,7 @@ int QIO_read_record_data(QIO_Reader *in,
   int datum_size_info;
   int this_node = in->layout->this_node;
   size_t buf_size = datum_size * in->layout->volume;
-  DIME_type dime_type=NULL;
+  LIME_type lime_type=NULL;
 
   /* It is an error to call for the data before the reading the info
      in a given record */
@@ -54,7 +54,7 @@ int QIO_read_record_data(QIO_Reader *in,
   /* We assume the BinX_record was created by the caller */
 
   if(this_node == QIO_MASTER_NODE){
-    if(QIO_read_string(in, BinX, dime_type))return 1;
+    if(QIO_read_string(in, BinX, lime_type))return 1;
 #ifdef DEBUG
     printf("%s(%d): BinX = %s\n",myname,this_node,XML_string_ptr(BinX));
 #endif
@@ -72,7 +72,7 @@ int QIO_read_record_data(QIO_Reader *in,
 
   /* Nodes read the field */
   if(QIO_read_field(in, put, datum_size, word_size, arg, 
-		    &checksum, dime_type))
+		    &checksum, lime_type))
     return 1;
 
 #ifdef DEBUG
@@ -82,7 +82,7 @@ int QIO_read_record_data(QIO_Reader *in,
   /* Master node reads the checksum */
   if(this_node == QIO_MASTER_NODE){
     xml_checksum = XML_string_create(QIO_STRINGALLOC);
-    if(QIO_read_string(in, xml_checksum, dime_type))return 1;
+    if(QIO_read_string(in, xml_checksum, lime_type))return 1;
 #ifdef DEBUG
     printf("%s(%d): checksum = %s\n",myname,this_node,
 	   XML_string_ptr(xml_checksum));

@@ -22,7 +22,7 @@ if test "X${QIO_ENABLED}X" = "XyesX" ; then
   AC_MSG_NOTICE([ Building QIO ])
 else 
   if test "X${QIO_ENABLED}X" = "XnoX" ; then
-     AC_MSG_NOTICE([ NOT Building full QIO - Only DIME ])
+     AC_MSG_NOTICE([ NOT Building full QIO - Only LIME ])
   else
      AC_MSG_ERROR([ Error: Incorrect value for QIO_ENABLED: ${QIO_ENABLED}. Check --enable-qio ])
   fi
@@ -168,12 +168,12 @@ AM_CONDITIONAL(ARCH_SCALAR,    [test "X${LOCAL_PARALLEL_ARCH}X" = "XscalarX"])
 AM_CONDITIONAL(ARCH_PARSCALAR, [test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX"])
 
 # Configure subdir packages
-AC_CONFIG_SUBDIRS(other_libs/c-dime)
+AC_CONFIG_SUBDIRS(other_libs/c-lime)
 
 # Configure makefiles
 AC_CONFIG_FILES([Makefile
                  include/Makefile
                  lib/Makefile
                  other_libs/Makefile
-                 other_libs/c-dime/Makefile])
+                 other_libs/c-lime/Makefile])
 AC_OUTPUT

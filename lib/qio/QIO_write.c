@@ -22,6 +22,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   DML_Checksum checksum;
   QIO_ChecksumInfo *checksum_info;
   int this_node = out->layout->this_node;
+  int msg_begin, msg_end;
   char myname[] = "QIO_write";
 
   /* Require consistency between the byte count specified in the
@@ -35,6 +36,10 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
     return 1;
   }
 
+  /* A message consists of the XML, binary payload, and checksums */
+  /* First and last records in a message are flagged */
+  msg_begin = 1; msg_end = 0;
+
   /* Create private record XML */
   xml_record_private = XML_string_create(0);
   QIO_encode_record_info(xml_record_private, record_info);
@@ -42,48 +47,53 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   /* Master node writes the private record XML record */
   if (this_node == QIO_MASTER_NODE)
   {
-    if (QIO_write_string(out, xml_record_private, 
-			 (const DIME_type)"application/scidac-private-record-xml"))
+    if (QIO_write_string(out, msg_begin, msg_end, xml_record_private, 
+			 (const LIME_type)"scidac-private-record-xml"))
       return 1;
 #ifdef DEBUG
     printf("%s(%d): private record XML = %s\n",
 	   myname,this_node,XML_string_ptr(xml_record_private));
 #endif
+    msg_begin = 0;
   }
   XML_string_destroy(xml_record_private);
 
   /* Master node writes the user file XML record */
   if (this_node == QIO_MASTER_NODE)
   {
-    if (QIO_write_string(out, xml_record, 
-			 (const DIME_type)"application/scidac-record-xml"))
+    if (QIO_write_string(out, msg_begin, msg_end, xml_record, 
+			 (const LIME_type)"scidac-record-xml"))
       return 1;
 #ifdef DEBUG
     printf("%s(%d): user record XML = XXX%sXXX\n",
 	   myname,this_node,XML_string_ptr(xml_record));
 #endif
+    msg_begin = 0;
   }
 
 #ifdef DO_BINX
   /* Master node writes the BinX record */
   if (this_node == QIO_MASTER_NODE)
   {
-    if (QIO_write_string(out, BinX, 
-			 (const DIME_type)"application/scidac-binx-xml"))
+    if (QIO_write_string(out, msg_begin, msg_end, BinX, 
+			 (const LIME_type)"scidac-binx-xml"))
       return 1;
 #ifdef DEBUG
     printf("%s(%d): BinX = %s\n",myname,this_node,XML_string_ptr(BinX));
 #endif
+    msg_begin = 0;
   }
 #endif
   
-  /* Nodes write the field */
-  QIO_write_field(out, xml_record, 
+  /* Next one is last record in message for all but master node */
+  if (this_node != QIO_MASTER_NODE)msg_end = 1;
+  QIO_write_field(out, msg_begin, msg_end, xml_record, 
 		  get, datum_size, word_size, arg, &checksum,
-		  (const DIME_type)"application/scidac-binary-data");
+		  (const LIME_type)"scidac-binary-data");
 #ifdef DEBUG
   printf("%s(%d): wrote field\n",myname,this_node);fflush(stdout);
 #endif
+
   /* Master node encodes and writes the checksum */
   if (this_node == QIO_MASTER_NODE)
   {
@@ -91,8 +101,9 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
     xml_checksum = XML_string_create(30);
     QIO_encode_checksum_info(xml_checksum, checksum_info);
 
-    if (QIO_write_string(out, xml_checksum,
-	(const DIME_type)"application/scidac-checksum"))return 1;
+    msg_end = 1;
+    if (QIO_write_string(out, msg_begin, msg_end, xml_checksum,
+	(const LIME_type)"scidac-checksum"))return 1;
 
 #ifdef DEBUG
     printf("%s(%d): checksum string = %s\n",

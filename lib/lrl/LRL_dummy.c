@@ -1,6 +1,6 @@
 /* LRL_read_bytes.c */
 /* Dummy */
-/* DIME ignored */
+/* LIME ignored */
 
 #include <lrl.h>
 #include <stdio.h>
@@ -34,7 +34,7 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode){
 }
 
 LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size, 
-				       DIME_tag tag){
+				       LIME_tag tag){
   LRL_RecordReader *rr;
 
   if(fr == NULL)return NULL;
@@ -51,7 +51,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
 }
 
 LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size, 
-					DIME_tag tag){
+					LIME_tag tag){
   LRL_RecordWriter *rr;
   
   if(fr == NULL)return NULL;

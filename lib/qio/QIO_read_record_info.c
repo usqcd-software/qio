@@ -25,7 +25,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
   int this_node = in->layout->this_node;
   int length;
   char myname[] = "QIO_read_record_info";
-  DIME_type dime_type=NULL;
+  LIME_type lime_type=NULL;
   
   /* Read user and private record XML if not already done */
   if(in->read_state == QIO_RECORD_XML_NEXT){
@@ -46,7 +46,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
       xml_record_private = XML_string_create(0);
 
       /* Read private record XML */
-      if(QIO_read_string(in, xml_record_private, dime_type ))return 1;
+      if(QIO_read_string(in, xml_record_private, lime_type ))return 1;
 #ifdef DEBUG
       printf("%s(%d): private XML = %s\n",myname,this_node,
 	     XML_string_ptr(xml_record_private));
@@ -82,7 +82,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 #endif
     /* Master node reads the user XML record */
     if(this_node == QIO_MASTER_NODE){
-      if(QIO_read_string(in, in->xml_record, dime_type))return 1;
+      if(QIO_read_string(in, in->xml_record, lime_type))return 1;
 #ifdef DEBUG
       printf("%s(%d): user XML = %s\n",myname,this_node,
 	     XML_string_ptr(in->xml_record));

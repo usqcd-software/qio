@@ -28,6 +28,7 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
   char *newfilename;
   QIO_FileInfo *file_info;
   int multifile;
+  int msg_begin, msg_end;
   char myname[] = "QIO_open_write";
 
   /* Make a local copy of lattice size */
@@ -41,6 +42,9 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
     printf("%s(%d): can't malloc dml_layout\n",myname,this_node);
     return NULL;
   }
+
+  /* Force single file format if there is only one node */
+  if(layout->number_of_nodes==1) volfmt = QIO_SINGLEFILE;
 
   dml_layout->node_number     = layout->node_number;
   dml_layout->node_index      = layout->node_index;
@@ -92,9 +96,14 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
   QIO_encode_file_info(xml_file_private, file_info);
   QIO_destroy_file_info(file_info);
   
+  /* A message consists of the XML, binary payload, and checksums */
+  /* First and last records in a message are flagged */
+  msg_begin = 1; msg_end = 0;
+  
   /* Master node writes the private file XML record */
   if(this_node == QIO_MASTER_NODE){
-    if(QIO_write_string(qio_out,xml_file_private, (const DIME_type)"application/scidac-private-file-xml")){
+    if(QIO_write_string(qio_out, msg_begin, msg_end, xml_file_private, 
+	      (const LIME_type)"scidac-private-file-xml")){
       printf("%s(%d): error writing private file XML\n",
 	     myname,this_node);
       return NULL;
@@ -102,21 +111,27 @@ QIO_Writer *QIO_open_write(XML_String *xml_file, const char *filename,
     /* Debug */
     printf("%s(%d): private file XML = %s\n",
 	   myname,this_node,XML_string_ptr(xml_file_private));
+    msg_begin = 0;
   }
 
   /* Free storage */
   XML_string_destroy(xml_file_private);
 
+  /* Next record is last in message for all but master node */
+  if (this_node != QIO_MASTER_NODE)msg_end = 1;
+
   /* All nodes write a site list if multifile format */
   if(volfmt == QIO_MULTIFILE){
-    QIO_write_sitelist(qio_out, 
-		       (const DIME_type)"application/scidac-sitelist");
+    QIO_write_sitelist(qio_out, msg_begin, msg_end, 
+		       (const LIME_type)"scidac-sitelist");
+    msg_begin = 0;
   }
 
   /* Master node writes the user file XML record */
   if(this_node == QIO_MASTER_NODE){
-    if(QIO_write_string(qio_out,xml_file, 
-			(const DIME_type)"application/scidac-file-xml")){
+    msg_end = 1;
+    if(QIO_write_string(qio_out, msg_begin, msg_end, xml_file, 
+			(const LIME_type)"scidac-file-xml")){
       printf("%s(%d): error writing user file XML\n",
 	     myname,this_node);
       return NULL;

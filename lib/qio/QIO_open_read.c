@@ -30,7 +30,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   int latdim = layout->latdim;
   int this_node = layout->this_node;
   int i;
-  DIME_type dime_type = NULL;
+  LIME_type lime_type = NULL;
   int length;
   int check;
   char *newfilename;
@@ -89,7 +89,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   /* Master node reads and decodes the private file XML record */
   if(this_node == QIO_MASTER_NODE){
     xml_file_private = XML_string_create(QIO_STRINGALLOC);
-    if(QIO_read_string(qio_in, xml_file_private, dime_type)){
+    if(QIO_read_string(qio_in, xml_file_private, lime_type)){
       printf("%s(%d): error reading private file XML\n",myname,this_node);
       return NULL;
     }
@@ -169,7 +169,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
     }
     
     /* Each node reads its own site list */
-    if(QIO_read_sitelist(qio_in, dime_type))return NULL;
+    if(QIO_read_sitelist(qio_in, lime_type))return NULL;
 #ifdef DEBUG
     printf("%s(%d): Sitelist was read\n",myname,this_node);fflush(stdout);
 #endif
@@ -204,7 +204,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   /* Master node reads the user file XML record */
   /* Assumes xml_file created by caller */
   if(this_node == QIO_MASTER_NODE){
-    if(QIO_read_string(qio_in, xml_file, dime_type)){
+    if(QIO_read_string(qio_in, xml_file, lime_type)){
       printf("%s(%d): error reading user file XML\n",myname,this_node);
       return NULL;
     }

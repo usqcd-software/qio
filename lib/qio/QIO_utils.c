@@ -34,8 +34,9 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
 /* Write an XML record */
 /* Returns 0 success; 1 failure */
 
-int QIO_write_string(QIO_Writer *out, XML_String *xml,
-		     const DIME_type dime_type)
+int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
+		     XML_String *xml,
+		     const LIME_type lime_type)
 {
   LRL_RecordWriter *lrl_record_out;
   char *buf;
@@ -45,8 +46,9 @@ int QIO_write_string(QIO_Writer *out, XML_String *xml,
   buf = XML_string_ptr(xml);
   rec_size = strlen(buf)+1;  /* Include terminating null */
 
-  lrl_record_out = LRL_open_write_record(out->lrl_file_out, &rec_size, 
-					 dime_type);
+  lrl_record_out = LRL_open_write_record(out->lrl_file_out, 1, msg_begin,
+					 msg_end, &rec_size, 
+					 lime_type);
   check = LRL_write_bytes(lrl_record_out, buf, rec_size);
 #ifdef DEBUG
   printf("%s(%d): wrote bytes\n",myname,out->layout->this_node);fflush(stdout);
@@ -65,7 +67,8 @@ int QIO_write_string(QIO_Writer *out, XML_String *xml,
 /* Write list of sites (used with multifile format) */
 /* Returns number of bytes written */
 
-int QIO_write_sitelist(QIO_Writer *out, const DIME_type dime_type){
+int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end, 
+		       const LIME_type lime_type){
   LRL_RecordWriter *lrl_record_out;
   size_t nbytes;
   size_t rec_size;
@@ -96,8 +99,9 @@ int QIO_write_sitelist(QIO_Writer *out, const DIME_type dime_type){
 #endif
 
   /* Write site list */
-  lrl_record_out = LRL_open_write_record(out->lrl_file_out, &rec_size, 
-					 dime_type);
+  lrl_record_out = LRL_open_write_record(out->lrl_file_out, 1, msg_begin,
+					 msg_end, &rec_size, 
+					 lime_type);
   nbytes = LRL_write_bytes(lrl_record_out, (char *)sitelist, rec_size);
 
   /* Close record when done and clean up*/
@@ -110,16 +114,18 @@ int QIO_write_sitelist(QIO_Writer *out, const DIME_type dime_type){
 /* Write binary data for a lattice field */
 /* Returns 0 success, 1 failure */
 
-int QIO_write_field(QIO_Writer *out, XML_String *xml_record, 
+int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
+	    XML_String *xml_record, 
 	    void (*get)(char *buf, size_t index, size_t count, void *arg),
 	    size_t datum_size, int word_size, void *arg, 
 	    DML_Checksum *checksum,
-	    const DIME_type dime_type){
+	    const LIME_type lime_type){
   
   LRL_RecordWriter *lrl_record_out;
   size_t check;
   size_t rec_size;
   size_t volume = out->layout->volume;
+  int do_write;
   char myname[] = "QIO_write_field";
 
   /* Compute record size */
@@ -134,8 +140,18 @@ int QIO_write_field(QIO_Writer *out, XML_String *xml_record,
 #ifdef DEBUG
   printf("%s(%d): rec_size = %d\n",myname,out->layout->this_node,rec_size);
 #endif
-  lrl_record_out = LRL_open_write_record(out->lrl_file_out, &rec_size, 
-					 dime_type);
+
+  /* If multiple nodes are writing to the same file, only
+     the master node should actually write the LIME header */
+  do_write = ( out->serpar == QIO_SERIAL ) || 
+    ( out->layout->this_node == QIO_MASTER_NODE );
+
+  /* Open record */
+
+  lrl_record_out = LRL_open_write_record(out->lrl_file_out, do_write,
+					 msg_begin, msg_end, &rec_size, 
+					 lime_type);
+  /* Write bytes */
 
   check = DML_stream_out(lrl_record_out, get, datum_size, word_size,
 			 arg, out->layout, out->serpar, 
@@ -157,7 +173,7 @@ int QIO_write_field(QIO_Writer *out, XML_String *xml_record,
 /* Read an XML record */
 /* Returns 0 success, 1 failure */
 
-int QIO_read_string(QIO_Reader *in, XML_String *xml, DIME_type dime_type){
+int QIO_read_string(QIO_Reader *in, XML_String *xml, LIME_type lime_type){
   char *buf;
   size_t buf_size;
   LRL_RecordReader *lrl_record_in;
@@ -166,7 +182,7 @@ int QIO_read_string(QIO_Reader *in, XML_String *xml, DIME_type dime_type){
 
   /* Open record and find record size */
   if(!in->lrl_file_in)return 0;
-  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, dime_type);
+  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, lime_type);
   if(!lrl_record_in)return 1;
 
   buf_size = XML_string_bytes(xml);   /* The size allocated for the string */
@@ -195,7 +211,7 @@ int QIO_read_string(QIO_Reader *in, XML_String *xml, DIME_type dime_type){
 /* Read site list */
 /* Returns 0 success; 1 failure */
 
-int QIO_read_sitelist(QIO_Reader *in, DIME_type dime_type){
+int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
   char *buf;
   size_t buf_size;
   LRL_RecordReader *lrl_record_in;
@@ -214,7 +230,8 @@ int QIO_read_sitelist(QIO_Reader *in, DIME_type dime_type){
   }
 
   /* Open record and find record size */
-  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, dime_type);
+  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, lime_type);
+  if(!lrl_record_in)return 1;
 
   /* Is record size correct? */
   check = sites*sizeof(DML_SiteRank);
@@ -254,7 +271,7 @@ int QIO_read_field(QIO_Reader *in,
 	   void (*put)(char *buf, size_t index, size_t count, void *arg),
 	   size_t datum_size, int word_size, void *arg, 
 	   DML_Checksum *checksum,
-	   DIME_type dime_type){
+	   LIME_type lime_type){
 
   LRL_RecordReader *lrl_record_in;
   size_t rec_size, check, buf_size;
@@ -270,7 +287,7 @@ int QIO_read_field(QIO_Reader *in,
 #endif
   else{
     lrl_record_in = LRL_open_read_record(in->lrl_file_in, 
-					 &rec_size, dime_type);
+					 &rec_size, lime_type);
     if(!lrl_record_in)return 1;
     
     /* Check that the record size matches the expected size of the QDP field 

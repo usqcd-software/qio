@@ -24,8 +24,8 @@ LRL_FileReader *LRL_open_read_file(const char *filename)
   fr->file = fopen(filename,"r");
   if (fr->file == NULL)return NULL;
 
-  fr->dr = dimeCreateReader(fr->file);
-  if (fr->dr == (DimeReader *)NULL)
+  fr->dr = limeCreateReader(fr->file);
+  if (fr->dr == (LimeReader *)NULL)
     return NULL;
 
   return fr;
@@ -54,8 +54,8 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
   if (fr->file == NULL)
     return NULL;
 
-  fr->dg = dimeWriterInit(fr->file);
-  if (fr->dg == (DimeWriter *)NULL)
+  fr->dg = limeCreateWriter(fr->file);
+  if (fr->dg == (LimeWriter *)NULL)
     return NULL;
 
   return fr;
@@ -71,10 +71,11 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
  * \return null if failure
  */
 LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size, 
-				       DIME_type dime_type)
+				       LIME_type lime_type)
 {
   LRL_RecordReader *rr;
   int status;
+  char myname[] = "LRL_open_read_record";
 
   if (fr == NULL)
     return NULL;
@@ -86,21 +87,16 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
   }
   rr->fr = fr;
   
-  /* Check if last record */
-  if (rr->fr->dr->is_last != 0 )
-  {
-    free(rr);
+  /* Get next record header */
+  status = limeReaderNextRecord(rr->fr->dr);
+  if (status != LIME_SUCCESS){
+    printf("%s error getting next record header\n",myname);
     return NULL;
   }
-   
-  /* Get next record header */
-  status = dimeReaderNextRecord(rr->fr->dr);
-  if (status != DIME_SUCCESS)
-    return NULL;
 
-  *rec_size = rr->fr->dr->bytes_total;
-
-  /* Ignore dime_type  for now */
+  /* Extract record information */
+  *rec_size = limeReaderBytes(rr->fr->dr);
+  lime_type = limeReaderType(rr->fr->dr);
 
   return rr;
 }
@@ -115,11 +111,13 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
  *
  * \return null if failure
  */
-LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size, 
-					DIME_type dime_type)
+LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, int do_write,
+					int msg_begin, int msg_end, 
+					size_t *rec_size, 
+					LIME_type lime_type)
 {
   LRL_RecordWriter *rr;
-  DimeRecordHeader *h;
+  LimeRecordHeader *h;
   int status;
   
   if (fr == NULL)
@@ -134,15 +132,8 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size,
   rr->fr = fr;
 
   /* Write record */
-  h = dimeCreateHeader(0,
-		       TYPE_MEDIA,
-		       dime_type, 
-		       "http://www.lqcd.org",
-		       *rec_size);
-
-  status = dimeWriteRecordHeader(h, 
-				 0, /* Not last record */
-				 rr->fr->dg);
+  h = limeCreateHeader(msg_begin, msg_end, lime_type, *rec_size);
+  status = limeWriteRecordHeader(h, do_write, rr->fr->dg);
 
   if (status < 0)
   { 
@@ -150,7 +141,7 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size,
     exit(EXIT_FAILURE);
   }
 
-  dimeDestroyHeader(h);
+  limeDestroyHeader(h);
 
   return rr;
 }
@@ -173,9 +164,9 @@ size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, size_t nbytes)
   if (rr == NULL)
     return 0;
 
-  status = dimeWriteRecordData(buf, &nbyt, rr->fr->dg);
+  status = limeWriteRecordData(buf, &nbyt, rr->fr->dg);
 
-  if( status != DIME_SUCCESS ) 
+  if( status != LIME_SUCCESS ) 
   { 
     fprintf(stderr, "LRL_write_bytes: some error has occurred. status is: %d\n", status);
     exit(EXIT_FAILURE);
@@ -198,14 +189,15 @@ size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes)
 {
   int status;
   size_t nbyt = nbytes;
+  char myname[] = "LRL_read_bytes";
 
   if (rr == NULL)
     return 0;
 
-  status = dimeReaderReadData((void *)buf, &nbyt, rr->fr->dr);
-  if( status != DIME_SUCCESS ) 
+  status = limeReaderReadData((void *)buf, &nbyt, rr->fr->dr);
+  if( status != LIME_SUCCESS ) 
   { 
-    fprintf(stderr, "LRL_read_bytes: some error has occurred. status is: %d\n", status);
+    fprintf(stderr, "%s: LIME error %d has occurred\n", status);
     exit(EXIT_FAILURE);
   }
 
@@ -221,9 +213,9 @@ int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset){
   int status;
 
   if (rr == NULL || rr->fr == NULL)return -1;
- status = dimeWriterSeek(rr->fr->dg, offset, SEEK_CUR);
+ status = limeWriterSeek(rr->fr->dg, offset, SEEK_CUR);
 
-  if( status != DIME_SUCCESS ) 
+  if( status != LIME_SUCCESS ) 
   { 
     fprintf(stderr, "LRL_seek_write_record: some error has occurred. status is: %d\n", status);
     exit(EXIT_FAILURE);
@@ -239,9 +231,9 @@ int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset){
   int status;
 
   if (rr == NULL || rr->fr == NULL)return -1;
-  status = dimeReaderSeek(rr->fr->dr, offset, SEEK_CUR);
+  status = limeReaderSeek(rr->fr->dr, offset, SEEK_CUR);
 
-  if( status != DIME_SUCCESS ) 
+  if( status != LIME_SUCCESS ) 
   { 
     fprintf(stderr, "LRL_seek_read_record: some error has occurred. status is: %d\n", status);
     exit(EXIT_FAILURE);
@@ -249,33 +241,73 @@ int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset){
   return 0;
 }
 
-/* For skipping to the beginning of the next logical record */
+/* For skipping to the beginning of the next message */
+
+int LRL_next_message(LRL_FileReader *fr){
+  int status;
+  int msg_begin = 0;
+
+  if(fr == NULL)return 1;
+  while(msg_begin == 0){
+    status = limeReaderNextRecord(fr->dr);
+    msg_begin = limeReaderMBFlag(fr->dr);
+    if( status != LIME_SUCCESS ) 
+      { 
+	fprintf(stderr, "LRL_next_message: a LIME error has occurred. status is: %d\n", status);
+	exit(EXIT_FAILURE);
+      }
+    return 0;
+  }
+}
+
+/* For skipping to the beginning of the next record - DO WE NEED THIS? */
 
 int LRL_next_record(LRL_FileReader *fr){
   int status;
 
   if(fr == NULL)return 1;
-  status = dimeReaderNextRecord(fr->file);
+  status = limeReaderNextRecord(fr->dr);
 
-  if( status != DIME_SUCCESS ) 
+  if( status != LIME_SUCCESS ) 
   { 
-    fprintf(stderr, "LRL_skip_record: some error has occurred. status is: %d\n", status);
+    fprintf(stderr, "LRL_next_record: a LIME error has occurred. status is: %d\n", status);
     exit(EXIT_FAILURE);
   }
   return 0;
 }
 
 
-int LRL_close_read_record(LRL_RecordReader *rr)
-{
-  free(rr);
-  return 0;
+/**
+ *
+ * \param rr     LRL record writer
+ *
+ * return 0 for success and 1 for failure
+ */
+
+int LRL_close_write_record(LRL_RecordWriter *wr){
+  int status;
+
+  status = limeWriterCloseRecord(wr->fr->dg);
+  free(wr);
+  if(status != LIME_SUCCESS)return 1;
+  else return 1;
 }
 
-int LRL_close_write_record(LRL_RecordWriter *rr)
+/**
+ *
+ * \param rr     LRL record reader
+ *
+ * return 0 for success and 1 for failure
+ */
+
+int LRL_close_read_record(LRL_RecordReader *rr)
 {
+  int status;
+
+  status = limeReaderCloseRecord(rr->fr->dr);
   free(rr);
-  return 0;
+  if(status != LIME_SUCCESS)return 1;
+  else return 1;
 }
 
 /** 
@@ -290,7 +322,7 @@ int LRL_close_read_file(LRL_FileReader *fr)
   if (fr == NULL)
     return 0;
 
-  dimeDestroyReader(fr->dr);
+  limeDestroyReader(fr->dr);
   fclose(fr->file);
   free(fr);
 
@@ -309,7 +341,7 @@ int LRL_close_write_file(LRL_FileWriter *fr)
   if (fr == NULL)
     return 0;
 
-  dimeWriterClose(fr->dg);
+  limeDestroyWriter(fr->dg);
   fclose(fr->file);
   free(fr);
 

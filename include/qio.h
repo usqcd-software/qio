@@ -6,6 +6,7 @@
 #include <lrl.h>
 #include <dml.h>
 #include <config.h>
+#include "lime.h"
 
 #define QIO_MASTER_NODE DML_MASTER_NODE
 
@@ -90,23 +91,18 @@ int QIO_next_record(QIO_Reader *in);
 
 /* Internal utilities  */
 char *QIO_filename_edit(const char *filename, int volfmt, int this_node);
-int QIO_write_string(QIO_Writer *out_file_out, XML_String *xml,
-		     const DIME_type dime_type);
-int QIO_write_field(QIO_Writer *out, XML_String *xml_record, 
+int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
+		     XML_String *xml,
+		     const LIME_type lime_type);
+int QIO_read_string(QIO_Reader *in, XML_String *xml, LIME_type lime_type);
+int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end, 
+		       const LIME_type lime_type);
+int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
+	    XML_String *xml_record, 
 	    void (*get)(char *buf, size_t index, size_t count, void *arg),
 	    size_t datum_size, int word_size, void *arg, 
-		    DML_Checksum *checksum,
-		    const DIME_type dime_type);
-
-int QIO_read_string(QIO_Reader *in, XML_String *xml, DIME_type dime_type);
-int QIO_read_sitelist(QIO_Reader *in, DIME_type dime_type);
-int QIO_write_sitelist(QIO_Writer *out, const DIME_type dime_type);
-int QIO_read_field(QIO_Reader *in, 
-	   void (*put)(char *buf, size_t index, size_t count, void *arg),
-	   size_t datum_size, int word_size, void *arg, 
-		   DML_Checksum *checksum,
-		   DIME_type dime_type);
-
+	    DML_Checksum *checksum,
+	    const LIME_type lime_type);
 #ifdef __cplusplus
 }
 #endif

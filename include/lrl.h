@@ -3,23 +3,23 @@
 
 #include <stdio.h>
 #include <sys/types.h>
-#include "dime.h"
+#include "lime.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-/* Dummy DIME tag for now */
-#define MAX_DIME_TYPE_LEN 32
-typedef char* DIME_type;
+/* Dummy LIME tag for now */
+#define MAX_LIME_TYPE_LEN 32
+typedef char* LIME_type;
 
 /* Dummy file XML string */
 #define XML_MAX 128
 
 typedef struct {
   FILE *file;
-  DimeWriter *dg;
+  LimeWriter *dg;
 } LRL_FileWriter;
 
 typedef struct {
@@ -28,7 +28,7 @@ typedef struct {
 
 typedef struct {
   FILE *file;
-  DimeReader *dr;
+  LimeReader *dr;
 } LRL_FileReader;
 
 typedef struct {
@@ -38,14 +38,17 @@ typedef struct {
 LRL_FileReader *LRL_open_read_file(const char *filename);
 LRL_FileWriter *LRL_open_write_file(const char *filename, int mode);
 LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size, 
-				       DIME_type dime_type);
-LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size, 
-					DIME_type dime_type);
+				       LIME_type lime_type);
+LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, int do_write,
+					int msg_begin, int msg_end, 
+					size_t *rec_size, 
+					LIME_type lime_type);
 size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, size_t nbytes);
 size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes);
 int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset);
 int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset);
 int LRL_next_record(LRL_FileReader *fr);
+int LRL_next_message(LRL_FileReader *fr);
 int LRL_close_read_record(LRL_RecordReader *rr);
 int LRL_close_write_record(LRL_RecordWriter *rr);
 int LRL_close_read_file(LRL_FileReader *fr);

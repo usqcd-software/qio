@@ -1,2 +1,2 @@
 #
-SUBDIRS = c-dime
+SUBDIRS = c-lime
