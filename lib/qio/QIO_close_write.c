@@ -13,5 +13,6 @@ int QIO_close_write(QIO_Writer *out){
   free(out->layout->latsize);
   free(out->layout);
   free(out);
-  return status;
+  if(status != LRL_SUCCESS)return QIO_ERR_CLOSE;
+  return QIO_SUCCESS;
 }

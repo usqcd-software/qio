@@ -5,6 +5,12 @@
 #include <sys/types.h>
 #include "lime.h"
 
+/* Return codes */
+#define LRL_SUCCESS      ( 0)
+#define LRL_ERR_SEEK     (-1)
+#define LRL_ERR_SKIP     (-2)
+#define LRL_ERR_CLOSE    (-3)
+
 #ifdef __cplusplus
 extern "C"
 {

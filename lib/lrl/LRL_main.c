@@ -212,15 +212,15 @@ size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes)
 int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset){
   int status;
 
-  if (rr == NULL || rr->fr == NULL)return -1;
- status = limeWriterSeek(rr->fr->dg, offset, SEEK_CUR);
+  if (rr == NULL || rr->fr == NULL)return LRL_ERR_SEEK;
+  status = limeWriterSeek(rr->fr->dg, offset, SEEK_CUR);
 
   if( status != LIME_SUCCESS ) 
   { 
-    fprintf(stderr, "LRL_seek_write_record: some error has occurred. status is: %d\n", status);
-    exit(EXIT_FAILURE);
+    fprintf(stderr, "LRL_seek_write_record: LIME error %d\n", status);
+    return LRL_ERR_SEEK;
   }
-  return 0;
+  return LRL_SUCCESS;
 }
 
 /* For skipping ahead offset bytes from the current position in the record
@@ -230,15 +230,15 @@ int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset){
 int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset){
   int status;
 
-  if (rr == NULL || rr->fr == NULL)return -1;
+  if (rr == NULL || rr->fr == NULL)return LRL_ERR_SEEK;
   status = limeReaderSeek(rr->fr->dr, offset, SEEK_CUR);
 
   if( status != LIME_SUCCESS ) 
   { 
     fprintf(stderr, "LRL_seek_read_record: some error has occurred. status is: %d\n", status);
-    exit(EXIT_FAILURE);
+    return LRL_ERR_SEEK;
   }
-  return 0;
+  return LRL_SUCCESS;
 }
 
 /* For skipping to the beginning of the next message */
@@ -247,16 +247,16 @@ int LRL_next_message(LRL_FileReader *fr){
   int status;
   int msg_begin = 0;
 
-  if(fr == NULL)return 1;
+  if(fr == NULL)return LRL_ERR_SKIP;
   while(msg_begin == 0){
     status = limeReaderNextRecord(fr->dr);
     msg_begin = limeReaderMBFlag(fr->dr);
     if( status != LIME_SUCCESS ) 
       { 
-	fprintf(stderr, "LRL_next_message: a LIME error has occurred. status is: %d\n", status);
-	exit(EXIT_FAILURE);
+	fprintf(stderr, "LRL_next_message: LIME error %d\n", status);
+	return LRL_ERR_SKIP;
       }
-    return 0;
+    return LRL_SUCCESS;
   }
 }
 
@@ -265,15 +265,15 @@ int LRL_next_message(LRL_FileReader *fr){
 int LRL_next_record(LRL_FileReader *fr){
   int status;
 
-  if(fr == NULL)return 1;
+  if(fr == NULL)return LRL_ERR_SKIP;
   status = limeReaderNextRecord(fr->dr);
 
   if( status != LIME_SUCCESS ) 
   { 
-    fprintf(stderr, "LRL_next_record: a LIME error has occurred. status is: %d\n", status);
-    exit(EXIT_FAILURE);
+    fprintf(stderr, "LRL_next_record: LIME error %d\n", status);
+    return LRL_ERR_SKIP;
   }
-  return 0;
+  return LRL_SUCCESS;
 }
 
 
@@ -281,17 +281,16 @@ int LRL_next_record(LRL_FileReader *fr){
  *
  * \param rr     LRL record writer
  *
- * return 0 for success and 1 for failure
  */
 
 int LRL_close_write_record(LRL_RecordWriter *wr){
   int status;
 
-  if(wr == NULL)return 1;
+  if(wr == NULL)return LRL_ERR_CLOSE;
   status = limeWriterCloseRecord(wr->fr->dg);
   free(wr);
-  if(status != LIME_SUCCESS)return 1;
-  else return 0;
+  if(status != LIME_SUCCESS)return LRL_ERR_CLOSE;
+  else return LRL_SUCCESS;
 }
 
 /**
@@ -307,8 +306,8 @@ int LRL_close_read_record(LRL_RecordReader *rr)
 
   status = limeReaderCloseRecord(rr->fr->dr);
   free(rr);
-  if(status != LIME_SUCCESS)return 1;
-  else return 1;
+  if(status != LIME_SUCCESS)return LRL_ERR_CLOSE;
+  else return LRL_SUCCESS;
 }
 
 /** 
@@ -321,13 +320,13 @@ int LRL_close_read_record(LRL_RecordReader *rr)
 int LRL_close_read_file(LRL_FileReader *fr)
 {
   if (fr == NULL)
-    return 0;
+    return LRL_SUCCESS;
 
   limeDestroyReader(fr->dr);
   fclose(fr->file);
   free(fr);
 
-  return 0;
+  return LRL_SUCCESS;
 }
 
 /** 
@@ -340,11 +339,11 @@ int LRL_close_read_file(LRL_FileReader *fr)
 int LRL_close_write_file(LRL_FileWriter *fr)
 {
   if (fr == NULL)
-    return 0;
+    return LRL_SUCCESS;
 
   limeDestroyWriter(fr->dg);
   fclose(fr->file);
   free(fr);
 
-  return 0;
+  return LRL_SUCCESS;
 }

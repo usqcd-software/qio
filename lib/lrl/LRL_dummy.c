@@ -76,13 +76,15 @@ size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes){
 }
 
 int LRL_seek_write_record(LRL_FileWriter *fr, size_t offset){
-  if (fr == NULL)return -1;
-  return fseeko(fr->file, offset, SEEK_CUR);
+  if (fr == NULL)return LRL_ERR_SEEK;
+  if(fseeko(fr->file, offset, SEEK_CUR)!=0)return LRL_ERR_SEEK;
+  return LRL_SUCCESS;
 }
 
 int LRL_seek_read_record(LRL_FileReader *fr, size_t offset){
-  if (fr == NULL)return -1;
-  return fseeko(fr->file, offset, SEEK_CUR);
+  if (fr == NULL)return LRL_ERR_SEEK;
+  if(fseeko(fr->file, offset, SEEK_CUR)!=0)return LRL_ERR_SEEK;
+  return LRL_SUCCESS;
 }
 
 int LRL_next_record(LRL_FileReader *fr){
@@ -92,25 +94,25 @@ int LRL_next_record(LRL_FileReader *fr){
 
 int LRL_close_read_record(LRL_RecordReader *rr){
   free(rr);
-  return 0;
+  return LRL_SUCCESS;
 }
 
 int LRL_close_write_record(LRL_RecordWriter *rr){
   free(rr);
-  return 0;
+  return LRL_SUCCESS;
 }
 
 int LRL_close_read_file(LRL_FileReader *fr){
-  if(fr == NULL)return 0;
+  if(fr == NULL)return LRL_SUCCESS;
   fclose(fr->file);
   free(fr);
-  return 0;
+  return LRL_SUCCESS;
 }
 
 int LRL_close_write_file(LRL_FileWriter *fr){
-  if(fr == NULL)return 0;
+  if(fr == NULL)return LRL_SUCCESS;
   fclose(fr->file);
   free(fr);
-  return 0;
+  return LRL_SUCCESS;
 }
 

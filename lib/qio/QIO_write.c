@@ -10,19 +10,18 @@
 #undef QIO_DEBUG
 
 /* Write a lattice field to a record.  Includes XML and checksum */
-/* Return 0 success.  1 failure */
 
 int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info, 
 	      XML_String *xml_record, 
 	      void (*get)(char *buf, size_t index, size_t count, void *arg),
 	      size_t datum_size, int word_size, void *arg){
-  /* Return status 0 for success, 1 for failure */
 
   XML_String *xml_record_private, *xml_checksum;
   DML_Checksum checksum;
   QIO_ChecksumInfo *checksum_info;
   int this_node = out->layout->this_node;
   int msg_begin, msg_end;
+  int status;
   char myname[] = "QIO_write";
 
   /* Require consistency between the byte count specified in the
@@ -33,7 +32,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 	   myname,this_node,datum_size,
 	   QIO_get_typesize(record_info),
 	   QIO_get_datacount(record_info));
-    return 1;
+    return QIO_ERR_BAD_SITE_BYTES;
   }
 
   /* A message consists of the XML, binary payload, and checksums */
@@ -47,9 +46,15 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   /* Master node writes the private record XML record */
   if (this_node == QIO_MASTER_NODE)
   {
-    if (QIO_write_string(out, msg_begin, msg_end, xml_record_private, 
-			 (const LIME_type)"scidac-private-record-xml"))
-      return 1;
+    if ((status = 
+	 QIO_write_string(out, msg_begin, msg_end, 
+			  xml_record_private, 
+			  (const LIME_type)"scidac-private-record-xml"))
+	!= QIO_SUCCESS){
+      printf("%s(%d): Error writing private record XML\n",
+	     myname,this_node);
+      return status;
+    }
 #ifdef QIO_DEBUG
     printf("%s(%d): private record XML = %s\n",
 	   myname,this_node,XML_string_ptr(xml_record_private));
@@ -58,12 +63,16 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   }
   XML_string_destroy(xml_record_private);
 
-  /* Master node writes the user file XML record */
+  /* Master node writes the user record XML record */
   if (this_node == QIO_MASTER_NODE)
   {
-    if (QIO_write_string(out, msg_begin, msg_end, xml_record, 
-			 (const LIME_type)"scidac-record-xml"))
-      return 1;
+    if ((status = 
+	 QIO_write_string(out, msg_begin, msg_end, xml_record, 
+			  (const LIME_type)"scidac-record-xml"))
+	!= QIO_SUCCESS){
+      printf("%s(%d): Error writing user record XML\n",myname,this_node);
+      return status;
+    }
 #ifdef QIO_DEBUG
     printf("%s(%d): user record XML = XXX%sXXX\n",
 	   myname,this_node,XML_string_ptr(xml_record));
@@ -75,9 +84,13 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   /* Master node writes the BinX record */
   if (this_node == QIO_MASTER_NODE)
   {
-    if (QIO_write_string(out, msg_begin, msg_end, BinX, 
-			 (const LIME_type)"scidac-binx-xml"))
-      return 1;
+    if ((status = 
+	 QIO_write_string(out, msg_begin, msg_end, BinX, 
+			  (const LIME_type)"scidac-binx-xml"))
+	!= QIO_SUCCESS){
+      printf("%s(%d): Error writing BinX\n",myname,this_node);
+      return status;
+    }
 #ifdef QIO_DEBUG
     printf("%s(%d): BinX = %s\n",myname,this_node,XML_string_ptr(BinX));
 #endif
@@ -102,8 +115,13 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
     QIO_encode_checksum_info(xml_checksum, checksum_info);
 
     msg_end = 1;
-    if (QIO_write_string(out, msg_begin, msg_end, xml_checksum,
-	(const LIME_type)"scidac-checksum"))return 1;
+    if ((status = 
+	 QIO_write_string(out, msg_begin, msg_end, xml_checksum,
+			  (const LIME_type)"scidac-checksum"))
+	!= QIO_SUCCESS){
+      printf("%s(%d): Error writing checksum\n",myname,this_node);
+      return status;
+    }
 
 #ifdef QIO_DEBUG
     printf("%s(%d): checksum string = %s\n",
@@ -112,5 +130,5 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
     XML_string_destroy(xml_checksum);
   }
 
-  return 0;
+  return QIO_SUCCESS;
 }

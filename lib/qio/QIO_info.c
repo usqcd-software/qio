@@ -392,8 +392,9 @@ int QIO_decode_record_info(QIO_RecordInfo *record_info,
   parse_pt = QIO_get_tag_value(parse_pt, tag, tags_string);
   QIO_decode_as_string (tag, tags_string, &wrapper.recordinfo_tags);
 
-  /* If outer wrapper has bad tag exit with error status */
-  if(QIO_check_string_occur(&wrapper.recordinfo_tags))return 1;
+  /* If outer wrapper has bad tag, exit with error status */
+  if(QIO_check_string_occur(&wrapper.recordinfo_tags))
+    return QIO_BAD_XML;
   /* Otherwise start parsing the string of tags */
   parse_pt = QIO_get_record_info_tag_string(&wrapper);
 
@@ -498,7 +499,7 @@ int QIO_decode_file_info(QIO_FileInfo *file_info,
   QIO_decode_as_string (tag, tags_string, &wrapper.fileinfo_tags);
 
   /* If outer wrapper has bad tag exit with error status */
-  if(QIO_check_string_occur(&wrapper.fileinfo_tags))return 1;
+  if(QIO_check_string_occur(&wrapper.fileinfo_tags))return QIO_BAD_XML;
   /* Otherwise start parsing the enclosed string of tags */
   parse_pt = QIO_get_file_info_tag_string(&wrapper);
 
@@ -600,7 +601,7 @@ int QIO_decode_checksum_info(QIO_ChecksumInfo *checksum,
   QIO_decode_as_string (tag, tags_string, &wrapper.checksuminfo_tags);
 
   /* If outer wrapper has bad tag exit with error status */
-  if(QIO_check_string_occur(&wrapper.checksuminfo_tags))return 1;
+  if(QIO_check_string_occur(&wrapper.checksuminfo_tags))return QIO_BAD_XML;
   /* Otherwise start parsing the enclosed string of tags */
   parse_pt = QIO_get_checksum_info_tag_string(&wrapper);
 
@@ -667,22 +668,22 @@ void QIO_encode_checksum_info(XML_String *checksum_string,
 int QIO_insert_file_tag_string(QIO_FileInfoWrapper *wrapper, 
 			       char *fileinfo_tags){
   wrapper->fileinfo_tags.occur = 0;
-  if(!fileinfo_tags)return 1;
+  if(!fileinfo_tags)return QIO_BAD_ARG;
   strncpy(wrapper->fileinfo_tags.value, fileinfo_tags, QIO_MAXVALUESTRING-1);
   wrapper->fileinfo_tags.value[QIO_MAXVALUESTRING-1] = '\0';
   wrapper->fileinfo_tags.occur = 1;
-  if(strlen(fileinfo_tags) >= QIO_MAXVALUESTRING)return 1;
-  else return 0;
+  if(strlen(fileinfo_tags) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
 }
 
 int QIO_insert_file_version(QIO_FileInfo *file_info, char *version){
   file_info->version.occur = 0;
-  if(!version)return 1;
+  if(!version)return QIO_BAD_ARG;
   strncpy(file_info->version.value, version, QIO_MAXVALUESTRING-1);
   file_info->version.value[QIO_MAXVALUESTRING-1] = '\0';
   file_info->version.occur = 1;
-  if(strlen(version) >= QIO_MAXVALUESTRING)return 1;
-  else return 0;
+  if(strlen(version) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
 }
 
 int QIO_insert_spacetime_dims(QIO_FileInfo *file_info, 
@@ -691,22 +692,22 @@ int QIO_insert_spacetime_dims(QIO_FileInfo *file_info,
 
   file_info->spacetime.occur = 0;
   file_info->dims.occur = 0;
-  if(!spacetime)return 1;
+  if(!spacetime)return QIO_BAD_ARG;
   if(!dims)return 1;
   file_info->spacetime.value =  spacetime;
   for(i = 0; i < spacetime; i++)
     file_info->dims.value[i] = dims[i];
   file_info->spacetime.occur = 1;
   file_info->dims.occur = 1;
-  return 0;
+  return QIO_SUCCESS;
 }
 
 int QIO_insert_multifile(QIO_FileInfo *file_info, int multifile){
   file_info->multifile.occur = 0;
-  if(!multifile)return 1;
+  if(!multifile)return QIO_BAD_ARG;
   file_info->multifile.value = multifile;
   file_info->multifile.occur = 1;
-  return 0;
+  return QIO_SUCCESS;
 }
 
 /* Utilities for loading record_info values */
@@ -714,30 +715,30 @@ int QIO_insert_multifile(QIO_FileInfo *file_info, int multifile){
 int QIO_insert_record_tag_string(QIO_RecordInfoWrapper *wrapper, 
 				 char *recordinfo_tags){
   wrapper->recordinfo_tags.occur = 0;
-  if(!recordinfo_tags)return 1;
+  if(!recordinfo_tags)return QIO_BAD_ARG;
   strncpy(wrapper->recordinfo_tags.value, recordinfo_tags, 
 	  QIO_MAXVALUESTRING-1);
   wrapper->recordinfo_tags.value[QIO_MAXVALUESTRING-1] = '\0';
   wrapper->recordinfo_tags.occur = 1;
-  if(strlen(recordinfo_tags) >= QIO_MAXVALUESTRING)return 1;
-  else return 0;
+  if(strlen(recordinfo_tags) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
 }
 
 int QIO_insert_record_version(QIO_RecordInfo *record_info, char *version){
   record_info->version.occur = 0;
-  if(!version)return 1;
+  if(!version)return QIO_BAD_ARG;
   strncpy(record_info->version.value, version, QIO_MAXVALUESTRING-1);
   record_info->version.value[QIO_MAXVALUESTRING-1] = '\0';
   record_info->version.occur = 1;
-  if(strlen(version) >= QIO_MAXVALUESTRING)return 1;
-  else return 0;
+  if(strlen(version) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
 }
 
 int QIO_insert_record_date(QIO_RecordInfo *record_info, char *date_string){
   int n;
 
   record_info->date.occur = 0;
-  if(!date_string)return 1;
+  if(!date_string)return QIO_BAD_ARG;
   strncpy(record_info->date.value, date_string, QIO_MAXVALUESTRING-1);
   /* Edit date: replace trailing end-of-line by blank and add UTC */
   n = strlen(record_info->date.value);
@@ -745,60 +746,60 @@ int QIO_insert_record_date(QIO_RecordInfo *record_info, char *date_string){
   strncpy(record_info->date.value + n,"UTC",QIO_MAXVALUESTRING - n);
   record_info->date.value[QIO_MAXVALUESTRING-1] = '\0';
   record_info->date.occur = 1;
-  if(strlen(date_string) + 3 >= QIO_MAXVALUESTRING)return 1;
-  else return 0;
+  if(strlen(date_string) + 3 >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
 }
 
 int QIO_insert_datatype(QIO_RecordInfo *record_info, char* datatype){
   record_info->datatype.occur = 0;
-  if(!record_info)return 1;
+  if(!record_info)return QIO_BAD_ARG;
   strncpy(record_info->datatype.value, datatype, QIO_MAXVALUESTRING-1);
   record_info->datatype.value[QIO_MAXVALUESTRING-1] = '\0';
   record_info->datatype.occur = 1;
-  if(strlen(datatype) >= QIO_MAXVALUESTRING)return 1;
-  else return 0;
+  if(strlen(datatype) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
 }
 
 int QIO_insert_precision(QIO_RecordInfo *record_info, char* precision){
   record_info->precision.occur = 0;
-  if(!precision)return 1;
+  if(!precision)return QIO_BAD_ARG;
   strncpy(record_info->precision.value, precision, QIO_MAXVALUESTRING-1);
   record_info->precision.value[QIO_MAXVALUESTRING-1] = '\0';
   record_info->precision.occur = 1;
-  if(strlen(precision) >= QIO_MAXVALUESTRING)return 1;
-  else return 0;
+  if(strlen(precision) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
 }
 
 int QIO_insert_colors(QIO_RecordInfo *record_info, int colors){
   record_info->colors.occur = 0;
-  if(!colors)return 1;
+  if(!colors)return QIO_BAD_ARG;
   record_info->colors.value = colors;
   record_info->colors.occur = 1;
-  return 0;
+  return QIO_SUCCESS;
 }
 
 int QIO_insert_spins(QIO_RecordInfo *record_info, int spins){
   record_info->spins.occur = 0;
-  if(!spins)return 1;
+  if(!spins)return QIO_BAD_ARG;
   record_info->spins.value = spins;
   record_info->spins.occur = 1;
-  return 0;
+  return QIO_SUCCESS;
 }
 
 int QIO_insert_typesize(QIO_RecordInfo *record_info, int typesize){
   record_info->typesize.occur = 0;
-  if(!typesize)return 1;
+  if(!typesize)return QIO_BAD_ARG;
   record_info->typesize.value = typesize;
   record_info->typesize.occur = 1;
-  return 0;
+  return QIO_SUCCESS;
 }
 
 int QIO_insert_datacount(QIO_RecordInfo *record_info, int datacount){
   record_info->datacount.occur = 0;
-  if(!datacount)return 1;
+  if(!datacount)return QIO_BAD_ARG;
   record_info->datacount.value = datacount;
   record_info->datacount.occur = 1;
-  return 0;
+  return QIO_SUCCESS;
 }
 
 /* Utility for loading checksum values */
@@ -806,36 +807,36 @@ int QIO_insert_datacount(QIO_RecordInfo *record_info, int datacount){
 int QIO_insert_checksum_tag_string(QIO_ChecksumInfoWrapper *wrapper, 
 				   char *checksuminfo_tags){
   wrapper->checksuminfo_tags.occur = 0;
-  if(!checksuminfo_tags)return 1;
+  if(!checksuminfo_tags)return QIO_BAD_ARG;
   strncpy(wrapper->checksuminfo_tags.value, checksuminfo_tags, 
 	  QIO_MAXVALUESTRING-1);
   wrapper->checksuminfo_tags.value[QIO_MAXVALUESTRING-1] = '\0';
   wrapper->checksuminfo_tags.occur = 1;
-  if(strlen(checksuminfo_tags) >= QIO_MAXVALUESTRING)return 1;
-  else return 0;
+  if(strlen(checksuminfo_tags) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
 }
 
 int QIO_insert_checksum_version(QIO_ChecksumInfo *checksum_info, 
 				char *version){
   checksum_info->version.occur = 0;
-  if(!version)return 1;
+  if(!version)return QIO_BAD_ARG;
   strncpy(checksum_info->version.value, version, QIO_MAXVALUESTRING-1);
   checksum_info->version.value[QIO_MAXVALUESTRING-1] = '\0';
   checksum_info->version.occur = 1;
-  if(strlen(version) >= QIO_MAXVALUESTRING)return 1;
-  else return 0;
+  if(strlen(version) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
 }
 
 int QIO_insert_suma_sumb(QIO_ChecksumInfo *checksum_info, 
 			 u_int32 suma, u_int32 sumb){
   checksum_info->suma.occur = 0;
   checksum_info->sumb.occur = 0;
-  if(!suma || !sumb)return 1;
+  if(!suma || !sumb)return QIO_BAD_ARG;
   checksum_info->suma.value = suma;
   checksum_info->sumb.value = sumb;
   checksum_info->suma.occur = 1;
   checksum_info->sumb.occur = 1;
-  return 0;
+  return QIO_SUCCESS;
 }
 
 
@@ -985,14 +986,14 @@ int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
 	printf("%s(%d):Spacetime dimension mismatch expected %d found %d \n",
 	       myname, this_node,
 	       QIO_get_spacetime(expect), QIO_get_spacetime(found));
-	return 1;
+	return QIO_ERR_FILE_INFO;
       }
   
   if(QIO_defined_dims(expect)){
     if(!QIO_defined_dims(found))
       {
 	printf("%s:Dimensions missing\n",myname,this_node);
-	return 1;
+	return QIO_ERR_FILE_INFO;
       }
     
     dims_expect = QIO_get_dims(expect);
@@ -1010,7 +1011,7 @@ int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
       printf("\nFound   ");
       for(i = 0; i < n; i++)printf(" %d", dims_found[i]);
       printf("\n");
-      return 1;
+      return QIO_ERR_FILE_INFO;
     }
   }
   
@@ -1021,10 +1022,10 @@ int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
 	printf("%s(%d):Multifile parameter mismatch expected %d found %d \n",
 	       myname,this_node,
 	       QIO_get_multifile(expect),QIO_get_multifile(found));
-	return 1;
+	return QIO_ERR_FILE_INFO;
       }
   
-  return 0;
+  return QIO_SUCCESS;
 }
 
 QIO_RecordInfo *QIO_create_record_info(char *datatype, char *precision, 
@@ -1065,7 +1066,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       {
 	printf("%s:Datatype mismatch expected %s found %s \n",myname,
 	       QIO_get_datatype(expect),QIO_get_datatype(found));
-	return 1;
+	return QIO_ERR_REC_INFO;
       }
 
   if(QIO_defined_precision(expect))
@@ -1075,7 +1076,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       {
 	printf("%s:Precision mismatch expected %s found %s \n",myname,
 	       QIO_get_precision(expect),QIO_get_precision(found));
-	return 1;
+	return QIO_ERR_REC_INFO;
       }
 
   if(QIO_defined_colors(expect))
@@ -1084,7 +1085,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       {
 	printf("%s:Colors mismatch expected %d found %d \n",myname,
 	       QIO_get_colors(expect),QIO_get_colors(found));
-	return 1;
+	return QIO_ERR_REC_INFO;
       }
 
   if(QIO_defined_spins(expect))
@@ -1093,7 +1094,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       {
 	printf("%s:Spins mismatch expected %d found %d \n",myname,
 	       QIO_get_spins(expect),QIO_get_spins(found));
-	return 1;
+	return QIO_ERR_REC_INFO;
       }
 
   if(QIO_defined_typesize(expect))
@@ -1102,7 +1103,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       {
 	printf("%s:Typesize mismatch expected %d found %d \n",myname,
 	       QIO_get_typesize(expect),QIO_get_typesize(found));
-	return 1;
+	return QIO_ERR_REC_INFO;
       }
 
   if(QIO_defined_datacount(expect))
@@ -1111,10 +1112,10 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       {
 	printf("%s:Datacount mismatch expected %d found %d \n",myname,
 	       QIO_get_datacount(expect),QIO_get_datacount(found));
-	return 1;
+	return QIO_ERR_REC_INFO;
       }
 
-  return 0;
+  return QIO_SUCCESS;
 }
 
 QIO_ChecksumInfo *QIO_create_checksum_info(u_int32 suma, u_int32 sumb){
@@ -1140,7 +1141,7 @@ int QIO_compare_checksum_info(QIO_ChecksumInfo *found,
 
   if(!QIO_defined_suma(found) || !QIO_defined_sumb(found)){
     printf("%s(%d): checksum info missing\n");
-    return 1;
+    return QIO_ERR_CHECKSUM_INFO;
   }
 
   if(QIO_get_suma(expect) != QIO_get_suma(found) || 
@@ -1148,13 +1149,13 @@ int QIO_compare_checksum_info(QIO_ChecksumInfo *found,
     printf("%s(%d): Checksum mismatch.  Found %x %x.  Expected %x %x\n",
 	   myname,this_node,QIO_get_suma(found),QIO_get_sumb(found),
 	   QIO_get_suma(expect),QIO_get_sumb(expect) );
-    return 1;
+    return QIO_CHECKSUM_MISMATCH;
   }
   else
     printf("%s(%d): Checksums %x %x OK\n",myname,this_node,
 	   QIO_get_suma(found),QIO_get_sumb(found));
 
-  return 0;
+  return QIO_SUCCESS;
 }
 
 

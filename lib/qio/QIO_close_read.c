@@ -11,14 +11,15 @@
 #endif
 
 int QIO_close_read(QIO_Reader *in){
-  int status = 0;
+  int status;
 
-  if(!in)return status;
+  if(!in)return QIO_SUCCESS;
   status = LRL_close_read_file(in->lrl_file_in);
   if(in->layout)free(in->layout->latsize);
   free(in->layout);
   if(!in->sitelist)free(in->sitelist);
   XML_string_destroy(in->xml_record);
   free(in);
-  return status;
+  if(status != LRL_SUCCESS)return QIO_ERR_CLOSE;
+  return QIO_SUCCESS;
 }

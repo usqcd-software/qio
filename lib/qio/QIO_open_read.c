@@ -43,6 +43,7 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   LIME_type lime_type = NULL;
   int length;
   int check;
+  int status;
   char *newfilename;
   int *dims;
   char myname[] = "QIO_open_read";
@@ -99,8 +100,11 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   /* Master node reads and decodes the private file XML record */
   if(this_node == QIO_MASTER_NODE){
     xml_file_private = XML_string_create(QIO_STRINGALLOC);
-    if(QIO_read_string(qio_in, xml_file_private, lime_type)){
-      printf("%s(%d): error reading private file XML\n",myname,this_node);
+    if((status = 
+	QIO_read_string(qio_in, xml_file_private, lime_type))
+       !=QIO_SUCCESS){
+      printf("%s(%d): error %d reading private file XML\n",
+	     myname,this_node,status);
       return NULL;
     }
 #ifdef QIO_DEBUG
@@ -117,8 +121,10 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
       QIO_create_file_info(dml_layout->latdim, dml_layout->latsize, 0);	    
 					    
     /* Compare what we found and what we expected */
-    if(QIO_compare_file_info(file_info_found,file_info_expect,
-			     myname,this_node)){
+    if((status = 
+	QIO_compare_file_info(file_info_found,file_info_expect,
+			      myname,this_node))!=QIO_SUCCESS){
+      printf("%s(%d): Error %d checking file info\n",myname,this_node,status);
       return NULL;
     }
     QIO_destroy_file_info(file_info_expect);
@@ -183,7 +189,12 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
     }
     
     /* Each node reads its own site list */
-    if(QIO_read_sitelist(qio_in, lime_type))return NULL;
+    if((status = 
+	QIO_read_sitelist(qio_in, lime_type))
+       != QIO_SUCCESS){
+      printf("%s(%d): Error %d reading site list\n",myname,this_node,status);
+      return NULL;
+    }
 #ifdef QIO_DEBUG
     printf("%s(%d): Sitelist was read\n",myname,this_node);fflush(stdout);
 #endif
@@ -218,8 +229,11 @@ QIO_Reader *QIO_open_read(XML_String *xml_file, const char *filename,
   /* Master node reads the user file XML record */
   /* Assumes xml_file created by caller */
   if(this_node == QIO_MASTER_NODE){
-    if(QIO_read_string(qio_in, xml_file, lime_type)){
-      printf("%s(%d): error reading user file XML\n",myname,this_node);
+    if((status = 
+	QIO_read_string(qio_in, xml_file, lime_type))
+       != QIO_SUCCESS){
+      printf("%s(%d): error %d reading user file XML\n",
+	     myname,this_node,status);
       return NULL;
     }
     

@@ -18,10 +18,28 @@
 #define QIO_SINGLEFILE DML_SINGLEFILE 
 #define QIO_MULTIFILE  DML_MULTIFILE  
 
-/* enum {QIO_CREATE, QIO_TRUNCATE, QIO_APPEND}; */
 #define QIO_CREATE     0
 #define QIO_TRUNCATE   1
 #define QIO_APPEND     2
+
+/* Return codes */
+
+#define QIO_SUCCESS              (  0)
+#define QIO_ERR_BAD_WRITE_BYTES  ( -1)
+#define QIO_ERR_OPEN_READ        ( -2)
+#define QIO_ERR_BAD_READ_BYTES   ( -3)
+#define QIO_ERR_ALLOC            ( -4)
+#define QIO_ERR_CLOSE            ( -5)
+#define QIO_ERR_INFO_MISSED      ( -6)
+#define QIO_ERR_BAD_SITE_BYTES   ( -7)
+#define QIO_ERR_PRIVATE_REC_INFO ( -8)
+#define QIO_BAD_XML              ( -9)
+#define QIO_BAD_ARG              (-10)
+#define QIO_CHECKSUM_MISMATCH    (-11)
+#define QIO_ERR_FILE_INFO        (-12)
+#define QIO_ERR_REC_INFO         (-13)
+#define QIO_ERR_CHECKSUM_INFO    (-14)
+#define QIO_ERR_SKIP             (-15)
 
 #ifdef __cplusplus
 extern "C"

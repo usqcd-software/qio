@@ -1,7 +1,6 @@
 /* QIO_next_record.c */
 
-/* Skip to beginning of next field in file */
-/* Record must be closed aftwards with QIO_close_read */
+/* Skip to beginning of next field (LIME message) in file */
 
 #include <qio.h>
 #include <lrl.h>
@@ -33,5 +32,7 @@ int QIO_next_record(QIO_Reader *in){
 #endif
 
 int QIO_next_record(QIO_Reader *in){
-  LRL_next_message(in->lrl_file_in);
+  if(LRL_next_message(in->lrl_file_in) != LRL_SUCCESS)
+    return QIO_ERR_SKIP;
+  return QIO_SUCCESS;
 }

@@ -38,7 +38,6 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
 }
 
 /* Write an XML record */
-/* Returns 0 success; 1 failure */
 
 int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
 		     XML_String *xml,
@@ -64,10 +63,10 @@ int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
   if(check != rec_size){
     printf("%s(%d): bytes written %d != expected rec_size %d\n",
 	   myname, out->layout->this_node, check, rec_size);
-    return 1;
+    return QIO_ERR_BAD_WRITE_BYTES;
   }
   LRL_close_write_record(lrl_record_out);
-  return 0;
+  return QIO_SUCCESS;
 }
 
 /* Write list of sites (used with multifile format) */
@@ -90,13 +89,13 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
   if(!sitelist){
     printf("QIO_write_sitelist: Node %d can't malloc sitelist\n",
 	   out->layout->this_node);
-    return 1;
+    return QIO_ERR_ALLOC;
   }
 
   /* Generate site list */
   if(DML_create_sitelist(out->layout,sitelist)){
     free(sitelist);
-    return 1;
+    return QIO_ERR_ALLOC;
   }
 
   /* Byte reordering for entire sitelist */
@@ -113,11 +112,10 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
   LRL_close_write_record(lrl_record_out);
 
   free(sitelist);
-  return 0;
+  return QIO_SUCCESS;
 }
 
 /* Write binary data for a lattice field */
-/* Returns 0 success, 1 failure */
 
 int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 	    XML_String *xml_record, 
@@ -168,15 +166,14 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   if(check != rec_size){
     printf("%s(%d): bytes written %d != expected rec_size %d\n",
 	   myname, out->layout->this_node, check, rec_size);
-    return 1;
+    return QIO_ERR_BAD_WRITE_BYTES;
   }
 
-  return 0;
+  return QIO_SUCCESS;
 }
 
 
 /* Read an XML record */
-/* Returns 0 success, 1 failure */
 
 int QIO_read_string(QIO_Reader *in, XML_String *xml, LIME_type lime_type){
   char *buf;
@@ -186,9 +183,9 @@ int QIO_read_string(QIO_Reader *in, XML_String *xml, LIME_type lime_type){
   char myname[] = "QIO_read_string";
 
   /* Open record and find record size */
-  if(!in->lrl_file_in)return 0;
+  if(!in->lrl_file_in)return QIO_SUCCESS;
   lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, lime_type);
-  if(!lrl_record_in)return 1;
+  if(!lrl_record_in)return QIO_ERR_OPEN_READ;
 
   buf_size = XML_string_bytes(xml);   /* The size allocated for the string */
   buf      = XML_string_ptr(xml);
@@ -207,14 +204,13 @@ int QIO_read_string(QIO_Reader *in, XML_String *xml, LIME_type lime_type){
   if(check != rec_size){
     printf("%s(%d): bytes read %d != expected rec_size %d\n",
 	   myname, in->layout->this_node, check, rec_size);
-    return 1;
+    return QIO_ERR_BAD_READ_BYTES;
   }
 
-  return 0;
+  return QIO_SUCCESS;
 }
 
 /* Read site list */
-/* Returns 0 success; 1 failure */
 
 int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
   char *buf;
@@ -231,19 +227,19 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
   
   if(!in->sitelist){
     printf("%s(%d) can't malloc sitelist\n",myname,in->layout->this_node);
-    return 1;
+    return QIO_ERR_ALLOC;
   }
 
   /* Open record and find record size */
   lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, lime_type);
-  if(!lrl_record_in)return 1;
+  if(!lrl_record_in)QIO_ERR_OPEN_READ;
 
   /* Is record size correct? */
   check = sites*sizeof(DML_SiteRank);
   if(rec_size != check){
     printf("%s(%d): rec size mismatch: found %d expected %d\n",
 	   myname, this_node, rec_size, check);
-    return 1;
+    return QIO_ERR_BAD_READ_BYTES;
   }
   
   buf = (char *)in->sitelist;
@@ -258,18 +254,17 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
   if(check != rec_size){
     printf("%s(%d): bytes read %d != expected rec_size %d\n",
 	   myname, this_node, check, rec_size);
-    return 1;
+    return QIO_ERR_BAD_READ_BYTES;
   }
 
   /* Byte reordering for entire sitelist */
   if (! DML_big_endian())
     DML_byterevn(buf, rec_size, sizeof(DML_SiteRank));
 
-  return 0;
+  return QIO_SUCCESS;
 }
 
 /* Read binary data for a lattice field */
-/* Returns 0 success, 1 failure */
 
 int QIO_read_field(QIO_Reader *in, 
 	   void (*put)(char *buf, size_t index, size_t count, void *arg),
@@ -293,7 +288,7 @@ int QIO_read_field(QIO_Reader *in,
   else{
     lrl_record_in = LRL_open_read_record(in->lrl_file_in, 
 					 &rec_size, lime_type);
-    if(!lrl_record_in)return 1;
+    if(!lrl_record_in)return QIO_ERR_OPEN_READ;
     
     /* Check that the record size matches the expected size of the QDP field 
        contained in this file */
@@ -306,7 +301,7 @@ int QIO_read_field(QIO_Reader *in,
     if (rec_size != buf_size){
       printf("%s(%d): rec_size mismatch: found %d expected %d\n",
 	     myname, this_node, rec_size, buf_size);
-      return 1;
+      return QIO_ERR_BAD_READ_BYTES;
     }
   }
 
@@ -325,9 +320,9 @@ int QIO_read_field(QIO_Reader *in,
     if(check != rec_size){
       printf("%s(%d): bytes read %d != expected rec_size %d\n",
 	     myname, in->layout->this_node,check, rec_size);
-      return 1;
+      return QIO_ERR_BAD_READ_BYTES;
     }
   }
 
-  return 0;
+  return QIO_SUCCESS;
 }

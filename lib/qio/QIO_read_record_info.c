@@ -16,17 +16,14 @@
 /* Can be called separately from QIO_read for discovering the record
    contents */
 
-/* Return 0 success. 1 failure. */
-
 int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 			 XML_String *xml_record){
   /* Caller must allocate *xml_record and *record_info */
-  /* Return status 0 for success, 1 for failure from any node. On
-     error caller must signal abort to all nodes. */
 
   XML_String *xml_record_private;
   int this_node = in->layout->this_node;
   int length;
+  int status;
   char myname[] = "QIO_read_record_info";
   LIME_type lime_type=NULL;
   
@@ -42,7 +39,8 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
       xml_record_private = XML_string_create(0);
 
       /* Read private record XML */
-      if(QIO_read_string(in, xml_record_private, lime_type ))return 1;
+      if((status=QIO_read_string(in, xml_record_private, lime_type ))
+	 != QIO_SUCCESS)return status;
 #ifdef QIO_DEBUG
       printf("%s(%d): private XML = %s\n",myname,this_node,
 	     XML_string_ptr(xml_record_private));
@@ -63,8 +61,8 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
       /* Check for private values that QIO needs */
       if(!in->record_info.typesize.occur ||
 	 !in->record_info.datacount.occur){
-	printf("%s(%d): bad private XML record\n",myname,this_node);
-	return 1;
+	printf("%s(%d): Error reading private XML record\n",myname,this_node);
+	return QIO_ERR_PRIVATE_REC_INFO;
       }
     }
     
@@ -78,7 +76,11 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 #endif
     /* Master node reads the user XML record */
     if(this_node == QIO_MASTER_NODE){
-      if(QIO_read_string(in, in->xml_record, lime_type))return 1;
+      if((status=QIO_read_string(in, in->xml_record, lime_type))
+	 != QIO_SUCCESS){
+	printf("%s(%d): Error reading user record XML\n",myname,this_node);
+	return status;
+      }
 #ifdef QIO_DEBUG
       printf("%s(%d): user XML = %s\n",myname,this_node,
 	     XML_string_ptr(in->xml_record));
@@ -108,5 +110,5 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
   printf("%s(%d): Finished\n",myname,this_node);
 #endif
 
-  return 0;
+  return QIO_SUCCESS;
 }
