@@ -33,6 +33,7 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+#if 0
 /* Name of package */
 #undef PACKAGE
 
@@ -50,9 +51,12 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+#endif
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
+#if 0
 /* Version number of package */
 #undef VERSION
+#endif
