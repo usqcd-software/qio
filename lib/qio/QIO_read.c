@@ -18,13 +18,14 @@ int QIO_read(QIO_Reader *in, XML_string *xml_record, XML_string *BinX,
   size_t check;
   int this_node = in->layout->this_node;
   size_t buf_size = datum_size * in->layout->volume;
+  DIME_type dime_type=NULL;
 
   /* Initialize private record XML - will be allocated by read_string */
   xml_record_private = XML_string_create(0);
   
   /* Master node reads the private record XML record */
   if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_string(in, xml_record_private))return 1;
+    if(!QIO_read_string(in, xml_record_private, dime_type ))return 1;
     printf("QIO_read: private XML = %s\n",XML_string_ptr(xml_record_private));
   }
 
@@ -40,20 +41,20 @@ int QIO_read(QIO_Reader *in, XML_string *xml_record, XML_string *BinX,
   /* Master node reads the user file XML record */
   /* Assume xml_record created by caller */
   if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_string(in, xml_record))return 1;
+    if(!QIO_read_string(in, xml_record, dime_type)) return 1;
     printf("QIO_read: user XML = %s\n",XML_string_ptr(xml_record));
   }
 
   /* Master node reads the BinX record */
   /* Assume xml_record created by caller */
   if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_string(in, BinX))return 1;
+    if(!QIO_read_string(in, BinX, dime_type)) return 1;
     printf("QIO_read: BinX = %s\n",XML_string_ptr(BinX));
   }
   
   /* Nodes read the field */
   check = QIO_read_field(in, QIO_SINGLEFILE, xml_record, 
-			 put, datum_size, arg, &checksum);
+			 put, datum_size, arg, &checksum, dime_type);
 
 #if 0
   /* Check no errors on reading field */
@@ -68,7 +69,7 @@ int QIO_read(QIO_Reader *in, XML_string *xml_record, XML_string *BinX,
   /* Master node reads the checksum */
   xml_checksum = XML_string_create(0);
   if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_string(in, xml_checksum))return 1;
+    if(!QIO_read_string(in, xml_checksum, dime_type)) return 1;
     printf("QIO_read: checksum = %s\n",XML_string_ptr(xml_checksum));
   }
   /* Need to extract checksum */

@@ -18,6 +18,7 @@ QIO_Reader *QIO_open_read(XML_string *xml_file, const char *filename, int serpar
   int latdim = layout->latdim;
   int this_node = layout->this_node;
   int i;
+  DIME_type dime_type = NULL;
 
   /* Make a local copy of lattice size */
   latsize = (int *)malloc(sizeof(int)*latdim);
@@ -60,7 +61,7 @@ QIO_Reader *QIO_open_read(XML_string *xml_file, const char *filename, int serpar
 
   /* Master node reads the private file XML record */
   if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_string(qio_in, xml_file_private)){
+    if(!QIO_read_string(qio_in, xml_file_private, dime_type)){
       printf("QIO_open_read: error reading private file XML\n");
       return NULL;
     }
@@ -83,7 +84,7 @@ QIO_Reader *QIO_open_read(XML_string *xml_file, const char *filename, int serpar
   /* Master node reads the user file XML record */
   /* Assumes xml_file created by caller */
   if(this_node == QIO_MASTER_NODE){
-    if(!QIO_read_string(qio_in, xml_file)){
+    if(!QIO_read_string(qio_in, xml_file, dime_type)){
       printf("QIO_open_read: error reading user file XML\n");
       return NULL;
     }

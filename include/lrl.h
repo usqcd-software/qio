@@ -10,7 +10,8 @@ extern "C"
 #endif
 
 /* Dummy DIME tag for now */
-typedef char* DIME_tag;
+#define MAX_DIME_TYPE_LEN 32
+typedef char* DIME_type;
 
 /* Dummy file XML string */
 #define XML_MAX 128
@@ -36,9 +37,9 @@ typedef struct {
 LRL_FileReader *LRL_open_read_file(const char *filename);
 LRL_FileWriter *LRL_open_write_file(const char *filename, int mode);
 LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size, 
-				       DIME_tag tag);
+				       DIME_type dime_type);
 LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size, 
-					DIME_tag tag);
+					DIME_type dime_type);
 size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, size_t nbytes);
 size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes);
 int LRL_close_read_record(LRL_RecordReader *rr);

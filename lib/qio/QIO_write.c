@@ -8,7 +8,7 @@
 #include <string.h>
 
 /* Dummy for now */
-char record_private_output[] = "XML with record number";
+char record_private_output[] = "<?xml version=\"1.0\">\n<RecordPrivate/>";
 
 int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
 	      void (*get)(char *buf, const int coords[], void *arg),
@@ -35,7 +35,7 @@ int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
   /* Master node writes the private record XML record */
   if (this_node == QIO_MASTER_NODE)
   {
-    if (QIO_write_string(out, xml_record_private))
+    if (QIO_write_string(out, xml_record_private, (const DIME_type)"application/scidac-private-record-xml"))
       return 1;
     printf("QIO_write: private record XML = XXX%sXXX\n",
 	   XML_string_ptr(xml_record_private));
@@ -47,7 +47,7 @@ int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
   /* Master node writes the user file XML record */
   if (this_node == QIO_MASTER_NODE)
   {
-    if (QIO_write_string(out, xml_record))
+    if (QIO_write_string(out, xml_record, (const DIME_type)"application/scidac-record-xml"))
       return 1;
     printf("QIO_write: user record XML = XXX%sXXX\n",
 	   XML_string_ptr(xml_record));
@@ -56,14 +56,15 @@ int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
   /* Master node creates and passes in the BinX record to write */
   if (this_node == QIO_MASTER_NODE)
   {
-    if (QIO_write_string(out, BinX))
+    if (QIO_write_string(out, BinX, (const DIME_type)"application/scidac-binx-xml"))
       return 1;
     printf("QIO_write: BinX = %s\n",XML_string_ptr(BinX));
   }
   
   /* Nodes write the field */
   QIO_write_field(out, QIO_SINGLEFILE, xml_record, 
-		  get, datum_size, arg, &checksum);
+		  get, datum_size, arg, &checksum, 
+		  (const DIME_type)"application/scidac-binary-data");
 
   printf("QIO_write(%d): wrote field\n",this_node);fflush(stdout);
 
@@ -78,7 +79,7 @@ int QIO_write(QIO_Writer *out, XML_string *xml_record, XML_string *BinX,
     snprintf(XML_string_ptr(xml_checksum), XML_string_bytes(xml_checksum),
 	     "%d", some_checksum_here);
 
-    if (QIO_write_string(out, xml_checksum))
+    if (QIO_write_string(out, xml_checksum, (const DIME_type)"application/scidac-checksum"))
       return 1;
     printf("QIO_write: checksum string = %s\n",
 	   XML_string_ptr(xml_checksum));

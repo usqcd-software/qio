@@ -71,7 +71,7 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
  * \return null if failure
  */
 LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size, 
-				       DIME_tag tag)
+				       DIME_type dime_type)
 {
   LRL_RecordReader *rr;
   int status;
@@ -98,6 +98,8 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
 
   *rec_size = rr->fr->dr->bytes_total;
 
+  /* Ignore dime_type  for now */
+
   return rr;
 }
 
@@ -112,7 +114,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
  * \return null if failure
  */
 LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size, 
-					DIME_tag tag)
+					DIME_type dime_type)
 {
   LRL_RecordWriter *rr;
   DimeRecordHeader *h;
@@ -130,8 +132,8 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size,
   /* Write record */
   h = dimeCreateHeader(0,
 		       TYPE_MEDIA,
-		       "application/text", 
-		       "http://www.foobar.com",
+		       dime_type, 
+		       "http://www.lqcd.org",
 		       *rec_size);
 
   status = dimeWriteRecordHeader(h, 

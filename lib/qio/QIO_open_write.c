@@ -8,7 +8,8 @@
 #include <malloc.h>
 
 /* Dummy for now */
-char file_private_output[] = "XML with QIO version no and lattice size";
+
+char file_private_output[] = "<?xml version=\"1.0\">\n\t<FilePrivate/>";
 
 QIO_Writer *QIO_open_write(XML_string *xml_file, const char *filename, 
 			   int serpar, int siteorder, int mode,
@@ -63,7 +64,7 @@ QIO_Writer *QIO_open_write(XML_string *xml_file, const char *filename,
   
   /* Master node writes the private file XML record */
   if(this_node == QIO_MASTER_NODE){
-    if(QIO_write_string(qio_out,xml_file_private)){
+    if(QIO_write_string(qio_out,xml_file_private, (const DIME_type)"application/scidac-private-file-xml")){
       printf("QIO_open_write: error writing private file XML\n");
       return NULL;
     }
@@ -78,7 +79,7 @@ QIO_Writer *QIO_open_write(XML_string *xml_file, const char *filename,
   /* Master node writes the user file XML record */
   if(this_node == QIO_MASTER_NODE){
     printf("About to do QIO_write_string(qio_out, xml_file)\n");
-    if(QIO_write_string(qio_out,xml_file)){
+    if(QIO_write_string(qio_out,xml_file, (const DIME_type)"application/scidac-file-xml")){
       printf("QIO_open_write: error writing user file XML\n");
       return NULL;
     }

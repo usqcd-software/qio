@@ -8,9 +8,10 @@
 #include <stdio.h>
 
 /* Unused dummy for now */
-char dime_XML[] = "XML DIME tag";
 
-int QIO_write_string(QIO_Writer *out, XML_string *xml)
+
+int QIO_write_string(QIO_Writer *out, XML_string *xml, 
+		     const DIME_type dime_type)
 {
   LRL_RecordWriter *lrl_record_out;
   char *buf;
@@ -21,7 +22,8 @@ int QIO_write_string(QIO_Writer *out, XML_string *xml)
   rec_size = strlen(buf)+1;  /* Include terminating null */
 
   lrl_record_out = LRL_open_write_record(out->lrl_file_out, &rec_size, 
-					 dime_XML);
+					 dime_type);
+
   check = LRL_write_bytes(lrl_record_out, buf, rec_size);
   /* Check byte count */
   if(check != rec_size){
@@ -34,8 +36,9 @@ int QIO_write_string(QIO_Writer *out, XML_string *xml)
 
 int QIO_write_field(QIO_Writer *out, int volfmt, XML_string *xml_record, 
 		    void (*get)(char *buf, const int coords[], void *arg),
-		    size_t datum_size, void *arg, 
-		    DML_Checksum *checksum){
+		    size_t datum_size, void *arg,
+		    DML_Checksum *checksum,
+		    const DIME_type dime_type){
   
   LRL_RecordWriter *lrl_record_out;
   int status;
@@ -48,7 +51,7 @@ int QIO_write_field(QIO_Writer *out, int volfmt, XML_string *xml_record,
   printf("QIO_write_field: rec_size = %d\n",rec_size);
 
   lrl_record_out = LRL_open_write_record(out->lrl_file_out, &rec_size, 
-					 dime_XML);
+					 dime_type);
 
   status = DML_stream_out(lrl_record_out, get, datum_size, arg, out->layout, 
 			  out->serpar, out->siteorder, 
@@ -61,14 +64,14 @@ int QIO_write_field(QIO_Writer *out, int volfmt, XML_string *xml_record,
 }
 
 
-size_t QIO_read_string(QIO_Reader *in, XML_string *xml){
+size_t QIO_read_string(QIO_Reader *in, XML_string *xml, DIME_type dime_type){
   char *buf;
   size_t buf_size;
   LRL_RecordReader *lrl_record_in;
   size_t check,rec_size;
-
+  
   /* Open record and find record size */
-  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, dime_XML);
+  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, dime_type);
 
   buf_size = XML_string_bytes(xml);   /* The size allocated for the string */
   buf      = XML_string_ptr(xml);
@@ -89,13 +92,14 @@ size_t QIO_read_string(QIO_Reader *in, XML_string *xml){
 size_t QIO_read_field(QIO_Reader *in, int volfmt, XML_string *xml_record, 
 		      void (*put)(char *buf, const int coords[], void *arg),
 		      int datum_size, void *arg, 
-		      DML_Checksum *checksum){
+		      DML_Checksum *checksum,
+		      DIME_type dime_type){
 
   LRL_RecordReader *lrl_record_in;
   size_t rec_size, check, buf_size;
   size_t volume = in->layout->volume;
 
-  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, dime_XML);
+  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, dime_type);
 
   /* Check that the record size matches the size of the QDP field */
   buf_size = datum_size*volume;
