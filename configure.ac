@@ -134,6 +134,7 @@ AC_PROG_RANLIB
 # Checks for header files.
 ## AC_HEADER_STDC
 ## AC_CHECK_HEADERS([stdlib.h string.h strings.h])
+AC_CHECK_HEADERS([malloc.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 ## AC_C_CONST

@@ -3,7 +3,9 @@
 #include <xml.h>
 #include <string.h>
 #include <stdio.h>
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
 
 /* Size of string in XML */
 size_t XML_string_bytes(const XML_string *const xml)
