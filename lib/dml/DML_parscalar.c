@@ -3,11 +3,6 @@
 
 #include <lrl.h>
 #include <qmp.h>
-
-/* Temporary! until added to qmp.h */
-int QMP_io_node(int node);
-extern int QMP_master_io_node;
-
 #include <dml.h>
 #include <inttypes.h>
 
@@ -127,5 +122,5 @@ int DML_io_node(int node){
 }
 
 int DML_master_io_node(void){
-  return QMP_master_io_node;
+  return QMP_master_io_node();
 }

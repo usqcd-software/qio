@@ -237,12 +237,19 @@ Example 8/10/2004
       --prefix=$HOME/scidac/qio/local             \
       CFLAGS="-g -Wall"                           \ 
       QMP_CFLAGS=-I$HOME/scidac/qmp/local/include \
-      QMP_LDFLAGS=-L$HOME/qmp/local/lib           \
+      QMP_LDFLAGS=-L$HOME/scidac/qmp/local/lib    \
       QMP_LIBS=-lqmp                              \
-      --enable-parallel-arch=parscalar            \
-      --no-create --no-recursion
+      QDP_CFLAGS=-I$HOME/scidac/qdp/local/include \
+      QDP_LDFLAGS=-L$HOME/scidac/qdp/local/lib    \
+      QDP_LIBS=-lqdp                              \
+      QLA_CFLAGS=-I$HOME/scidac/qla/local/include \
+      QLA_LDFLAGS=-L$HOME/scidac.qla/local/lib    \
+      QLA_LIBS=-lqla                              \
+      --enable-parallel-arch=parscalar
 
 (The enable-parallel-arch flag is being phased out.)
+
+(The QDP and QLA settings are needed only for the examples directory)
 
    make
    make install
