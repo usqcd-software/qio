@@ -1,6 +1,4 @@
 /* LRL_read_bytes.c */
-/* Dummy */
-/* DIME ignored */
 
 #include <lrl.h>
 #include <stdio.h>
@@ -61,8 +59,18 @@ LRL_FileWriter *LRL_open_write_file(char *filename, int mode)
   return fr;
 }
 
-LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size, 
-				       DIME_tag tag){
+/** 
+ * Open a record for reading
+ *
+ * \param fr         LRL file reader  ( Read )
+ * \param rec_size   record size ( Read )
+ * \param tag        tag for the record header ( Read )
+ *
+ * \return null if failure
+ */
+LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t rec_size, 
+				       DIME_tag tag)
+{
   LRL_RecordReader *rr;
 
   if(fr == NULL)return NULL;
@@ -88,7 +96,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
  *
  * \return null if failure
  */
-LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size, 
+LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t rec_size, 
 					DIME_tag tag)
 {
   LRL_RecordWriter *rr;
@@ -103,18 +111,15 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size,
     return NULL;
   rr->fr = fr;
 
-  /* Write byte size of record */
-  if(fwrite(rec_size, 1, sizeof(size_t), fr->file) != sizeof(size_t))
-    return NULL;  
-
+  /* Write record */
   h = dimeCreateHeader(0,
 		       TYPE_MEDIA,
 		       "application/text", 
 		       "http://www.foobar.com",
-		       strlen(message));
+		       rec_size);
 
   status = dimeWriteRecordHeader(h, 
-				 1, /* First and Last record */
+				 0, /* Not last record */
 				 fr->dg);
 
   if (status < 0)
@@ -125,15 +130,44 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size,
 
   dimeDestroyHeader(h);
 
-
   return rr;
 }
 
+
+/** 
+ * Write bytes
+ *
+ * \param rr         LRL record writer  ( Read )
+ * \param buf        buffer for writing ( Read )
+ * \param nbytes     number of bytes to write ( Read )
+ *
+ * \return number of bytes written
+ */
 size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, size_t nbytes)
 {
-  return fwrite(buf, 1, nbytes, rr->fr->file);
+  int status;
+  size_t nbyt = nbytes;
+
+  status = dimeWriteRecordData(buf, &nbyt, rr->fr->dg);
+
+  if( status < 0 ) { 
+     fprintf(stderr, "Oh dear some horrible error has occurred. status is: %d\n", status);
+    exit(EXIT_FAILURE);
+  }
+
+  return nbyt;
 }
 
+
+/** 
+ * Read bytes
+ *
+ * \param rr         LRL record reader  ( Read )
+ * \param buf        buffer for reading ( Write )
+ * \param nbytes     number of bytes to read ( Read )
+ *
+ * \return number of bytes read
+ */
 size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes)
 {
   return fread(buf, 1, nbytes, rr->fr->file);
