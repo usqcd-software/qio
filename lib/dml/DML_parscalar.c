@@ -50,6 +50,24 @@ int DML_get_bytes(char *buf, size_t size, int fromnode){
   QMP_free_msgmem(mm);
 }
 
+#if defined(HAVE_QMP_ROUTE)
+int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) {
+  return QMP_route(buf, size, fromnode, tonode);
+}
+#else
+int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) {
+  int this_node = QMP_get_node_number();
+
+  if (this_node == tonode)
+    DML_get_bytes(buf,size,fromnode);
+
+  if (this_node == fromnode)
+    DML_send_bytes(buf,size,tonode);
+
+  return 0;
+}
+#endif
+
 void DML_global_xor(u_int32 *x){
   long work = (long)*x;
   QMP_global_xor(&work);

@@ -126,6 +126,7 @@ void DML_sum_size_t(size_t *ipt);
 void DML_sum_int(int *ipt);
 int DML_send_bytes(char *buf, size_t size, int tonode);
 int DML_get_bytes(char *buf, size_t size, int fromnode);
+int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode);
 void DML_sync(void);
 
 u_int32 DML_crc32(u_int32 crc, const unsigned char *buf, u_int32 len);

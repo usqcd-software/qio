@@ -324,6 +324,7 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
   int this_node = layout->this_node;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
+  int volume = layout->volume;
   DML_SiteRank snd_coords;
   size_t nbytes = 0;
   char myname[] = "DML_serial_out";
@@ -356,31 +357,48 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
   DML_lex_init(&dim, coords, latdim, latsize);
   snd_coords = 0;
   /* Loop over the coordinates in lexicographic order */
-  /** Could have just used a scalar counter - CD */
   do {
-    
     /* Send nodes must wait for a ready signal from the master node
        to prevent message pileups on the master node */
     new_node = layout->node_number(coords);
+
     if(new_node != current_node){
+#if defined(DML_NEED_A_CTS)
+      /* See if we can avoid for now */
       if(this_node == DML_MASTER_NODE && new_node != DML_MASTER_NODE)
 	DML_send_bytes(buf,4,new_node); /* junk message */
       if(this_node == new_node && new_node != DML_MASTER_NODE)
 	DML_get_bytes(buf,4,DML_MASTER_NODE);
+#endif
       current_node = new_node;
     }
     
-    /* Master node receives the data and writes it */
-    if(this_node == DML_MASTER_NODE){
-      if(current_node == DML_MASTER_NODE){
-	/* Data on the master node is just copied to the write buffer */
-	get(buf,layout->node_index(coords),1,arg);
-      }
-      else{
-	/* Data from any other node is received in the write buffer */
+    /* Copy to the write buffer */
+    if(this_node == current_node){
+      get(buf,layout->node_index(coords),1,arg);
+    }
+
+    /* Send result to Master node. Avoid Master node sending to itself. */
+    if (current_node != DML_MASTER_NODE) 
+    {
+#if defined(HAVE_QMP_ROUTE)
+      DML_route_bytes(buf,size,current_node,DML_MASTER_NODE);
+#else
+      /* Data from any other node is received in the Master node write buffer */
+      if(this_node == DML_MASTER_NODE){
 	DML_get_bytes(buf,size,current_node);
       }
-      
+    
+      /* All other nodes send the data */
+      if(this_node == current_node){
+	DML_send_bytes(buf,size,DML_MASTER_NODE);
+      }
+#endif
+    }
+
+    /* Now write data */
+    if(this_node == DML_MASTER_NODE)
+    {
       /* Do byte reordering before checksum */
 #if(QIO_BIG_ENDIAN != 1)
       DML_byterevn(buf, size, word_size);
@@ -392,13 +410,6 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
       /* Write the datum */
       if(LRL_write_bytes(lrl_record_out,buf,size) != size)return 0;
       nbytes += size;
-    }
-    /* All other nodes send the data */
-    else{
-      if(this_node == current_node){
-	get(buf,layout->node_index(coords),1,arg);
-	DML_send_bytes(buf,size,DML_MASTER_NODE);
-      }
     }
     
     snd_coords++;
@@ -799,18 +810,24 @@ int DML_serial_in(LRL_RecordReader *lrl_record_in,
 	/* Master node gets the next value */
 	if(LRL_read_bytes(lrl_record_in, buf, size) != size)return 0;
 	nbytes += size;
-
-	/* If destination elsewhere, send it */
-	if(dest_node != DML_MASTER_NODE){
-	  DML_send_bytes(buf, size, dest_node);
-	}
       }
 
-      /* Other nodes receive from the master node */
-      else {
+      /* Send result to destination node. Avoid Master node sending to itself. */
+      if (dest_node != DML_MASTER_NODE)
+      {
+#if defined(HAVE_QMP_ROUTE)
+	DML_route_bytes(buf,size,DML_MASTER_NODE,dest_node);
+#else
+	/* If destination elsewhere, send it */
+	if(this_node == DML_MASTER_NODE){
+	  DML_send_bytes(buf, size, dest_node);
+	}
+
+	/* Other nodes receive from the master node */
 	if(this_node == dest_node){
 	  DML_get_bytes(buf, size, DML_MASTER_NODE);
 	}
+#endif
       }
 	  
       /* Process data before inserting */

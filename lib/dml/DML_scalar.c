@@ -24,6 +24,11 @@ int DML_get_bytes(char *buf, size_t size, int fromnode){
   exit(1);
 }
 
+int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) {
+  printf("ERROR: called DML_route_bytes() in DML_vanilla.c\n");
+  exit(1);
+}
+
 void DML_global_xor(u_int32 *x){}
 
 void DML_sync(void){}
