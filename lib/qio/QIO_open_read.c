@@ -12,22 +12,14 @@
 
 #undef QIO_DEBUG
 
-
-#undef PARALLEL_READ
-#if defined(QIO_USE_PARALLEL_READ)
-#define PARALLEL_READ 1
-#else
-#define PARALLEL_READ 0
-#endif
-
 /* Opens a file for reading */
-/* Discovers whether the file is single or multifile format */
+/* Gets the volume format code from the file header */
 /* Reads, interprets, and broadcasts the private file XML record */
-/* Reads the site list if multifile format */
+/* Reads the site list if partfile or multifile format */
 /* Reads and broadcasts the user file XML record */
 
 QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename, 
-			  int serpar, QIO_Layout *layout){
+			  QIO_Layout *layout, QIO_ioflag iflag){
 
   /* Calling program must allocate *xml_file */
 
@@ -42,10 +34,9 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
   int i;
   LIME_type lime_type = NULL;
   int length;
-  int check;
   int status;
   char *newfilename;
-  int *dims;
+  int volfmt;
   char myname[] = "QIO_open_read";
 
   /* Make a local copy of lattice size */
@@ -58,15 +49,18 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
   if (layout == NULL)
     return NULL;
 
-  dml_layout->node_number     = layout->node_number;
-  dml_layout->node_index      = layout->node_index;
-  dml_layout->get_coords      = layout->get_coords;
-  dml_layout->latsize         = latsize;
-  dml_layout->latdim          = layout->latdim;
-  dml_layout->volume          = layout->volume;
-  dml_layout->sites_on_node   = layout->sites_on_node;
-  dml_layout->this_node       = layout->this_node;
-  dml_layout->number_of_nodes = layout->number_of_nodes;
+  dml_layout->node_number        = layout->node_number;
+  dml_layout->node_index         = layout->node_index;
+  dml_layout->get_coords         = layout->get_coords;
+  dml_layout->latsize            = latsize;
+  dml_layout->latdim             = layout->latdim;
+  dml_layout->volume             = layout->volume;
+  dml_layout->sites_on_node      = layout->sites_on_node;
+  dml_layout->this_node          = layout->this_node;
+  dml_layout->number_of_nodes    = layout->number_of_nodes;
+			         
+  dml_layout->ionode             = DML_io_node;
+  dml_layout->master_io_node     = DML_master_io_node();
 
   /* Construct the reader handle */
   qio_in = (QIO_Reader *)malloc(sizeof(QIO_Reader));
@@ -75,13 +69,16 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
     return NULL;
   }
   qio_in->lrl_file_in = NULL;
-  qio_in->serpar      = serpar;
   qio_in->layout      = dml_layout;
   qio_in->read_state  = QIO_RECORD_XML_NEXT;
 
-  /* First, only the master node opens the file, regardless of
+  /*******************************************************************/
+  /* Master I/O node opens the file for reading and reads the header */
+  /*******************************************************************/
+
+  /* First, only the global master node opens the file, regardless of
      whether it will be read by all nodes */
-  if(this_node == QIO_MASTER_NODE){
+  if(this_node == dml_layout->master_io_node){
     lrl_file_in = LRL_open_read_file(filename);
     if(lrl_file_in == NULL){
       printf("%s(%d): Can't open %s\n",myname,this_node,filename);
@@ -94,12 +91,14 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
   printf("%s(%d) Reading xml_file_private\n",myname,this_node);fflush(stdout);
 #endif
 
-  /* Create structure with what the file says */
+  /* Create structure to hold what the file says */
   file_info_found = QIO_create_file_info(0,NULL,0);
 
   /* Master node reads and decodes the private file XML record */
-  if(this_node == QIO_MASTER_NODE){
-    xml_file_private = QIO_string_create(QIO_STRINGALLOC);
+  /* For parallel input the other nodes pretend to read */
+  if(this_node == dml_layout->master_io_node){
+    xml_file_private = QIO_string_create();
+    QIO_string_realloc(xml_file_private,QIO_STRINGALLOC);
     if((status = 
 	QIO_read_string(qio_in, xml_file_private, lime_type))
        !=QIO_SUCCESS){
@@ -111,14 +110,16 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
     printf("%s(%d): private file XML = %s\n",myname,this_node,
 	   QIO_string_ptr(xml_file_private));
 #endif
+    /* Decode the file info */
     QIO_decode_file_info(file_info_found, xml_file_private);
     QIO_string_destroy(xml_file_private);
 
     /* Create structure with what we expect */
-    /* We discover and respond to the multifile parameter.
+    /* We discover and respond to the volume format parameter.
        A zero here implies a matching value is not required. */
     file_info_expect = 
-      QIO_create_file_info(dml_layout->latdim, dml_layout->latsize, 0);	    
+      QIO_create_file_info(dml_layout->latdim, dml_layout->latsize, 
+			   dml_layout->master_io_node);	    
 					    
     /* Compare what we found and what we expected */
     if((status = 
@@ -131,107 +132,107 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
   }
 
   /* Broadcast the file info to all nodes */
-  DML_broadcast_bytes((char *)file_info_found, sizeof(QIO_FileInfo));
+  DML_broadcast_bytes((char *)file_info_found, sizeof(QIO_FileInfo),
+		      this_node, dml_layout->master_io_node);
   
 #ifdef QIO_DEBUG
   printf("%s(%d): private file info was broadcast\n",
 	 myname,this_node);fflush(stdout);
 #endif
-  
-  /* We need the volume format for consistency checking */
-  /* If parallel read possible, and parallel read requested,
-     all nodes open the file.  Otherwise, only master does.*/
-  
-  /* Are we reading multiple files? */
-  if(QIO_get_multifile(file_info_found) == 1){
-    /* Single file */
-#ifdef QIO_DEBUG
-    printf("%s(%d): reading %s as single file\n",
-	   myname,this_node,filename);fflush(stdout);
-#endif
-    qio_in->volfmt = QIO_SINGLEFILE;
-    /* Single file site ordering must be lexicographic */
-    qio_in->siteorder = QIO_LEX_ORDER;
-    /* If parallel read is possible and requested, the remaining nodes
-       open the same file */
-    if((PARALLEL_READ && qio_in->serpar == QIO_PARALLEL) && 
-       this_node != QIO_MASTER_NODE){ 
-      lrl_file_in = LRL_open_read_file(filename);
-      qio_in->lrl_file_in = lrl_file_in; 
-    }
-    else{
-      /* Otherwise, we must read serially through the master node 
-         regardless of what is requested */
-      qio_in->serpar == QIO_SERIAL;
-    }
-  }
-  else {
-    /* Multifile */
-#ifdef QIO_DEBUG
-    printf("%s(%d): reading %s as multifile\n",
-	   myname,this_node,filename);fflush(stdout);
-#endif
-    qio_in->volfmt = QIO_MULTIFILE;
-    /* For now we support only multifile reads with one file per node */
-    if(QIO_get_multifile(file_info_found) != layout->number_of_nodes){
-      printf("%s(%d): multifile volume count %d must match number_of_nodes %d\n",
-	     myname,this_node,QIO_get_multifile(file_info_found), 
-	     layout->number_of_nodes);
-      return NULL;
-    }
-    /* The non-master nodes open their files */
-    if(this_node != QIO_MASTER_NODE){
-      /* Edit file name */
-      newfilename = QIO_filename_edit(filename, qio_in->volfmt, 
-				      layout->this_node);
-      lrl_file_in = LRL_open_read_file(newfilename);
-      qio_in->lrl_file_in = lrl_file_in; 
-    }
-    
-    /* Each node reads its own site list */
-    if((status = 
-	QIO_read_sitelist(qio_in, lime_type))
-       != QIO_SUCCESS){
-      printf("%s(%d): Error %d reading site list\n",myname,this_node,status);
-      return NULL;
-    }
-#ifdef QIO_DEBUG
-    printf("%s(%d): Sitelist was read\n",myname,this_node);fflush(stdout);
-#endif
-    /* For now we support only a site order that matches the current
-       layout exactly */
-    check = DML_is_native_sitelist(qio_in->layout,qio_in->sitelist);
-    /* Return value is zero for native order, one for nonnative */
-    /* Poll all nodes to be sure all have native order */
-    DML_sum_int(&check);
-    if(check){
-      qio_in->siteorder = QIO_LIST_ORDER;
-      if(this_node == QIO_MASTER_NODE)
-	printf("%s(%d): List-directed reordering not supported\n",
-	       myname,this_node);
-      return NULL;
-    }
-    else{
-#ifdef QIO_DEBUG
-      printf("%s(%d): List is in natural order\n",
-	     myname,this_node);fflush(stdout);
-#endif
-      qio_in->siteorder = QIO_NAT_ORDER;
-    }
-  }
 
+  volfmt = QIO_get_volfmt(file_info_found);
   QIO_destroy_file_info(file_info_found);
+  
+  /*********************************************************************/
+  /* Act on the volume format.  Other nodes open their file (if needed)*/
+  /*********************************************************************/
+
+  /* Open any additional file handles as needed */
+  /* Read the sitelist if needed */
+
+  if(volfmt == QIO_SINGLEFILE)
+    {
+      /* One file for all nodes */
+      printf("%s(%d): opened %s for reading in singlefile mode\n",
+	     myname,this_node,filename);fflush(stdout);
+      qio_in->volfmt = QIO_SINGLEFILE;
+    }
+  else if(volfmt == QIO_PARTFILE)
+    {
+      /* One file per machine partition in lexicographic order */
+      printf("%s(%d): opened %s for reading in partfile mode\n",
+	     myname,this_node,filename);fflush(stdout);
+      qio_in->volfmt = QIO_PARTFILE;
+
+      /* All the partition I/O nodes open their files.  */
+      if(this_node == dml_layout->ionode(this_node)){
+	/* (The global master has already opened its file) */
+	if(this_node != dml_layout->master_io_node){
+	  /* Construct the file name based on the partition I/O node number */
+	  newfilename = QIO_filename_edit(filename, qio_in->volfmt, this_node,
+					  dml_layout->master_io_node);
+	  /* Open the file */
+	  lrl_file_in = LRL_open_read_file(newfilename);
+	  qio_in->lrl_file_in = lrl_file_in; 
+	}
+      }
+    }
+  else if(volfmt == QIO_MULTIFILE)
+    {
+      /* One file per node */
+      printf("%s(%d): opened %s for reading in multifile mode\n",
+	     myname,this_node,filename);fflush(stdout);
+      qio_in->volfmt = QIO_MULTIFILE;
+      /* The non-master nodes open their files */
+      if(this_node != dml_layout->master_io_node){
+	/* Edit file name */
+	newfilename = QIO_filename_edit(filename, qio_in->volfmt, 
+				layout->this_node, dml_layout->master_io_node);
+	lrl_file_in = LRL_open_read_file(newfilename);
+	qio_in->lrl_file_in = lrl_file_in; 
+      }
+    }
+
+  else 
+    {
+      printf("%s(%d): bad volfmt parameter %d\n",myname,this_node,volfmt);
+      return NULL;
+    }
+
+  /****************************************/
+  /* Nodes read their site lists (if any) */
+  /****************************************/
+
+  /* Create the expected sitelist.  Input must agree exactly. */
+
+  qio_in->sites = QIO_create_sitelist(qio_in->layout, qio_in->volfmt);
+  if(qio_in->sites == NULL){
+    printf("%s(%d): error creating sitelist\n",
+	   myname,this_node);
+    return NULL;
+  }
+  
+  if((status = QIO_read_sitelist(qio_in, lime_type))!= QIO_SUCCESS){
+    printf("%s(%d): Error %d reading site list\n",myname,this_node,status);
+    return NULL;
+  }
+#ifdef QIO_DEBUG
+  printf("%s(%d): Sitelist was read\n",myname,this_node);fflush(stdout);
+#endif
+  
+
+  /*************************************************************/
+  /* Master node reads and broadcasts the user file XML record */
+  /*************************************************************/
 
 #ifdef QIO_DEBUG
   printf("%s(%d): Reading user file XML\n",myname,this_node);fflush(stdout);
 #endif
   
-  /* Master node reads the user file XML record */
-  /* Assumes xml_file created by caller */
-  if(this_node == QIO_MASTER_NODE){
+  /* Assumes the xml_file structure was created by caller */
+  if(this_node == dml_layout->master_io_node){
     if((status = 
-	QIO_read_string(qio_in, xml_file, lime_type))
-       != QIO_SUCCESS){
+	QIO_read_string(qio_in, xml_file, lime_type))!= QIO_SUCCESS){
       printf("%s(%d): error %d reading user file XML\n",
 	     myname,this_node,status);
       return NULL;
@@ -241,18 +242,22 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
     printf("%s(%d): file XML = %s\n",
 	   myname,this_node,QIO_string_ptr(xml_file));
 #endif
-    length = QIO_string_bytes(xml_file);
+    length = QIO_string_length(xml_file);
   }
   
   /* Broadcast the user xml file to all nodes */
   /* First broadcast length */
-  DML_broadcast_bytes((char *)&length,sizeof(int));
+  DML_broadcast_bytes((char *)&length,sizeof(int),
+		      this_node, dml_layout->master_io_node);
   
   /* Receiving nodes resize their strings */
-  if(this_node != QIO_MASTER_NODE){
+  if(this_node != dml_layout->master_io_node){
     QIO_string_realloc(xml_file,length);
   }
-  DML_broadcast_bytes(QIO_string_ptr(xml_file),length);
+
+  /* Then broadcast the string itself */
+  DML_broadcast_bytes(QIO_string_ptr(xml_file),length,
+		      this_node, dml_layout->master_io_node);
   
 #ifdef QIO_DEBUG
   printf("%s(%d): Done with user file XML\n",myname,this_node);fflush(stdout);

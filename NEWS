@@ -1,3 +1,11 @@
+08/0/2004 -- Carleton DeTar
+
+        Version 1.0 supports partitioned I/O.
+        Parallel I/O capability has been abandoned.
+        Open write "mode" has been abandoned.
+        Added some examples.
+        Requires QMP-2.0
+
 05/11/2004 -- Robert Edwards
 
 	Version 0.9.5. Last minor changes. Will split off c-lime to

@@ -6,7 +6,7 @@
 #include <qio.h>
 #include <qioxml.h>
 #include <qio_string.h>
-#include <type32.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <time.h>
 #ifdef HAVE_STDLIB_H
@@ -118,8 +118,6 @@ char *QIO_next_tag(char *parse_pt, char *tag, char **left_angle){
 char *QIO_get_tag_value(char *parse_pt, char *tag, char *value_string){
   char tmptag[QIO_MAXTAG];
 
-  char *tag_ptr = tag;
-  char *value_string_ptr = value_string;
   char *begin_tag_ptr;
   char *begin_value_string;
   int end_tag = 0;
@@ -454,7 +452,7 @@ void QIO_encode_record_info(QIO_String *record_string,
   /* Now build final XML string */
   QIO_string_realloc(record_string, QIO_STRINGALLOC);
   buf  = QIO_string_ptr(record_string);
-  remainder = QIO_string_bytes(record_string);
+  remainder = QIO_string_length(record_string);
   
   /* Begin with xml info stuff */
   strncpy(buf,QIO_XMLINFO,remainder);
@@ -483,6 +481,9 @@ int QIO_decode_file_info(QIO_FileInfo *file_info,
   QIO_FileInfoWrapper wrapper = QIO_FILE_INFO_WRAPPER;
   QIO_FileInfo templ = QIO_FILE_INFO_TEMPLATE;
   char *left_angle;
+
+  /* Compatibility */
+  QIO_FileInfo_v1p0 file_info_v1p0  = QIO_FILE_INFO_TEMPLATE_v1p0;
   
   /* Initialize file info structure from a template */
   *file_info = templ;
@@ -501,7 +502,7 @@ int QIO_decode_file_info(QIO_FileInfo *file_info,
   parse_pt = QIO_get_tag_value(parse_pt, tag, tags_string);
   QIO_decode_as_string (tag, tags_string, &wrapper.fileinfo_tags);
 
-  /* If outer wrapper has bad tag exit with error status */
+  /* If outer wrapper has bad tag, exit with error status */
   if(QIO_check_string_occur(&wrapper.fileinfo_tags))return QIO_BAD_XML;
   /* Otherwise start parsing the enclosed string of tags */
   parse_pt = QIO_get_file_info_tag_string(&wrapper);
@@ -513,7 +514,9 @@ int QIO_decode_file_info(QIO_FileInfo *file_info,
     QIO_decode_as_string (tag,value_string,&file_info->version);
     QIO_decode_as_int    (tag,value_string,&file_info->spacetime);
     QIO_decode_as_intlist(tag,value_string,&file_info->dims);
-    QIO_decode_as_int    (tag,value_string,&file_info->multifile);
+    QIO_decode_as_int    (tag,value_string,&file_info->volfmt);
+    /* compatibility */
+    QIO_decode_as_int    (tag,value_string,&file_info_v1p0.multifile);
   }
 
   /* Check for completeness */
@@ -521,12 +524,30 @@ int QIO_decode_file_info(QIO_FileInfo *file_info,
   errors += QIO_check_string_occur  (&file_info->version);
   errors += QIO_check_int_occur     (&file_info->spacetime);
   errors += QIO_check_intarray_occur(&file_info->dims);
-  errors += QIO_check_int_occur     (&file_info->multifile);
+  errors += QIO_check_int_occur     (&file_info->volfmt);
 
   /* Did we get all the spacetime dimensions */
   if(file_info->spacetime.value != file_info->dims.n){
     printf("QIO_decode_file_info: mismatch in spacetime dimensions\n");
     errors++;
+  }
+
+  /* Backward compatibility */
+
+  /* Convert version 1.0 file_info structure to version 1.1 */
+
+  if(strcmp("1.0",QIO_get_file_version(file_info)) == 0){
+
+    /* Version 1.0 had a multifile parameter where the volfmt paramter
+       now appears.  The multifile parameter gave the file count. A 1
+       implied singlefile and greater than 1 implied multifile.  There
+       was no partfile format in 1.0. In version 1.1 the multifile
+       flag was changed to specify the volume format: SINGLEFILE,
+       MULTIFILE, PARTFILE */
+    if(QIO_get_multifile(&file_info_v1p0) == 1)
+      QIO_insert_volfmt(file_info,QIO_SINGLEFILE);
+    else
+      QIO_insert_volfmt(file_info,QIO_MULTIFILE);
   }
 
   return errors;
@@ -549,7 +570,7 @@ void QIO_encode_file_info(QIO_String *file_string,
   buf = QIO_encode_as_int    (buf,&file_info->spacetime, &remainder);
   buf = QIO_encode_as_intlist(buf,&file_info->dims, 
 			      file_info->spacetime.value, &remainder);
-  buf = QIO_encode_as_int    (buf,&file_info->multifile, &remainder);
+  buf = QIO_encode_as_int    (buf,&file_info->volfmt, &remainder);
 
   /* Insert inner tag string into file wrapper structure */
   QIO_insert_file_tag_string(&wrapper, fileinfo_tags);
@@ -557,7 +578,7 @@ void QIO_encode_file_info(QIO_String *file_string,
   /* Now build final XML string */
   QIO_string_realloc(file_string, QIO_STRINGALLOC);
   buf  = QIO_string_ptr(file_string);
-  remainder = QIO_string_bytes(file_string);
+  remainder = QIO_string_length(file_string);
 
   /* Begin with xml info stuff */
   strncpy(buf,QIO_XMLINFO,remainder);
@@ -649,7 +670,7 @@ void QIO_encode_checksum_info(QIO_String *checksum_string,
   /* Now build final XML string */
   QIO_string_realloc(checksum_string, QIO_STRINGALLOC);
   buf  = QIO_string_ptr(checksum_string);
-  remainder = QIO_string_bytes(checksum_string);
+  remainder = QIO_string_length(checksum_string);
 
   /* Begin with xml info stuff */
   strncpy(buf,QIO_XMLINFO,remainder);
@@ -705,11 +726,16 @@ int QIO_insert_spacetime_dims(QIO_FileInfo *file_info,
   return QIO_SUCCESS;
 }
 
-int QIO_insert_multifile(QIO_FileInfo *file_info, int multifile){
-  file_info->multifile.occur = 0;
-  if(!multifile)return QIO_BAD_ARG;
-  file_info->multifile.value = multifile;
-  file_info->multifile.occur = 1;
+int QIO_insert_volfmt(QIO_FileInfo *file_info, int volfmt){
+  file_info->volfmt.occur = 0;
+  if(volfmt!=QIO_SINGLEFILE && 
+     volfmt!=QIO_MULTIFILE &&
+     volfmt!=QIO_PARTFILE){
+    printf("QIO_insert_volfmt: Bad volfmt parameter %d\n",volfmt);
+    return QIO_BAD_ARG;
+  }
+  file_info->volfmt.value = volfmt;
+  file_info->volfmt.occur = 1;
   return QIO_SUCCESS;
 }
 
@@ -839,7 +865,7 @@ int QIO_insert_checksum_version(QIO_ChecksumInfo *checksum_info,
 }
 
 int QIO_insert_suma_sumb(QIO_ChecksumInfo *checksum_info, 
-			 u_int32 suma, u_int32 sumb){
+			 uint32_t suma, uint32_t sumb){
   checksum_info->suma.occur = 0;
   checksum_info->sumb.occur = 0;
   if(!suma || !sumb)return QIO_BAD_ARG;
@@ -870,7 +896,11 @@ int *QIO_get_dims(QIO_FileInfo *file_info){
   return file_info->dims.value;
 }
 
-int QIO_get_multifile(QIO_FileInfo *file_info){
+int QIO_get_volfmt(QIO_FileInfo *file_info){
+  return file_info->volfmt.value;
+}
+
+int QIO_get_multifile(QIO_FileInfo_v1p0 *file_info){
   return file_info->multifile.value;
 }
 
@@ -882,8 +912,8 @@ int QIO_defined_dims(QIO_FileInfo *file_info){
   return file_info->dims.occur;
 }
 
-int QIO_defined_multifile(QIO_FileInfo *file_info){
-  return file_info->multifile.occur;
+int QIO_defined_volfmt(QIO_FileInfo *file_info){
+  return file_info->volfmt.occur;
 }
 
 
@@ -955,11 +985,11 @@ char *QIO_get_checksum_info_tag_string(QIO_ChecksumInfoWrapper *wrapper){
   return wrapper->checksuminfo_tags.value;
 }
 
-u_int32 QIO_get_suma(QIO_ChecksumInfo *checksum_info){
+uint32_t QIO_get_suma(QIO_ChecksumInfo *checksum_info){
   return checksum_info->suma.value;
 }
 
-u_int32 QIO_get_sumb(QIO_ChecksumInfo *checksum_info){
+uint32_t QIO_get_sumb(QIO_ChecksumInfo *checksum_info){
   return checksum_info->sumb.value;
 }
 
@@ -974,7 +1004,7 @@ int QIO_defined_sumb(QIO_ChecksumInfo *checksum_info){
 
 /* Utilities for creating structures from templates */
 
-QIO_FileInfo *QIO_create_file_info(int spacetime, int *dims, int multifile){
+QIO_FileInfo *QIO_create_file_info(int spacetime, int *dims, int volfmt){
   QIO_FileInfo templ = QIO_FILE_INFO_TEMPLATE;
   QIO_FileInfo *file_info;
   
@@ -984,7 +1014,7 @@ QIO_FileInfo *QIO_create_file_info(int spacetime, int *dims, int multifile){
   *file_info = templ;
   QIO_insert_file_version(file_info,QIO_FILEFORMATVERSION);
   QIO_insert_spacetime_dims(file_info,spacetime,dims);
-  QIO_insert_multifile(file_info,multifile);
+  QIO_insert_volfmt(file_info,volfmt);
   return file_info;
 }
 
@@ -1011,7 +1041,7 @@ int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
   if(QIO_defined_dims(expect)){
     if(!QIO_defined_dims(found))
       {
-	printf("%s:Dimensions missing\n",myname,this_node);
+	printf("%s(%d):Dimensions missing\n",myname,this_node);
 	return QIO_ERR_FILE_INFO;
       }
     
@@ -1034,13 +1064,13 @@ int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
     }
   }
   
-  if(QIO_defined_multifile(expect))
-    if(!QIO_defined_multifile(found) &&
-       QIO_get_multifile(found) != QIO_get_multifile(expect))
+  if(QIO_defined_volfmt(expect))
+    if(!QIO_defined_volfmt(found) &&
+       QIO_get_volfmt(found) != QIO_get_volfmt(expect))
       {
-	printf("%s(%d):Multifile parameter mismatch expected %d found %d \n",
+	printf("%s(%d):Volfmt parameter mismatch expected %d found %d \n",
 	       myname,this_node,
-	       QIO_get_multifile(expect),QIO_get_multifile(found));
+	       QIO_get_volfmt(expect),QIO_get_volfmt(found));
 	return QIO_ERR_FILE_INFO;
       }
   
@@ -1148,7 +1178,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
   return QIO_SUCCESS;
 }
 
-QIO_ChecksumInfo *QIO_create_checksum_info(u_int32 suma, u_int32 sumb){
+QIO_ChecksumInfo *QIO_create_checksum_info(uint32_t suma, uint32_t sumb){
   QIO_ChecksumInfo templ = QIO_CHECKSUM_INFO_TEMPLATE;
   QIO_ChecksumInfo *checksum_info;
   
@@ -1170,7 +1200,7 @@ int QIO_compare_checksum_info(QIO_ChecksumInfo *found,
 			      char *myname, int this_node){
 
   if(!QIO_defined_suma(found) || !QIO_defined_sumb(found)){
-    printf("%s(%d): checksum info missing\n");
+    printf("%s(%d): checksum info missing\n",myname,this_node);
     return QIO_ERR_CHECKSUM_INFO;
   }
 

@@ -38,9 +38,9 @@
   (zlib format), rfc1951.txt (deflate format) and rfc1952.txt (gzip format).
 */
 
-#include <type32.h>
-
-typedef u_int32 uLong;            /* At least 32 bits */
+#include <inttypes.h>
+#include <stdlib.h>
+typedef uint32_t uLong;            /* At least 32 bits */
 typedef unsigned char Byte;
 typedef Byte Bytef;
 typedef uLong uLongf;
@@ -178,7 +178,7 @@ static uLongf *get_crc_table()
 #define DO8(buf)  DO4(buf); DO4(buf);
 
 /* ========================================================================= */
-u_int32 DML_crc32(u_int32 crc, const unsigned char *buf, u_int32 len)
+uint32_t DML_crc32(uint32_t crc, const unsigned char *buf, size_t len)
 {
     if (buf == Z_NULL) return 0L;
 #ifdef DYNAMIC_CRC_TABLE

@@ -3,25 +3,32 @@
 
 #include <lrl.h>
 #include <qmp.h>
-#include <dml.h>
 
-void DML_broadcast_bytes(char *buf, size_t size)
+/* Temporary! until added to qmp.h */
+int QMP_io_node(int node);
+extern int QMP_master_io_node;
+
+#include <dml.h>
+#include <inttypes.h>
+
+/* Sum a uint64_t over all nodes (for 64 bit byte counts) */
+
+void DML_peq_uint64_t(uint64_t *subtotal, uint64_t *addend)
 {
-  QMP_broadcast(buf, (QMP_u32_t)size);
+  *subtotal += *addend;
 }
 
-/* Sum a size_t over all nodes (32 bit) */
-void DML_sum_size_t(size_t *ipt)
+void DML_sum_uint64_t(uint64_t *ipt)
 {
-  QMP_s32_t work = *ipt;
-  QMP_sum_int(&work);
+  uint64_t work = *ipt;
+  QMP_binary_reduction(&work, sizeof(work), DML_peq_uint64_t);
   *ipt = work;
 }
 
 /* Sum an int over all nodes (16 or 32 bit) */
 void DML_sum_int(int *ipt)
 {
-  QMP_s32_t work = *ipt;
+  int work = *ipt;
   QMP_sum_int(&work);
   *ipt = work;
 }
@@ -53,17 +60,31 @@ int DML_get_bytes(char *buf, size_t size, int fromnode){
 }
 
 
-int DML_clear_to_send(char *scratch_buf, size_t size, int new_node) 
+void DML_broadcast_bytes(char *buf, size_t size, int this_node, int from_node)
+{
+  /* QMP broadcasts from node 0 only!  So move the data there first */
+  if(from_node != 0){
+    if(this_node == from_node)
+      DML_send_bytes(buf, size, 0);
+    if(this_node == 0)
+      DML_get_bytes(buf, size, from_node);
+  }
+  
+  QMP_broadcast(buf, size);
+}
+
+int DML_clear_to_send(char *scratch_buf, size_t size, 
+		      int my_io_node, int new_node) 
 {
   if (QMP_get_msg_passing_type() != QMP_GRID)
   {
     int this_node = QMP_get_node_number();
 
-    if(this_node == DML_MASTER_NODE && new_node != DML_MASTER_NODE)
+    if(this_node == my_io_node && new_node != my_io_node)
       DML_send_bytes(scratch_buf,size,new_node); /* junk message */
 
-    if(this_node == new_node && new_node != DML_MASTER_NODE)
-      DML_get_bytes(scratch_buf,size,DML_MASTER_NODE);
+    if(this_node == new_node && new_node != my_io_node)
+      DML_get_bytes(scratch_buf,size,my_io_node);
   }
 
   return 0;
@@ -90,13 +111,21 @@ int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode)
   return 0;
 }
 
-void DML_global_xor(u_int32 *x){
-  long work = (long)*x;
-  QMP_global_xor(&work);
-  *x = (u_int32)work;
+void DML_global_xor(uint32_t *x){
+  unsigned long work = (unsigned long)*x;
+  QMP_xor_ulong(&work);
+  *x = (uint32_t)work;
 }
 
 void DML_sync(void){
-  while(QMP_wait_for_barrier(1000)==QMP_TIMEOUT);
+  QMP_barrier();
 }
 
+/* I/O layout */
+int DML_io_node(int node){
+  return QMP_io_node(node);
+}
+
+int DML_master_io_node(void){
+  return QMP_master_io_node;
+}

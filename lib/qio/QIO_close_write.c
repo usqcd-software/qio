@@ -12,6 +12,7 @@ int QIO_close_write(QIO_Writer *out){
   status = LRL_close_write_file(out->lrl_file_out);
   free(out->layout->latsize);
   free(out->layout);
+  DML_free_sitelist(out->sites);
   free(out);
   if(status != LRL_SUCCESS)return QIO_ERR_CLOSE;
   return QIO_SUCCESS;

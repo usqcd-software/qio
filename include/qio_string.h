@@ -15,13 +15,13 @@ typedef struct {
   size_t length;
 } QIO_String;
 
-QIO_String *QIO_string_create(int length);
-QIO_String *QIO_string_realloc(QIO_String *qs, int length);
-QIO_String *QIO_string_set(const char *const string);
-void QIO_string_copy(QIO_String *dest, QIO_String *src);
-size_t QIO_string_bytes(const QIO_String *const qs);
-char * QIO_string_ptr(QIO_String *qs);
+QIO_String *QIO_string_create();
 void QIO_string_destroy(QIO_String *qs);
+void QIO_string_set(QIO_String *qs, const char *const string);
+size_t QIO_string_length(const QIO_String *const qs);
+char * QIO_string_ptr(QIO_String *qs);
+void QIO_string_copy(QIO_String *dest, QIO_String *src);
+void QIO_string_realloc(QIO_String *qs, int length);
 
 #ifdef __cplusplus
 }

@@ -227,3 +227,24 @@ operates.
 `configure' also accepts some other, not widely useful, options.  Run
 `configure --help' for more details.
 
+Example 8/10/2004
+=================
+
+   tar -xzf qio.tar.gz
+   mkdir qio-build
+   cd qio-build
+   ../qio/configure                               \
+      --prefix=$HOME/scidac/qio/local             \
+      CFLAGS="-g -Wall"                           \ 
+      QMP_CFLAGS=-I$HOME/scidac/qmp/local/include \
+      QMP_LDFLAGS=-L$HOME/qmp/local/lib           \
+      QMP_LIBS=-lqmp                              \
+      --enable-parallel-arch=parscalar            \
+      --no-create --no-recursion
+
+(The enable-parallel-arch flag is being phased out.)
+
+   make
+   make install
+   make clean (or distclean)
+

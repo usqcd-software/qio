@@ -17,13 +17,14 @@
 /* In case of multifile format we use a common file name stem and add
    a suffix that depends on the node number */
 
-char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
+char *QIO_filename_edit(const char *filename, int volfmt, int this_node,
+			int master_io_node){
   /* Caller must clean up returned filename */
   int n = strlen(filename) + 12;
   char *newfilename = (char *)malloc(n);
 
   /* No change if a single file or on the master node */
-  if(volfmt == QIO_SINGLEFILE || this_node == QIO_MASTER_NODE){
+  if(volfmt == QIO_SINGLEFILE || this_node == master_io_node){
     strncpy(newfilename,filename,strlen(filename));
     newfilename[strlen(filename)] = '\0';
     return newfilename;
@@ -39,7 +40,8 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
 
 /* Write an XML record */
 
-int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
+int QIO_write_string(QIO_Writer *out, 
+		     int msg_begin, int msg_end,
 		     QIO_String *xml,
 		     const LIME_type lime_type)
 {
@@ -51,25 +53,56 @@ int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
   buf = QIO_string_ptr(xml);
   rec_size = strlen(buf)+1;  /* Include terminating null */
 
-  lrl_record_out = LRL_open_write_record(out->lrl_file_out, 1, msg_begin,
+  lrl_record_out = LRL_open_write_record(out->lrl_file_out, 
+					 msg_begin,
 					 msg_end, &rec_size, 
 					 lime_type);
   check = LRL_write_bytes(lrl_record_out, buf, rec_size);
 #ifdef QIO_DEBUG
-  printf("%s(%d): wrote bytes\n",myname,out->layout->this_node);fflush(stdout);
+  printf("%s(%d): wrote %d bytes\n",myname,out->layout->this_node,check);fflush(stdout);
 #endif
 
   /* Check byte count */
   if(check != rec_size){
-    printf("%s(%d): bytes written %d != expected rec_size %d\n",
-	   myname, out->layout->this_node, check, rec_size);
+    printf("%s(%d): bytes written %lu != expected rec_size %lu\n",
+	   myname, out->layout->this_node, (unsigned long)check, 
+	   (unsigned long)rec_size);
     return QIO_ERR_BAD_WRITE_BYTES;
   }
   LRL_close_write_record(lrl_record_out);
+#ifdef QIO_DEBUG
+  printf("%s(%d): closed string record\n",myname,out->layout->this_node);
+  fflush(stdout);
+#endif
   return QIO_SUCCESS;
 }
 
-/* Write list of sites (used with multifile format) */
+/* Create list of sites output from this node */
+
+DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt){
+  DML_SiteList *sites;
+  char myname[] = "QIO_create_sitelist";
+
+  /* Initialize sitelist structure */
+  sites = DML_init_sitelist(volfmt, layout);
+  if(sites == NULL){
+    printf("%s(%d): Error creating the sitelist structure\n", 
+	   myname,layout->this_node);
+    return sites;
+  }
+
+  /* Populate the sitelist */
+  if(DML_fill_sitelist(sites, volfmt, layout)){
+    printf("%s(%d): Error building the site list\n", 
+	   myname,layout->this_node);
+    DML_free_sitelist(sites);
+    return NULL;
+  }
+
+  return sites;
+}
+
+/* Write list of sites (used with multifile and partitioned file formats) */
 /* Returns number of bytes written */
 
 int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end, 
@@ -77,41 +110,54 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
   LRL_RecordWriter *lrl_record_out;
   size_t nbytes;
   size_t rec_size;
-  int sites_this_node = out->layout->sites_on_node;
-  size_t datum_size = sizeof(DML_SiteRank);
-  DML_SiteRank *sitelist;
+  DML_SiteRank *outputlist;
+  DML_SiteList *sites = out->sites;
+  int volfmt = out->volfmt;
+  int this_node = out->layout->this_node;
+  char myname[] = "QIO_write_sitelist";
 
-  /* Create sitelist */
-  rec_size = sites_this_node * datum_size;
+  /* Quit if we aren't writing the sitelist */
+  /* Single file writes no sitelist.  Multifile always writes one.
+     Partitioned file writes only if an I/O node */
 
-  /* Allocate space */
-  sitelist = (DML_SiteRank *)malloc(rec_size);
-  if(!sitelist){
-    printf("QIO_write_sitelist: Node %d can't malloc sitelist\n",
-	   out->layout->this_node);
+  if(volfmt == QIO_SINGLEFILE)return 0;
+  if(volfmt == QIO_PARTFILE)
+    if(this_node != out->layout->ionode(this_node))return 0;
+
+  /* Make a copy in case we have to byte reverse */
+  rec_size = sites->number_of_io_sites * sizeof(DML_SiteRank);
+  printf("%s(%d) allocating %d for output sitelist\n",myname,this_node,
+	 rec_size);fflush(stdout);
+
+  outputlist = (DML_SiteRank *)malloc(rec_size);
+  if(outputlist == NULL){
+    printf("%s(%d) no room for output sitelist\n",myname,this_node);fflush(stdout);
     return QIO_ERR_ALLOC;
   }
 
-  /* Generate site list */
-  if(DML_create_sitelist(out->layout,sitelist)){
-    free(sitelist);
-    return QIO_ERR_ALLOC;
-  }
+  memcpy(outputlist, sites->list, rec_size);
 
   /* Byte reordering for entire sitelist */
   if (! DML_big_endian())
-    DML_byterevn((char *)sitelist, rec_size, sizeof(DML_SiteRank));
+    DML_byterevn((char *)outputlist, rec_size, sizeof(DML_SiteRank));
 
   /* Write site list */
-  lrl_record_out = LRL_open_write_record(out->lrl_file_out, 1, msg_begin,
-					 msg_end, &rec_size, 
-					 lime_type);
-  nbytes = LRL_write_bytes(lrl_record_out, (char *)sitelist, rec_size);
+  lrl_record_out = LRL_open_write_record(out->lrl_file_out, msg_begin,
+					 msg_end, &rec_size, lime_type);
+  nbytes = LRL_write_bytes(lrl_record_out, (char *)outputlist, rec_size);
+
+  if(nbytes != rec_size){
+    printf("%s(%d): Error writing site list. Wrote %lu bytes expected %lu\n", 
+	   myname,out->layout->this_node,(unsigned long)rec_size,
+	   (unsigned long)nbytes);
+    free(outputlist);
+    return QIO_ERR_BAD_WRITE_BYTES;
+  }
 
   /* Close record when done and clean up*/
   LRL_close_write_record(lrl_record_out);
 
-  free(sitelist);
+  free(outputlist); 
   return QIO_SUCCESS;
 }
 
@@ -124,66 +170,69 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 	    DML_Checksum *checksum,
 	    const LIME_type lime_type){
   
-  LRL_RecordWriter *lrl_record_out;
-  size_t check;
+  LRL_RecordWriter *lrl_record_out = NULL;
+  off_t total_bytes,check;
   size_t rec_size;
   size_t volume = out->layout->volume;
+  int this_node = out->layout->this_node;
+  int volfmt = out->volfmt;
   int do_write;
   char myname[] = "QIO_write_field";
 
   /* Compute record size */
   if(globaldata == QIO_GLOBAL){
     rec_size = datum_size; /* Global data */
+    total_bytes = rec_size;
 #ifdef QIO_DEBUG
-    printf("%s(%d): global data: size %d\n",myname,out->layout->this_node,
-	   datum_size);
+    printf("%s(%d): global data: size %lu\n",myname,out->layout->this_node,
+	   (unsigned long)datum_size);
 #endif
   }
   else{
-    if(out->volfmt == QIO_SINGLEFILE){
-      rec_size = volume * datum_size;  /* Single file holds all the data */
+    rec_size = out->sites->number_of_io_sites * datum_size;
+    total_bytes = volume * datum_size;
 #ifdef QIO_DEBUG
-      printf("%s(%d): singlefile field data sites = %d datum %d\n",
-	     myname,out->layout->this_node,
-	     volume,datum_size);
+    printf("%s(%d): field data: sites %lu datum %lu\n",
+	   myname,out->layout->this_node,
+	   (unsigned long)out->layout->sites_on_node,
+	   (unsigned long)datum_size);
 #endif
-    }
-    else{ 
-      rec_size = out->layout->sites_on_node * datum_size; /* Multifile */
-#ifdef QIO_DEBUG
-      printf("%s(%d): multifile field sites = %d datum %d\n",
-	     myname,out->layout->this_node,
-	     out->layout->sites_on_node,datum_size);
-#endif
-    }
   }
   
 #ifdef QIO_DEBUG
-  printf("%s(%d): rec_size = %d\n",myname,out->layout->this_node,rec_size);
+  printf("%s(%d): rec_size = %lu\n",myname,out->layout->this_node,
+	 (unsigned long)rec_size);
 #endif
 
-  /* In all cases the master node writes the record header */
+  /* For singlefile the master node writes the record header */
+  if(volfmt == QIO_SINGLEFILE)
+    do_write = (this_node == out->layout->master_io_node);
   /* For multifile all nodes write the record header */
-  do_write = ( out->layout->this_node == QIO_MASTER_NODE ) ||
-    ( out->volfmt == QIO_MULTIFILE );
+  else if(volfmt == QIO_MULTIFILE)
+    do_write = 1;
+  /* For partitioned I/O the I/O nodes write the header */
+  else if(volfmt == QIO_PARTFILE)
+    do_write = (this_node == out->layout->ionode(this_node));
 
   /* Open record */
 
-  lrl_record_out = LRL_open_write_record(out->lrl_file_out, do_write,
-					 msg_begin, msg_end, &rec_size, 
-					 lime_type);
+  if(do_write)
+    lrl_record_out = LRL_open_write_record(out->lrl_file_out, 
+					   msg_begin, msg_end, &rec_size, 
+					   lime_type);
   /* Write bytes */
 
   check = DML_stream_out(lrl_record_out, globaldata, get, count, datum_size, 
-			 word_size, arg, out->layout, out->serpar, 
-			 out->volfmt, checksum);
+			 word_size, arg, out->layout, out->sites, out->volfmt, 
+			 checksum);
 
   /* Close record when done and clean up*/
   LRL_close_write_record(lrl_record_out);
 
-  if(check != rec_size){
-    printf("%s(%d): bytes written %d != expected rec_size %d\n",
-	   myname, out->layout->this_node, check, rec_size);
+  if(check != total_bytes){
+    printf("%s(%d): bytes written %lu != expected rec_size %lu\n",
+	   myname, out->layout->this_node, (unsigned long)check, 
+	   (unsigned long)total_bytes);
     return QIO_ERR_BAD_WRITE_BYTES;
   }
 
@@ -205,7 +254,7 @@ int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type lime_type){
   lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, lime_type);
   if(!lrl_record_in)return QIO_ERR_OPEN_READ;
 
-  buf_size = QIO_string_bytes(xml);   /* The size allocated for the string */
+  buf_size = QIO_string_length(xml);   /* The size allocated for the string */
   buf      = QIO_string_ptr(xml);
 
   /* Realloc if necessary */
@@ -213,15 +262,16 @@ int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type lime_type){
     QIO_string_realloc(xml,rec_size+1);  /* The +1 will insure null terminating string */
   }
 
-  buf_size = QIO_string_bytes(xml);   /* Get this again */
+  buf_size = QIO_string_length(xml);   /* Get this again */
   buf      = QIO_string_ptr(xml);
 
   check = LRL_read_bytes(lrl_record_in, buf, rec_size);
   LRL_close_read_record(lrl_record_in);
 
   if(check != rec_size){
-    printf("%s(%d): bytes read %d != expected rec_size %d\n",
-	   myname, in->layout->this_node, check, rec_size);
+    printf("%s(%d): bytes read %lu != expected rec_size %lu\n",
+	   myname, in->layout->this_node, (unsigned long)check, 
+	   (unsigned long)rec_size);
     return QIO_ERR_BAD_READ_BYTES;
   }
 
@@ -231,53 +281,32 @@ int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type lime_type){
 /* Read site list */
 
 int QIO_read_sitelist(QIO_Reader *in, LIME_type lime_type){
-  char *buf;
-  size_t buf_size;
-  LRL_RecordReader *lrl_record_in;
-  size_t check,rec_size;
-  int sites;
   int this_node = in->layout->this_node;
+  int volfmt = in->volfmt;
   char myname[] = "QIO_read_sitelist";
+  int not_ok = 0;
 
-  /* The number of sites expected per file */
-  sites = in->layout->sites_on_node;
-  in->sitelist = (DML_SiteRank *)malloc(sites*sizeof(DML_SiteRank));
-  
-  if(!in->sitelist){
-    printf("%s(%d) can't malloc sitelist\n",myname,in->layout->this_node);
-    return QIO_ERR_ALLOC;
-  }
+  /* SINGLEFILE format has no sitelist */
+  if(volfmt == QIO_SINGLEFILE)return QIO_SUCCESS;
 
-  /* Open record and find record size */
-  lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, lime_type);
-  if(!lrl_record_in)QIO_ERR_OPEN_READ;
+  /* Only I/O nodes read and verify the sitelist */
+  if((volfmt == QIO_MULTIFILE) || 
+     ((volfmt == QIO_PARTFILE) 
+      && (this_node == in->layout->ionode(this_node))))
+    not_ok = DML_read_sitelist(in->sites, 
+			       in->lrl_file_in, in->volfmt, 
+			       in->layout, lime_type);
 
-  /* Is record size correct? */
-  check = sites*sizeof(DML_SiteRank);
-  if(rec_size != check){
-    printf("%s(%d): rec size mismatch: found %d expected %d\n",
-	   myname, this_node, rec_size, check);
-    return QIO_ERR_BAD_READ_BYTES;
-  }
-  
-  buf = (char *)in->sitelist;
-  check = LRL_read_bytes(lrl_record_in, buf, rec_size);
-
-  LRL_close_read_record(lrl_record_in);
-
+  /* Poll all nodes to be sure all sitelists pass */
+  DML_sum_int(&not_ok);
+  if(not_ok)return QIO_ERR_BAD_SITELIST;
+  else {
 #ifdef QIO_DEBUG
-  printf("%s(%d) site record was read %d\n",myname,in->layout->this_node,check);
+    if(this_node == in->layout->master_io_node)
+      printf("%s(%d): sitelist passes test\n",
+	     myname,this_node);fflush(stdout);
 #endif
-
-  if(check != rec_size){
-    printf("%s(%d): bytes read %d != expected rec_size %d\n",
-	   myname, this_node, check, rec_size);
-    return QIO_ERR_BAD_READ_BYTES;
   }
-
-  /* Byte reordering for entire sitelist */
-  if (! DML_big_endian())
-    DML_byterevn(buf, rec_size, sizeof(DML_SiteRank));
 
   return QIO_SUCCESS;
 }
@@ -291,7 +320,9 @@ int QIO_read_field(QIO_Reader *in, int globaldata,
 	   LIME_type lime_type){
 
   LRL_RecordReader *lrl_record_in;
-  size_t rec_size, check, buf_size;
+  DML_SiteList *sites = in->sites;
+  size_t rec_size, buf_size;
+  off_t total_bytes, check;
   size_t volume = in->layout->volume;
   int this_node = in->layout->this_node;
   char myname[] = "QIO_read_field";
@@ -311,18 +342,17 @@ int QIO_read_field(QIO_Reader *in, int globaldata,
     /* Check that the record size matches the expected size of the data */
     if(globaldata == QIO_GLOBAL){
       buf_size = datum_size; /* Global data */
+      total_bytes = buf_size;
     }
-    else{  /* Field data */
-      if(in->volfmt == QIO_SINGLEFILE)
-	buf_size = volume * datum_size;  /* Single file holds all the data */
-      else{ 
-	buf_size = in->layout->sites_on_node * datum_size; /* Multifile */
-      }
+    else { /* Field data */
+      buf_size = sites->number_of_io_sites * datum_size;
+      total_bytes = volume * datum_size;
     }
     
     if (rec_size != buf_size){
-      printf("%s(%d): rec_size mismatch: found %d expected %d\n",
-	     myname, this_node, rec_size, buf_size);
+      printf("%s(%d): rec_size mismatch: found %lu expected %lu\n",
+	     myname, this_node, (unsigned long)rec_size, 
+	     (unsigned long)buf_size);
       return QIO_ERR_BAD_READ_BYTES;
     }
   }
@@ -330,8 +360,8 @@ int QIO_read_field(QIO_Reader *in, int globaldata,
   /* Nodes read and/or collect data.  Compute checksum */
   check = DML_stream_in(lrl_record_in, globaldata, put, 
 			count, datum_size, word_size,
-			arg, in->layout, in->serpar, in->siteorder, 
-			in->sitelist, in->volfmt,  checksum);
+			arg, in->layout, in->sites, in->volfmt,
+			checksum);
 #ifdef QIO_DEBUG
   printf("%s(%d): done with DML_stream_in\n", myname,this_node);
 #endif
@@ -340,9 +370,10 @@ int QIO_read_field(QIO_Reader *in, int globaldata,
   if(in->lrl_file_in){
     LRL_close_read_record(lrl_record_in);
   
-    if(check != rec_size){
-      printf("%s(%d): bytes read %d != expected rec_size %d\n",
-	     myname, in->layout->this_node,check, rec_size);
+    if(check != total_bytes){
+      printf("%s(%d): bytes read %lu != expected rec_size %lu\n",
+	     myname, in->layout->this_node,
+	     (unsigned long)check, (unsigned long)total_bytes);
       return QIO_ERR_BAD_READ_BYTES;
     }
   }

@@ -5,14 +5,15 @@
 #define QIO_MAXVALUESTRING 512
 #define QIO_MAXINTARRAY 8
 #define QIO_STRINGALLOC 1024
-#define QIO_FILEFORMATVERSION "1.0"
+/*#define QIO_FILEFORMATVERSION "1.0"*/
+#define QIO_FILEFORMATVERSION "1.1"
 #define QIO_RECORDFORMATVERSION "1.0"
 #define QIO_CHECKSUMFORMATVERSION "1.0"
 #define QIO_QUESTXML "?xml"
 #define QIO_XMLINFO "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 
 #include <qio_string.h>
-#include <type32.h>
+#include <inttypes.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -29,7 +30,7 @@ typedef struct {
 
 typedef struct {
   char tag[QIO_MAXTAG];
-  u_int32 value;     /* Must be 32-bit type */
+  uint32_t value;     /* Must be 32-bit type */
   short occur;
 } QIO_TagHex32Value;
 
@@ -61,7 +62,7 @@ typedef struct {
 } QIO_RecordInfoWrapper;
 
 #define QIO_RECORD_INFO_WRAPPER {\
-  {"scidacRecord",  0 , 0}       \
+  {"scidacRecord", "" , 0}       \
 }
 
 
@@ -120,7 +121,7 @@ typedef struct {
 } QIO_FileInfoWrapper;
 
 #define QIO_FILE_INFO_WRAPPER {\
-  {"scidacFile",  0 , 0}       \
+  {"scidacFile", "" , 0}       \
 }
 
 
@@ -132,17 +133,35 @@ typedef struct {
    version    version      file format version number      1.0
    spacetime  spacetime    dimensions of space plus time   4
    dims       dims         lattice dimensions              20 20 20 64
-   multifile  multifile    number of multifile volumes     1
+   volfmt     volfmt       QIO_SINGLEFILE, QIO_PARTFILE, 
+                           QIO_MULTIFILE                   0
 */
 
 typedef struct {
   QIO_TagCharValue      version;
   QIO_TagIntValue       spacetime;
   QIO_TagIntArrayValue  dims;
-  QIO_TagIntValue       multifile;
+  QIO_TagIntValue       volfmt;
 } QIO_FileInfo;
 
 #define QIO_FILE_INFO_TEMPLATE  {\
+  {"version",   "", 0},       \
+  {"spacetime", 0,  0},       \
+  {"dims",      {0}, 1, 0},   \
+  {"volfmt",  0 , 0}       \
+}
+
+/* Obsolete version 1.0 format */
+
+typedef struct {
+  QIO_TagCharValue      version;
+  QIO_TagIntValue       spacetime;
+  QIO_TagIntArrayValue  dims;
+  QIO_TagIntValue       multifile;
+} QIO_FileInfo_v1p0;
+
+
+#define QIO_FILE_INFO_TEMPLATE_v1p0  {\
   {"version",   "", 0},       \
   {"spacetime", 0,  0},       \
   {"dims",      {0}, 1, 0},   \
@@ -164,7 +183,7 @@ typedef struct {
 } QIO_ChecksumInfoWrapper;
 
 #define QIO_CHECKSUM_INFO_WRAPPER {\
-  {"scidacChecksum",  0 , 0}       \
+  {"scidacChecksum", "" , 0}       \
 }
 
 
@@ -209,7 +228,7 @@ int QIO_insert_file_tag_string(QIO_FileInfoWrapper *wrapper,
 			       char *fileinfo_tags);
 int QIO_insert_spacetime_dims(QIO_FileInfo *file_info, 
 			      int spacetime, int *dims);
-int QIO_insert_multifile(QIO_FileInfo *file_info, int multifile);
+int QIO_insert_volfmt(QIO_FileInfo *file_info, int volfmt);
 
 int QIO_insert_record_tag_string(QIO_RecordInfoWrapper *wrapper, 
 				 char *recordinfo_tags);
@@ -225,16 +244,17 @@ int QIO_insert_datacount(QIO_RecordInfo *record_info, int datacount);
 int QIO_insert_checksum_tag_string(QIO_ChecksumInfoWrapper *wrapper, 
 				   char *checksuminfo_tags);
 int QIO_insert_suma_sumb(QIO_ChecksumInfo *checksum_info, 
-			 u_int32 suma, u_int32 sumb);
+			 uint32_t suma, uint32_t sumb);
 
 char *QIO_get_file_info_tag_string(QIO_FileInfoWrapper *wrapper);
 char *QIO_get_file_version(QIO_FileInfo *file_info);
 int QIO_get_spacetime(QIO_FileInfo *file_info);
 int *QIO_get_dims(QIO_FileInfo *file_info);
-int QIO_get_multifile(QIO_FileInfo *file_info);
+int QIO_get_volfmt(QIO_FileInfo *file_info);
+int QIO_get_multifile(QIO_FileInfo_v1p0 *file_info);
 int QIO_defined_spacetime(QIO_FileInfo *file_info);
 int QIO_defined_dims(QIO_FileInfo *file_info);
-int QIO_defined_multifile(QIO_FileInfo *file_info);
+int QIO_defined_volfmt(QIO_FileInfo *file_info);
 
 char *QIO_get_record_info_tag_string(QIO_RecordInfoWrapper *wrapper);
 char *QIO_get_record_date(QIO_RecordInfo *record_info);
@@ -247,8 +267,8 @@ int QIO_get_typesize(QIO_RecordInfo *record_info);
 int QIO_get_datacount(QIO_RecordInfo *record_info);
 
 char *QIO_get_checksum_info_tag_string(QIO_ChecksumInfoWrapper *wrapper);
-u_int32 QIO_get_suma(QIO_ChecksumInfo *checksum_info);
-u_int32 QIO_get_sumb(QIO_ChecksumInfo *checksum_info);
+uint32_t QIO_get_suma(QIO_ChecksumInfo *checksum_info);
+uint32_t QIO_get_sumb(QIO_ChecksumInfo *checksum_info);
 int QIO_defined_suma(QIO_ChecksumInfo *checksum_info);
 int QIO_defined_sumb(QIO_ChecksumInfo *checksum_info);
 
@@ -261,7 +281,7 @@ int QIO_defined_spins(QIO_RecordInfo *record_info);
 int QIO_defined_typesize(QIO_RecordInfo *record_info);
 int QIO_defined_datacount(QIO_RecordInfo *record_info);
 
-QIO_FileInfo *QIO_create_file_info(int spacetime, int *dims, int multifile);
+QIO_FileInfo *QIO_create_file_info(int spacetime, int *dims, int volfmt);
 void QIO_destroy_file_info(QIO_FileInfo *file_info);
 int QIO_compare_file_info(QIO_FileInfo *found, QIO_FileInfo *expect,
 			  char *myname, int this_node);
@@ -272,7 +292,7 @@ QIO_RecordInfo *QIO_create_record_info(int globaldata,
 void QIO_destroy_record_info(QIO_RecordInfo *record_info);
 int QIO_compare_record_info(QIO_RecordInfo *r, QIO_RecordInfo *s);
 
-QIO_ChecksumInfo *QIO_create_checksum_info(u_int32 suma, u_int32 sumb);
+QIO_ChecksumInfo *QIO_create_checksum_info(uint32_t suma, uint32_t sumb);
 void QIO_destroy_checksum_info(QIO_ChecksumInfo *checksum_info);
 int QIO_compare_checksum_info(QIO_ChecksumInfo *found, 
 			      QIO_ChecksumInfo *expect, 

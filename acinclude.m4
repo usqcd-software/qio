@@ -44,9 +44,9 @@ dnl - set the parallel compiler environment
     AC_TRY_LINK(
       [#include "qmp.h"],
       [
-        int argc ; char **argv ;
+        int argc ; char **argv ; QMP_thread_level_t provided;
         $4 ;
-        QMP_init_msg_passing(&argc, &argv, QMP_SMP_ONE_ADDRESS) ;
+        QMP_init_msg_passing(&argc, &argv, QMP_THREAD_SINGLE, &provided ) ;
         $5 ;
         QMP_finalize_msg_passing() ;
       ],

@@ -20,6 +20,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   DML_Checksum checksum;
   QIO_ChecksumInfo *checksum_info;
   int this_node = out->layout->this_node;
+  int master_io_node = out->layout->master_io_node;
   int msg_begin, msg_end;
   int status;
   int globaldata = QIO_get_globaldata(record_info);
@@ -30,11 +31,11 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
      private record metadata and the byte count per site to be written */
   if(datum_size != QIO_get_typesize(record_info) * count)
     {
-      printf("%s(%d): bytes per site mismatch %d != %d * %d\n",
-	     myname,this_node,datum_size,
+      printf("%s(%d): bytes per site mismatch %lu != %d * %d\n",
+	     myname,this_node,(unsigned long)datum_size,
 	     QIO_get_typesize(record_info),
 	     QIO_get_datacount(record_info));
-      return QIO_ERR_BAD_SITE_BYTES;
+      return QIO_ERR_BAD_SITELIST;
     }
 
   /* A message consists of the XML, binary payload, and checksums */
@@ -42,12 +43,11 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   msg_begin = 1; msg_end = 0;
 
   /* Create private record XML */
-  xml_record_private = QIO_string_create(0);
+  xml_record_private = QIO_string_create();
   QIO_encode_record_info(xml_record_private, record_info);
-  
+
   /* Master node writes the private record XML record */
-  if (this_node == QIO_MASTER_NODE)
-  {
+  if(this_node == master_io_node){
     if ((status = 
 	 QIO_write_string(out, msg_begin, msg_end, 
 			  xml_record_private, 
@@ -66,8 +66,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   QIO_string_destroy(xml_record_private);
 
   /* Master node writes the user record XML record */
-  if (this_node == QIO_MASTER_NODE)
-  {
+  if(this_node == master_io_node){
     if ((status = 
 	 QIO_write_string(out, msg_begin, msg_end, xml_record, 
 			  (const LIME_type)"scidac-record-xml"))
@@ -84,8 +83,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 
 #ifdef DO_BINX
   /* Master node writes the BinX record */
-  if (this_node == QIO_MASTER_NODE)
-  {
+  if(this_node == master_io_node){
     if ((status = 
 	 QIO_write_string(out, msg_begin, msg_end, BinX, 
 			  (const LIME_type)"scidac-binx-xml"))
@@ -101,7 +99,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 #endif
   
   /* Next one is last record in message for all but master node */
-  if (this_node != QIO_MASTER_NODE)msg_end = 1;
+  if (this_node != master_io_node)msg_end = 1;
   if((status = 
       QIO_write_field(out, msg_begin, msg_end, xml_record, globaldata,
 		      get, count, datum_size, word_size, arg, &checksum,
@@ -115,12 +113,11 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 #endif
 
   /* Master node encodes and writes the checksum */
-  if (this_node == QIO_MASTER_NODE)
-  {
+  if(this_node == master_io_node){
     checksum_info = QIO_create_checksum_info(checksum.suma,checksum.sumb);
-    xml_checksum = QIO_string_create(30);
+    xml_checksum = QIO_string_create();
     QIO_encode_checksum_info(xml_checksum, checksum_info);
-
+    
     msg_end = 1;
     if ((status = 
 	 QIO_write_string(out, msg_begin, msg_end, xml_checksum,
@@ -130,10 +127,17 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
       return status;
     }
 
-#ifdef QIO_DEBUG
+    printf("%s(%d): Wrote field. datatype %s globaltype %d \n              precision %s colors %d spins %d count %d\n",
+	   myname,this_node,
+	   QIO_get_datatype(record_info),
+	   QIO_get_globaldata(record_info),
+	   QIO_get_precision(record_info),
+	   QIO_get_colors(record_info),
+	   QIO_get_spins(record_info),
+	   QIO_get_datacount(record_info));
+    
     printf("%s(%d): checksum string = %s\n",
 	   myname,this_node,QIO_string_ptr(xml_checksum));
-#endif
     QIO_string_destroy(xml_checksum);
   }
 

@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 0.9.5, edwards@jlab.org)
+AC_INIT(qio, 1.0.beta, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
@@ -121,6 +121,11 @@ case ${LOCAL_PARALLEL_ARCH} in
     ;;
 esac
 
+AC_SUBST(QDP_CFLAGS)
+AC_SUBST(QDP_LDFLAGS)
+AC_SUBST(QLA_CFLAGS)
+AC_SUBST(QLA_LDFLAGS)
+
 dnl verify we can compile and link against QMP, if needed
 PAC_QMP_LINK_CC_FUNC(
   [${QMP_CFLAGS}],
@@ -210,6 +215,7 @@ AC_CONFIG_SUBDIRS(other_libs/c-lime)
 
 # Configure makefiles
 AC_CONFIG_FILES([Makefile
+		 examples/Makefile
                  include/Makefile
                  lib/Makefile
                  other_libs/Makefile

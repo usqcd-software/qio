@@ -6,26 +6,24 @@
 #include <stdarg.h>
 #include <string.h>
 
-#ifndef HAVE_QMP_ROUTE
-
 /* Private implementation of route method */
-QMP_status_t DML_grid_route(void* buffer, QMP_u32_t count,
-			    QMP_u32_t src, QMP_u32_t dest)
+QMP_status_t DML_grid_route(void* buffer, size_t count,
+			    size_t src, size_t dest)
 {
-  QMP_u32_t* l_src_coords;      /* Coordinates of the source */
-  QMP_u32_t* l_dst_coords;      /* Coordinates of the destination */
-  int* l_disp_vec;              /* Displacement vector dst_coords - src_coords */
+  size_t* l_src_coords;      /* Coordinates of the source */
+  size_t* l_dst_coords;      /* Coordinates of the destination */
+  int* l_disp_vec;           /* Displacement vector dst_coords - src_coords */
   
   QMP_msgmem_t sendbufmm, recvbufmm; /* Message memory handles */
 
   void *sendbuf;                   /* These are the actual comms buffers */
   void *recvbuf;                 
 
-  QMP_s32_t i,j;                   /* Loop Counters. Use for directions too */
-  QMP_u32_t me;                    /* My node */
+  int i,j;                   /* Loop Counters. Use for directions too */
+  size_t me;                    /* My node */
 
   int n_hops;                      /* Number of hops */
-  QMP_s32_t  direction_sign;       /* Direction of hops */
+  int  direction_sign;       /* Direction of hops */
 
   QMP_msghandle_t send_handle;     /* A handle for sending */
   QMP_msghandle_t recv_handle;     /* A handle for receiving */
@@ -33,11 +31,11 @@ QMP_status_t DML_grid_route(void* buffer, QMP_u32_t count,
   QMP_status_t err;                /* Error status */
   
   /* The number of dimensions in our "grid" */
-  QMP_u32_t ndim;
+  size_t ndim;
 
-  QMP_u32_t bufsize;
+  size_t bufsize;
 
-  QMP_bool_t log_top_declP;
+  size_t alignment = 8;
 
   /* Check to see if the logical topology is declared or not */
   /*
@@ -58,14 +56,14 @@ QMP_status_t DML_grid_route(void* buffer, QMP_u32_t count,
 
   /* Must free these later I think */
   /* Allocate space for the coordinates */
-  l_src_coords =(QMP_u32_t *)QMP_get_logical_coordinates_from(src);
-  if( l_src_coords == (QMP_u32_t *)NULL ) { 
+  l_src_coords =(size_t *)QMP_get_logical_coordinates_from(src);
+  if( l_src_coords == (size_t *)NULL ) { 
     fprintf(stderr, "QMP_route: QMP_get_logical_coordinates_from failed\n");
     return QMP_NOMEM_ERR;
   }
 
-  l_dst_coords = (QMP_u32_t *)QMP_get_logical_coordinates_from(dest);
-  if( l_dst_coords == (QMP_u32_t *)NULL ) { 
+  l_dst_coords = (size_t *)QMP_get_logical_coordinates_from(dest);
+  if( l_dst_coords == (size_t *)NULL ) { 
     fprintf(stderr, "QMP_route: QMP_get_logical_coordinates_from failed\n");
     return QMP_NOMEM_ERR;
   }
@@ -94,14 +92,14 @@ QMP_status_t DML_grid_route(void* buffer, QMP_u32_t count,
     bufsize += (8 - (count % 8));
   }
 
-  /* Will have to free these with QMP_free_aligned_memory */
-  sendbuf = QMP_allocate_aligned_memory(bufsize);
+  /* Will have to free these with QMP_free_memory */
+  sendbuf = QMP_allocate_aligned_memory(bufsize,alignment,0);
   if( sendbuf == NULL ) { 
     fprintf(stderr, "Unable to allocate sendbuf in QMP_route\n");
     return QMP_NOMEM_ERR;
   }
 
-  recvbuf = QMP_allocate_aligned_memory(bufsize);
+  recvbuf = QMP_allocate_aligned_memory(bufsize,alignment,0);
   if( recvbuf == NULL ) { 
     fprintf(stderr ,"Unable to allocate recvbuf in QMP_route\n");
     return QMP_NOMEM_ERR;
@@ -229,24 +227,11 @@ QMP_status_t DML_grid_route(void* buffer, QMP_u32_t count,
   /* We can now free a whole  bunch of stuff */
   QMP_free_msgmem(sendbufmm);
   QMP_free_msgmem(recvbufmm);
-  QMP_free_aligned_memory(sendbuf);
-  QMP_free_aligned_memory(recvbuf);
+  QMP_free_memory(sendbuf);
+  QMP_free_memory(recvbuf);
 
   /* Alloced with malloc */
   free(l_disp_vec);
 
   return(QMP_SUCCESS);
 }
-
-#else
-
-/* #warning "Using native QMP_route since it is available" */
-
-/* Use native version of QMP_route since it is available */
-QMP_status_t DML_grid_route(void* buffer, QMP_u32_t count,
-			    QMP_u32_t src, QMP_u32_t dest)
-{
-  return QMP_route(buffer, count, src, dest);
-}
-
-#endif

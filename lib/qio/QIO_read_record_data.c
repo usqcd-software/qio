@@ -21,15 +21,13 @@ int QIO_read_record_data(QIO_Reader *in,
 
 
   char myname[] = "QIO_read_record_data";
-  QIO_String *xml_record_private,*xml_checksum;
+  QIO_String *xml_checksum;
   DML_Checksum checksum;
   QIO_ChecksumInfo *checksum_info_expect, *checksum_info_found;
-  size_t check;
   int count = QIO_get_datacount(&(in->record_info));
-  int datum_size_info;
+  size_t datum_size_info;
   int this_node = in->layout->this_node;
   int status;
-  size_t buf_size = datum_size * in->layout->volume;
   int globaldata = QIO_get_globaldata(&(in->record_info));
   LIME_type lime_type=NULL;
 
@@ -40,22 +38,32 @@ int QIO_read_record_data(QIO_Reader *in,
     return QIO_ERR_INFO_MISSED;
   }
 
-  /* Require consistency between the byte count specified in the
-     private record metadata and the byte count to be read 
+  /* Require consistency between the byte count obtained from the
+     private record metadata and the datum_size and count parameters
      (per site for field data or total for global data) */
   if(datum_size != 
      QIO_get_typesize(&(in->record_info)) * count){
-    printf("%s(%d): byte count mismatch %d != %d * %d\n",
-	   myname,this_node,datum_size,
-	   QIO_get_typesize(&(in->record_info)), count);
-    return QIO_ERR_BAD_SITE_BYTES;
+    if(this_node == in->layout->master_io_node){
+      printf("%s(%d): requested byte count %lu disagrees with the record %d * %d\n",
+	     myname,this_node,(unsigned long)datum_size,
+	     QIO_get_typesize(&(in->record_info)), count);
+      printf("%s(%d): Record header says datatype %s globaltype %d \n                         precision %s colors %d spins %d count %d\n",
+	     myname,this_node,
+	     QIO_get_datatype(&(in->record_info)),
+	     QIO_get_globaldata(&(in->record_info)),
+	     QIO_get_precision(&(in->record_info)),
+	     QIO_get_colors(&(in->record_info)),
+	     QIO_get_spins(&(in->record_info)),
+	     QIO_get_datacount(&(in->record_info)));
+    }
+    return QIO_ERR_BAD_SITELIST;
   }
 
 #ifdef DO_BINX
   /* Master node reads the BinX record. This may be dropped. */
   /* We assume the BinX_record was created by the caller */
 
-  if(this_node == QIO_MASTER_NODE){
+  if(this_node == in->layout->master_io_node){
     if((status=QIO_read_string(in, BinX, lime_type))!=QIO_SUCCESS){
       printf("%s(%d): Bad BinX record\n",myname,this_node);
       return status;
@@ -69,9 +77,11 @@ int QIO_read_record_data(QIO_Reader *in,
   /* Verify byte count per site (for field) or total (for global) */
   datum_size_info = QIO_get_typesize(&(in->record_info)) * count;
   if(datum_size != datum_size_info){
-    printf("%s(%d): byte count mismatch request %d != actual %d\n",
-	   myname, this_node, datum_size, datum_size_info);
-    return QIO_ERR_BAD_SITE_BYTES;
+    printf("%s(%d): byte count mismatch request %lu != actual %lu\n",
+	   myname, this_node, (unsigned long)datum_size, 
+	   (unsigned long)datum_size_info);
+
+    return QIO_ERR_BAD_SITELIST;
   }
 
   /* Nodes read the field */
@@ -87,9 +97,11 @@ int QIO_read_record_data(QIO_Reader *in,
 
   /* Master node reads the checksum */
   status = QIO_SUCCESS;  /* Changed if checksum does not match */
-  if(this_node == QIO_MASTER_NODE){
-    xml_checksum = QIO_string_create(QIO_STRINGALLOC);
-    if((status=QIO_read_string(in, xml_checksum, lime_type))!=QIO_SUCCESS){
+  if(this_node == in->layout->master_io_node){
+    xml_checksum = QIO_string_create();
+    QIO_string_realloc(xml_checksum,QIO_STRINGALLOC);
+    if((status=QIO_read_string(in, xml_checksum, lime_type))
+       !=QIO_SUCCESS){
       printf("%s(%d): Error reading checksum\n",myname,this_node);
       return status;
     }
@@ -106,6 +118,15 @@ int QIO_read_record_data(QIO_Reader *in,
     }
     QIO_string_destroy(xml_checksum);
     
+    printf("%s(%d): Read field. datatype %s globaltype %d \n                         precision %s colors %d spins %d count %d\n",
+	   myname,this_node,
+	   QIO_get_datatype(&(in->record_info)),
+	   QIO_get_globaldata(&(in->record_info)),
+	   QIO_get_precision(&(in->record_info)),
+	   QIO_get_colors(&(in->record_info)),
+	   QIO_get_spins(&(in->record_info)),
+	   QIO_get_datacount(&(in->record_info)));
+
     /* Compare checksums */
     checksum_info_found = QIO_create_checksum_info(checksum.suma, 
 						   checksum.sumb);

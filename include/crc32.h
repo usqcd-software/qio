@@ -23,17 +23,9 @@
 #ifndef CRC32_H
 #define CRC32_H
 
-/*#include "config.h"*/
-#include <limits.h>
+#include <inttypes.h>
 
-/* Avoid wasting space on 8-byte longs. */
-#if UINT_MAX >= 0xffffffff
-typedef unsigned int uLong;
-#elif ULONG_MAX >= 0xffffffff
-typedef unsigned long uLong;
-#else
-#error This compiler is not ANSI-compliant!
-#endif
+typedef uint32_t uLong;            /* At least 32 bits */
 
 #define Z_NULL  0  
 

@@ -20,7 +20,6 @@ LRL_FileReader *LRL_open_read_file(const char *filename)
   if (fr == NULL)
     return NULL;
 
-  /*** Ignore mode for now ***/
   fr->file = fopen(filename,"r");
   if (fr->file == NULL)return NULL;
 
@@ -35,11 +34,10 @@ LRL_FileReader *LRL_open_read_file(const char *filename)
  * Open a file for writing 
  *
  * \param filename   file for writing  ( Read )
- * \param mode       mode of file - not sure what to do with this ( Read )
  *
  * \return null if failure
  */
-LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
+LRL_FileWriter *LRL_open_write_file(const char *filename)
 {
   LRL_FileWriter *fr;
 
@@ -47,16 +45,18 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
   if (fr == NULL)
     return NULL;
 
-  /*** Ignore mode for now ***/
-  /*** (RGE) - what do we do with mode ??? */
-  /*** (CD)  mode = write (from beginning with truncation) or append to end */
   fr->file = fopen(filename,"w");
-  if (fr->file == NULL)
+  if (fr->file == NULL){
+    printf("LRL_open_write_file: failed to open %s for writing\n",
+	   filename);
     return NULL;
+  }
 
   fr->dg = limeCreateWriter(fr->file);
-  if (fr->dg == (LimeWriter *)NULL)
+  if (fr->dg == (LimeWriter *)NULL){
+    printf("LRL_open_write_file: limeCreateWriter failed\n");
     return NULL;
+  }
 
   return fr;
 }
@@ -70,7 +70,8 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
  *
  * \return null if failure
  */
-LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size, 
+LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
+				       size_t *rec_size, 
 				       LIME_type lime_type)
 {
   LRL_RecordReader *rr;
@@ -82,7 +83,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
 
   rr = (LRL_RecordReader *)malloc(sizeof(LRL_RecordReader));
   if (rr == NULL){
-    printf("LRL_open_read_record: Can't malloc reader\n");
+    printf("%s: Can't malloc reader\n",myname);
     return NULL;
   }
   rr->fr = fr;
@@ -90,7 +91,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
   /* Get next record header */
   status = limeReaderNextRecord(rr->fr->dr);
   if (status != LIME_SUCCESS){
-    printf("%s error getting next record header\n",myname);
+    printf("%s lime error %d getting next record header\n",myname,status);
     return NULL;
   }
 
@@ -111,7 +112,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
  *
  * \return null if failure
  */
-LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, int do_write,
+LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, 
 					int msg_begin, int msg_end, 
 					size_t *rec_size, 
 					LIME_type lime_type)
@@ -134,46 +135,17 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, int do_write,
 
   /* Write record */
   h = limeCreateHeader(msg_begin, msg_end, lime_type, *rec_size);
-  status = limeWriteRecordHeader(h, do_write, rr->fr->dg);
+  status = limeWriteRecordHeader(h, rr->fr->dg);
 
   if (status < 0)
   { 
-    fprintf(stderr, "%s: fatal error. status is: %d\n", myname, status);
+    printf( "%s: fatal error. status is: %d\n", myname, status);
     exit(EXIT_FAILURE);
   }
 
   limeDestroyHeader(h);
 
   return rr;
-}
-
-
-/** 
- * Write bytes
- *
- * \param rr         LRL record writer  ( Read )
- * \param buf        buffer for writing ( Read )
- * \param nbytes     number of bytes to write ( Read )
- *
- * \return number of bytes written
- */
-size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, size_t nbytes)
-{
-  int status;
-  size_t nbyt = nbytes;
-
-  if (rr == NULL)
-    return 0;
-
-  status = limeWriteRecordData(buf, &nbyt, rr->fr->dg);
-
-  if( status != LIME_SUCCESS ) 
-  { 
-    fprintf(stderr, "LRL_write_bytes: some error has occurred. status is: %d\n", status);
-    exit(EXIT_FAILURE);
-  }
-
-  return nbyt;
 }
 
 
@@ -186,7 +158,8 @@ size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, size_t nbytes)
  *
  * \return number of bytes read
  */
-size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes)
+size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, 
+		      size_t nbytes)
 {
   int status;
   size_t nbyt = nbytes;
@@ -198,7 +171,7 @@ size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes)
   status = limeReaderReadData((void *)buf, &nbyt, rr->fr->dr);
   if( status != LIME_SUCCESS ) 
   { 
-    fprintf(stderr, "%s: LIME error %d has occurred\n", myname, status);
+    printf( "%s: LIME error %d has occurred\n", myname, status);
     exit(EXIT_FAILURE);
   }
 
@@ -206,24 +179,35 @@ size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes)
 }
 
 
-/* For skipping ahead offset bytes from the current position in the record
-   payload.  We are not allowed to go beyond the end of the
-   payload. */
-
-int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset)
+/** 
+ * Write bytes
+ *
+ * \param rr         LRL record writer  ( Read )
+ * \param buf        buffer for writing ( Read )
+ * \param nbytes     number of bytes to write ( Read )
+ *
+ * \return number of bytes written
+ */
+size_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, 
+		       size_t nbytes)
 {
   int status;
+  size_t nbyt = nbytes;
 
-  if (rr == NULL || rr->fr == NULL)return LRL_ERR_SEEK;
-  status = limeWriterSeek(rr->fr->dg, offset, SEEK_CUR);
+  if (rr == NULL)
+    return 0;
+
+  status = limeWriteRecordData(buf, &nbyt, rr->fr->dg);
 
   if( status != LIME_SUCCESS ) 
   { 
-    fprintf(stderr, "LRL_seek_write_record: LIME error %d\n", status);
-    return LRL_ERR_SEEK;
+    printf( "LRL_write_bytes: some error has occurred. status is: %d\n", status);
+    exit(EXIT_FAILURE);
   }
-  return LRL_SUCCESS;
+
+  return nbyt;
 }
+
 
 /* For skipping ahead offset bytes from the current position in the record
    payload.  We are not allowed to go beyond the end of the
@@ -238,7 +222,34 @@ int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset)
 
   if( status != LIME_SUCCESS ) 
   { 
-    fprintf(stderr, "LRL_seek_read_record: some error has occurred. status is: %d\n", status);
+    printf( "LRL_seek_read_record: some error has occurred. status is: %d\n", status);
+    return LRL_ERR_SEEK;
+  }
+  return LRL_SUCCESS;
+}
+
+/* For skipping ahead offset bytes from the current position in the record
+   payload.  We are not allowed to go beyond the end of the
+   payload. */
+
+int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset)
+{
+  int status;
+
+  if (rr == NULL){
+    printf("LRL_seek_write_record: null record writer\n");
+    return LRL_ERR_SEEK;
+  }
+  if(rr->fr == NULL){
+    printf("LRL_seek_write_record: null file writer\n");
+    return LRL_ERR_SEEK;
+  }
+
+  status = limeWriterSeek(rr->fr->dg, offset, SEEK_CUR);
+
+  if( status != LIME_SUCCESS ) 
+  { 
+    printf("LRL_seek_write_record: LIME error %d\n", status);
     return LRL_ERR_SEEK;
   }
   return LRL_SUCCESS;
@@ -257,11 +268,11 @@ int LRL_next_message(LRL_FileReader *fr)
     msg_begin = limeReaderMBFlag(fr->dr);
     if( status != LIME_SUCCESS ) 
       { 
-	fprintf(stderr, "LRL_next_message: LIME error %d\n", status);
+	printf( "LRL_next_message: LIME error %d\n", status);
 	return LRL_ERR_SKIP;
       }
-    return LRL_SUCCESS;
   }
+  return LRL_SUCCESS;
 }
 
 /* For skipping to the beginning of the next record - DO WE NEED THIS? */
@@ -275,29 +286,12 @@ int LRL_next_record(LRL_FileReader *fr)
 
   if( status != LIME_SUCCESS ) 
   { 
-    fprintf(stderr, "LRL_next_record: LIME error %d\n", status);
+    printf( "LRL_next_record: LIME error %d\n", status);
     return LRL_ERR_SKIP;
   }
   return LRL_SUCCESS;
 }
 
-
-/**
- *
- * \param rr     LRL record writer
- *
- */
-
-int LRL_close_write_record(LRL_RecordWriter *wr)
-{
-  int status;
-
-  if(wr == NULL)return LRL_ERR_CLOSE;
-  status = limeWriterCloseRecord(wr->fr->dg);
-  free(wr);
-  if(status != LIME_SUCCESS)return LRL_ERR_CLOSE;
-  else return LRL_SUCCESS;
-}
 
 /**
  *
@@ -312,6 +306,23 @@ int LRL_close_read_record(LRL_RecordReader *rr)
 
   status = limeReaderCloseRecord(rr->fr->dr);
   free(rr);
+  if(status != LIME_SUCCESS)return LRL_ERR_CLOSE;
+  else return LRL_SUCCESS;
+}
+
+/**
+ *
+ * \param rr     LRL record writer
+ *
+ */
+
+int LRL_close_write_record(LRL_RecordWriter *wr)
+{
+  int status;
+
+  if(wr == NULL)return LRL_ERR_CLOSE;
+  status = limeWriterCloseRecord(wr->fr->dg);
+  free(wr);
   if(status != LIME_SUCCESS)return LRL_ERR_CLOSE;
   else return LRL_SUCCESS;
 }
@@ -338,18 +349,18 @@ int LRL_close_read_file(LRL_FileReader *fr)
 /** 
  * Close a file for writing
  *
- * \param fr   file buffer  ( Modify )
+ * \param fw   file buffer  ( Modify )
  *
  * \return status
  */
-int LRL_close_write_file(LRL_FileWriter *fr)
+int LRL_close_write_file(LRL_FileWriter *fw)
 {
-  if (fr == NULL)
+  if (fw == NULL)
     return LRL_SUCCESS;
 
-  limeDestroyWriter(fr->dg);
-  fclose(fr->file);
-  free(fr);
+  limeDestroyWriter(fw->dg);
+  fclose(fw->file);
+  free(fw);
 
   return LRL_SUCCESS;
 }
