@@ -197,7 +197,7 @@ size_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, size_t nbytes)
   status = limeReaderReadData((void *)buf, &nbyt, rr->fr->dr);
   if( status != LIME_SUCCESS ) 
   { 
-    fprintf(stderr, "%s: LIME error %d has occurred\n", status);
+    fprintf(stderr, "%s: LIME error %d has occurred\n", myname, status);
     exit(EXIT_FAILURE);
   }
 
