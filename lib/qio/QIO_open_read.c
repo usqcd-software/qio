@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #endif
 
-#define DEBUG
+#undef DEBUG
 
 /* Opens a file for reading */
 /* Discovers whether the file is single or multifile format */

@@ -10,7 +10,7 @@
 #include <malloc.h>
 #endif
 
-#define DEBUG
+#undef DEBUG
 
 /* Read user record XML */
 /* Can be called separately from QIO_read for discovering the record

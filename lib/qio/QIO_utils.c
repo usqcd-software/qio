@@ -4,13 +4,15 @@
 #include <lrl.h>
 #include <dml.h>
 #include <xml_string.h>
-#include <string.h>
 #include <stdio.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
 
-#define DEBUG
+#undef DEBUG
 
 /* In case of multifile format we use a common file name stem and add
    a suffix that depends on the node number */
@@ -284,11 +286,12 @@ int QIO_read_field(QIO_Reader *in,
   char myname[] = "QIO_read_field";
 
   /* Open record only if we have a file handle */
-  if(!in->lrl_file_in)
+  if(!in->lrl_file_in) {
 #ifdef DEBUG
     printf("%s(%d): skipping LRL_open_read_record %x\n",
 	   myname,this_node,in->lrl_file_in);
 #endif
+  }
   else{
     lrl_record_in = LRL_open_read_record(in->lrl_file_in, 
 					 &rec_size, lime_type);

@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define DEBUG
+#undef DEBUG
 
 /* Write a lattice field to a record.  Includes XML and checksum */
 /* Return 0 success.  1 failure */

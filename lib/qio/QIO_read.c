@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define DEBUG
+#undef DEBUG
 
 /* Reads a lattice field from a record.  Includes XML and checksum */
 /* Calls QIO_read_record_info and QIO_read_record_data */

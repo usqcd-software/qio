@@ -7,7 +7,7 @@
 #include <qioxml.h>
 #include <stdio.h>
 
-#define DEBUG
+#undef DEBUG
 
 /* Read record data */
 /* Can be called separately from QIO_read, but then QIO_read_record_info
