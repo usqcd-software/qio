@@ -6,8 +6,10 @@
 % Prototype elements
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \newcommand{\allTypes}{{\tt S, I, R, C, V, H, D, M, P}}
+\newcommand{\allQLATypes}{{\tt s, i, r, c, v, h, d, m, p}}
 \newcommand{\itt}{\it T}
-\newcommand{\QMDhandle}{{\tt XML\_String}}
+\newcommand{\itQLAt}{\it t}
+\newcommand{\QMDhandle}{{\tt QDP\_String }}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -26,10 +28,9 @@ Applications Programmer Interface developed under the auspices of the
 U.S. Department of Energy Scientific Discovery through Advanced
 Computing (SciDAC) program.
 
-This interface provides for (1) moving QDP lattice fields to and from
-files, (2) creating and extracting physics metadata for describing
-these fields, and (3) reading and writing files containing metadata.
-[??? QLA fields - CD].
+This interface provides for (1) moving QDP lattice fields, QLA global
+data, and strings to and from files and (2) creating and extracting
+physics metadata for describing these fields.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Overview of File Format}
@@ -106,11 +107,10 @@ The site order of the binary data is lexicographic according to the
 site coordinate $r_i$ with the first coordinate $r_0$ varying most
 rapidly.
 
-We have adopted the DIME standard (a generalization of the MIME
-standard) for packaging the logical records.  File system limitations
-may require splitting a logical single file into multiple physical
-files.  The management of physical files is handled internally and is
-hidden from the applications programmer.
+We use our own ``LIME'' format (Lattice QCD Interchange Message
+Encapsulation) (a simplified version of DIME) for packaging the
+logical records.  The management of physical files is handled
+internally and is hidden from the applications programmer.
 
 \subsection{Multifile format}
 
@@ -122,13 +122,18 @@ the file format in this case is implementation-dependent and not
 standardized.  A specific choice of format is described in the
 Appendix.
 
-\subsection{ASCII Metadata Files}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Data Types Supported}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The API also provides for reading and writing global values in a
-standard metadata format from or to a file or a character string.
-Startup parameters for controlling a simulation could be read in this
-way.  Results of a computation could be written in this way for post
-processing and analysis.
+The API provides for binary file operation for writing and reading
+lattice fields consisting of any of the QDP types, for writing and
+reading global data of any of the QLA types or QDP strings.  The
+multifile format applies only to files containing at least one lattice
+field, but mixing of global and field records is permitted.
+
+The API also provides for ASCII global printf and scanf operations
+involving system standard output and input devices.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Metadata Standard and Manipulation}
@@ -318,7 +323,7 @@ field type.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QDP_write_multi_|\itt\verb|(QDP_Writer *out, |\\
+  Prototype      & \verb|int QDP_write_v|\itt\verb|(QDP_Writer *out, |\\
                  & \QMDhandle \verb|*xml_record, QDP_|{\it Type}\verb| *field, int n);|\\
     \hline
   Purpose        & Writes the array of fields and its metadata as the next \\
@@ -327,7 +332,7 @@ field type.
   \itt     & \allTypes \\
    \hline
   Example  & \verb|QDP_ColorMatrix field[4];| \\
-           & \verb|QDP_write_multi_M(outfile, xml_record_out, field, 4);| \\
+           & \verb|QDP_write_vM(outfile, xml_record_out, field, 4);| \\
    \hline
  \end{tabular}
 \end{flushleft}
@@ -341,7 +346,7 @@ in advance.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|int QDP_read_multi_|\itt\verb|(QDP_Reader *in, |\\
+  Prototype      & \verb|int QDP_read_v|\itt\verb|(QDP_Reader *in, |\\
                  &   \QMDhandle \verb|*xml_record, QDP_|{\it Type}\verb| *field, int n);|\\
     \hline
   Purpose        & Reads the array of fields and its metadata from the next \\
@@ -350,7 +355,7 @@ in advance.
   \itt     & \allTypes \\
    \hline
   Example  & \verb|QDP_ColorMatrix field[4];| \\
-           & \verb|QDP_read_multi_M(infile, xml_record_in, field, 4);| \\
+           & \verb|QDP_read_vM(infile, xml_record_in, field, 4);| \\
    \hline
  \end{tabular}
 \end{flushleft}
@@ -395,71 +400,135 @@ metadata along with the lattice field.
  \end{tabular}
 \end{flushleft}
 %
+\subsection{Writing and reading QLA arrays}
+
+QLA data is single processor data that carries no lattice site index.
+Typically these values result from a global reduction. For example, a
+correlation function might be computed on every time slice of the
+lattice and summed globally over the entire machine.  From the
+standpoint of data parallel I/O operation the data is treated as a
+global quantity with the same name and value on every processor.  When
+it is written to a file, it is assumed that the values are the same on
+each node, so only one node needs to write its value.  When it is read
+from a file, the I/O system does a broadcast to every node, so the
+result of reading is a global value.
+
+An interface is provided for reading and writing arrays of QLA data.
+Single QLA values can be passed as an array of length one.  The naming
+conventions for the routines follow conventions of the QDP API.
+Notice that the encoded QLA data type is lower case and the argument is a
+pointer to a QLA type.
+
+\paragraph{Writing an array of QLA values}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QDP_write_v|\itQLAt\verb|(QDP_Writer *out, |\\
+                 & \QMDhandle \verb|*xml_record, QLA_|{\it Type}\verb| *array, int n);|\\
+    \hline
+  Purpose        & Writes the QLA array and its metadata as the next \\
+                 & record in the specified file. \\
+\hline
+  \itQLAt     & \allQLATypes \\
+   \hline
+  Example  & \verb|QLA_ColorMatrix array[4];| \\
+           & \verb|QDP_write_vm(outfile, xml_record_out, array, 4);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The integer return value is 0 for success and 1 for failure.  It is
+assumed the user has prepared the record metadata and the field data
+in advance.
+
+\paragraph{Reading a QLA array}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QDP_read_v|\itQLAt\verb|(QDP_Reader *in, |\\
+                 &   \QMDhandle \verb|*xml_record, QLA_|{\it Type}\verb| *array, int n);|\\
+    \hline
+  Purpose        & Reads the QLA array and its metadata from the next \\
+                 & record in the specified file. \\
+\hline
+  \itQLAt     & \allQLATypes \\
+   \hline
+  Example  & \verb|QLA_ColorMatrix array[4];| \\
+           & \verb|QDP_read_vm(infile, xml_record_in, array, 4);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The integer return value is 0 for success and 1 for failure.  It is
+assumed the user has prepared space for the record metadata and the
+field data in advance.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{XML String Handling}
+\section{String Handling}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A separate SciDAC package currently under development provides the
-tools for constructing XML documents as ``XML strings''.  For present
-purposes of reading and writing lattice fields, the accompanying
-metadata documents are treated merely as strings.  Until the package
-is ready, a few utilities are provided for constructing the XML string
-type \QMDhandle required by the API\@.
+tools for constructing XML documents.  For I/O they must be converted
+to ``QDP strings''.  A few utilities are provided for manipulating the
+QDP string type \QMDhandle required by the API\@.
 
-\paragraph{Creating an XML String}
+\paragraph{Creating an empty QDP String}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \QMDhandle \verb|*XML_string_create(int length);|\\
+  Prototype      & \QMDhandle \verb|*QDP_string_create(int length);|\\
     \hline
   Purpose        & Creates an empty string of length \verb|length|. \\
    \hline
-  Example        & \verb|XML_string_create(MAX_XML);| \\
+  Example        & \verb|fileinfo = QDP_string_create(MAX);| \\
    \hline
  \end{tabular}
 \end{flushleft}
 %
-\paragraph{Inserting a character string}
+\paragraph{Creating a QDP string from a null-terminated character array}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|void XML_string_set(|\QMDhandle \verb|*xml,| \\
+  Prototype      & \QMDhandle \verb|*QDP_string_set(| \\
                  & \verb| const char *const string);|\\
     \hline
-  Purpose        & Inserts the character string \verb|string|. \\
+  Purpose        & Creates a QDP string containing the null-terminated \\
+                 & character array \verb|string|. \\
    \hline
-  Example        & \verb|XML_string_set(mystring);| \\
-   \hline
- \end{tabular}
-\end{flushleft}
-%
-\paragraph{Copying an XML string}
-
-\begin{flushleft}
-  \begin{tabular}{|l|l|}
-  \hline
-  Prototype      & \verb|void XML_string_copy(|\QMDhandle \verb|*dest, |\QMDhandle \verb|*src);|\\
-    \hline
-  Purpose        & Copies \verb|src| to \verb|dest|. \\
-   \hline
-  Example        & \verb|XML_string_copy(newxml, oldxml);| \\
+  Example        & \verb|QDP_string *fileinfo;| \\
+                 & \verb|fileinfo = QDP_string_set(string);| \\
    \hline
  \end{tabular}
 \end{flushleft}
 %
-\paragraph{Reallocating an XML string}
+\paragraph{Copying a QDP string}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \QMDhandle \verb|*XML_string_realloc(|\QMDhandle \verb| *xml, int length);|\\
+  Prototype      & \QMDhandle \verb|*QDP_string_copy(|\QMDhandle \verb|*dest,| \QMDhandle \verb|*src);|\\
     \hline
-  Purpose        & Copies \verb|src| to \verb|dest|. \\
+  Purpose        & Copies the string. \\
    \hline
-  Example        & \verb|newxml = XML_string_realloc(oldxml,length);| \\
+  Example        & \verb|QDP_string_copy(newxml,oldxml);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+\paragraph{Reallocating a QDP string}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \QMDhandle \verb|*QDP_string_realloc(|\QMDhandle \verb| *xml, int length);|\\
+    \hline
+  Purpose        & Adjusts space allocated for string. \\
+   \hline
+  Example        & \verb|QDP_string_realloc(oldxml, NEWMAX);| \\
    \hline
  \end{tabular}
 \end{flushleft}
@@ -471,11 +540,12 @@ if necessary.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|char *XML_string_bytes(const |\QMDhandle \verb|*const xml);|\\
+  Prototype      & \verb|char *QDP_string_bytes(const |\QMDhandle \verb|*const xml);|\\
     \hline
-  Purpose        & Returns a pointer to the string. \\
+  Purpose        & Returns a pointer to the null-terminated character array \\
+                 & in the string. \\
    \hline
-  Example        & \verb|printf("%s\n", XML_string_bytes(xml));| \\
+  Example        & \verb|printf("%s\n", QDP_string_bytes(xml));| \\
    \hline
  \end{tabular}
 \end{flushleft}
@@ -485,25 +555,25 @@ if necessary.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|size_t XML_string_ptr(const |\QMDhandle \verb|*const xml);|\\
+  Prototype      & \verb|size_t QDP_string_ptr(const |\QMDhandle \verb|*const xml);|\\
     \hline
   Purpose        & Returns the length of the string. \\
    \hline
-  Example        & \verb| length = XML_string_length(xml);| \\
+  Example        & \verb| length = QDP_string_length(xml);| \\
    \hline
  \end{tabular}
 \end{flushleft}
 %
-\paragraph{Destroying an XML string}
+\paragraph{Destroying a QDP string}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|void XML_string_destroy(|\QMDhandle \verb|*xml);|\\
+  Prototype      & \verb|void QDP_string_destroy(|\QMDhandle \verb|*xml);|\\
     \hline
   Purpose        & Frees storage. \\
    \hline
-  Example        & \verb|XML_string_destroy(xml);| \\
+  Example        & \verb|QDP_string_destroy(xml);| \\
    \hline
  \end{tabular}
 \end{flushleft}
@@ -519,7 +589,7 @@ are also needed:
 %
 \begin{verbatim}
   qdpio.h
-  xml_string.h
+  qdp_string.h
 \end{verbatim}
 %
 
@@ -567,8 +637,8 @@ gives the number of sites on the current node, the eighth, the number
 of the present node, and the last, the total number of nodes.
 
 Here is an illustration of how the layout structure is loaded from the
-data in the QDP/C API prior to a \verb|QIO_open_read| or
-\verb|QIO_open_write| call:
+data in our implementation of the QDP/C API prior to a
+\verb|QIO_open_read| or \verb|QIO_open_write| call:
 %
 \begin{verbatim}
 QIO_Layout layout;
@@ -609,7 +679,7 @@ It is assumed that the user has prepared the \verb|layout| argument as described
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|QIO_Reader *QIO_open_read(XML_MetaData *xml_file,,|\\
+  Prototype      & \verb|QIO_Reader *QIO_open_read(\QMDhandle *xml_file,,|\\
                  & \verb|  char *filename, int serpar, QIO_Layout *layout);|\\
   Purpose        & Opens a named file for writing and writes the file metadata. \\
 \hline
@@ -651,7 +721,7 @@ argument as described above.
 \end{flushleft}
 
 
-\paragraph{Write a field}
+\paragraph{Write a field, array of fields, or array of global data}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
@@ -662,7 +732,8 @@ argument as described above.
             & \verb| int datum_size, int word_size, void *arg);| \\
 \hline
   Example  & \verb|QIO_RecordInfo *rec_info;| \\
-           & \verb|rec_info = QIO_create_record_info("QDP_F_Real","F",0,QLA_Ns,size,1);| \\
+           & \verb|rec_info = QIO_create_record_info(QDP_FIELD,"QDP_F_Real","F",|\\
+           & \verb|0,QLA_Ns,size,1);| \\
            & \verb|QIO_write(outfile, rec_info, xml_record, QDP_F_get_R,|\\
            & \verb| sizeof(QLA_Real), sizeof(QLA_Real), (void *)field);|\\
    \hline
@@ -690,12 +761,43 @@ invoked by QIO like this:
 \end{verbatim}
 %
 It is expected to fill the QIO-supplied buffer \verb|buf| with a
-byte-serialized copy of the field datum belonging to \verb|count|
-consecutive sites of QIO's choosing, starting with the storage order
-site index \verb|index|.  The byte ordering through the factory
-functions should be the native order of the architecture.  Any byte
-rearrangement needed to convert to and from standard file order is the
-responsibility of QIO.
+byte-serialized copy of the field datum at site index \verb|index|.
+The parameter \verb|count| specifies the array length of the field
+datum at that site.  The datum size parameter \verb|datum_size| gives
+the total number of bytes to be delivered as the product of the count
+parameter and the byte length of the array element on that site.
+
+It is up to the applications programmer to assure that the data
+base-type (int, float, double) word order produced by the factory
+function follows the SciDAC convention for the specified datatype.
+However byte ordering within a word (big endian or little endian)
+processed by the factory functions should be in the native order of
+the architecture.  Any byte rearrangement needed to convert to and
+from standard file endianness is the responsibility of QIO.  To this
+end the user must specify the base-type word length of the data in
+bytes through the parameter \verb|word_size|.  All numeric SciDAC data
+types are homogeneous in word size, so a single parameter
+suffices.
+
+For example for an array of four single precision color vector fields,
+each consisting of three complex numbers, there are $4 \times 3 \times
+2 = 24$ real values per site, each of them single-precision floating
+point numbers.  The word size is 4 (bytes).  The factory function must
+produce the standard word order: real part of the first color
+component of the first color vector, followed by the imaginary part of
+the same component, followed by the real and then imaginary parts of
+the second color component of the first color vector, etc. The count
+is 4 (color vectors), and the datum size is $4 \times 24 = 96$ (total
+bytes per call).  [The type size of $3 \times 2 \times 4 = 12$ (bytes)
+and the count of 4 (array elements) were specified when creating the
+\verb|QIO_record_info| structure.]
+
+The same factory function type is used for global and field data, even
+though for global data the site \verb|index| parameter has no meaning.
+For field data, QIO calls the factory function once per lattice site.
+For global data, QIO calls only once and expects to take all the data
+in that call.  It is the responsibility of the applications programmer
+to provide the appropriate factory function for each case.
 
 Since the open operation has already registered a \verb|node_number|
 function, QIO knows to ask only for a site on the present node.  The
@@ -703,20 +805,10 @@ factory function is not required to fetch data from a different node.
 
 The seventh argument of \verb|QIO_write| is passed back as the fourth
 argument of the \verb|get| function.  It can be used to identify the
-field.  
+field from which the data is required.  In this way only one factory
+function is needed for each QDP and QLA datatype.
 
-If the write operation involves a single field, e.g. a
-\verb|QDP_ColorVector| field, the datum at a single site would be a
-single color vector.  If the write operation involves an array of
-fields, e.g. the four directional components of a gauge field, the
-datum at a single site would be an array of four color matrices.  For
-possible byte-reversal the datum is viewed as a collection of words,
-all of the same length.  The \verb|word_size| is the number of bytes
-in a single such word.  The serialization must conform to requirements
-of the file layout and the data structure must obey word-size
-uniformity.
-
-\paragraph{Read a field}
+\paragraph{Read a field, array of fields, or array of global data}
 
 \begin{flushleft}
   \begin{tabular}{|l|l|}
@@ -786,15 +878,26 @@ using the same calling procedure.
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|QIO_RecordInfo *QIO_create_record_info(char *datatype,,| \\
-                 & \verb| char *precision, int colors, int spins, int typesize,| \\
+  Prototype      & \verb|QIO_RecordInfo *QIO_create_record_info(int globaltype,| \\
+                 & \verb|char *datatype, char *precision, int colors,| \\
+                 & \verb| int spins, int typesize,| \\
                  & \verb| int datacount);| \\
 \hline
-  Example  & \verb|rec_info = QIO_create_record_info("QDP_F_Real","F",0,0,size,1);|\\
+  Example  & \verb|rec_info = QIO_create_record_info(QDP_FIELD,"QDP_F_Real","F",|\\
+                 & \verb|0,0,size,1);|\\
    \hline
  \end{tabular}
 \end{flushleft}
 %
+The \verb|globaltype| parameter distinguishes between a record
+containing a QDP field and a record containing a QLA array.
+%
+\begin{verbatim}
+  QDP_FIELD, QDP_GLOBAL
+\end{verbatim}
+%
+for a QDP and a QLA record type, respectively.
+
 The \verb|datatype| string is the name of one of the QLA datatypes.
 The \verb|precision| string is one of these:
 %
@@ -865,7 +968,8 @@ The following accessors perform self-evident functions:
 \begin{flushleft}
   \begin{tabular}{|l|l|}
   \hline
-  Prototype      & \verb|char *QIO_get_datatype(QIO_RecordInfo *record_info);| \\
+  Prototype      & \verb|int QIO_get_globaldata(QIO_RecordInfo *record_info);| \\
+                 & \verb|char *QIO_get_datatype(QIO_RecordInfo *record_info);| \\
                  & \verb|char *QIO_get_precision(QIO_RecordInfo *record_info);| \\
                  & \verb|int QIO_get_colors(QIO_RecordInfo *record_info);| \\
                  & \verb|int QIO_get_spins(QIO_RecordInfo *record_info);| \\
