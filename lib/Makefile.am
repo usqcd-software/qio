@@ -1,29 +1,25 @@
 
-INCFLAGS=-I@top_srcdir@/include -I@top_srcdir@/lib/lrl/c-dime/include
+INCFLAGS=-I@top_srcdir@/include -I@top_srcdir@/other_libs/c-dime/include
 
 AM_CFLAGS = $(INCFLAGS) @CFLAGS@
 VPATH = @top_srcdir@/lib
 VPATH += @top_srcdir@/include
-VPATH += @top_srcdir@/lib/qio
-VPATH += @top_srcdir@/lib/dml
-VPATH += @top_srcdir@/lib/lrl
-VPATH += @top_srcdir@/lib/xml
-VPATH += @top_srcdir@/lib/lrl/c-dime/include
+VPATH += @top_srcdir@/other_libs/c-dime/include
 
 HDRS = qio.h dml.h lrl.h xml.h dime.h
 
 lib_LIBRARIES = libqio.a
 
-QIO_SRCS = QIO_close_read.c QIO_close_write.c QIO_open_read.c \
-     QIO_open_write.c QIO_read.c QIO_utils.c QIO_write.c
+QIO_SRCS = qio/QIO_close_read.c qio/QIO_close_write.c qio/QIO_open_read.c \
+     qio/QIO_open_write.c qio/QIO_read.c qio/QIO_utils.c qio/QIO_write.c
 
-DML_GENERIC = DML_get_sitelist.c DML_stream_in.c DML_stream_out.c DML_utils.c
-DML_PARSCALAR = ${OBJECTS} DML_parscalar.c
-DML_SCALAR = ${OBJECTS} DML_scalar.c
+DML_GENERIC = dml/DML_get_sitelist.c dml/DML_stream_in.c dml/DML_stream_out.c dml/DML_utils.c
+DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c
+DML_SCALAR = ${OBJECTS} dml/DML_scalar.c
 
-LRL_SRCS = LRL_dummy.c
+LRL_SRCS = lrl/LRL_dummy.c
 
-XML_SRCS = XML_dummy.c
+XML_SRCS = xml/XML_dummy.c
 
 GENERIC_SRCS = $(QIO_SRCS) $(DML_GENERIC) $(LRL_SRCS) $(XML_SRCS)
 
