@@ -77,6 +77,11 @@ int DML_parallel_in(LRL_RecordReader *lrl_record_in, int siteorder,
 		    size_t size, void *arg, DML_Layout *layout,
 		    DML_Checksum *checksum);
 
+int DML_multidump_out(LRL_RecordWriter *lrl_record_out, 
+		      void (*get)(char *buf, const int coords[], void *arg),
+		      size_t size, void *arg, DML_Layout *layout, 
+		      DML_Checksum *checksum);
+
 #ifdef __cplusplus
 }
 #endif

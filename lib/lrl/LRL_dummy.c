@@ -4,6 +4,8 @@
 
 #include <lrl.h>
 #include <stdio.h>
+#include <malloc.h>
+#include <stdlib.h>
 
 LRL_FileReader *LRL_open_read_file(const char *filename){
   LRL_FileReader *fr;

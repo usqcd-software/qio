@@ -1,5 +1,6 @@
 /* QIO_close_write.c */
 
+#include <stdlib.h>
 #include <qio.h>
 #include <lrl.h>
 

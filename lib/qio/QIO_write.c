@@ -5,6 +5,7 @@
 #include <dml.h>
 #include <xml.h>
 #include <stdio.h>
+#include <string.h>
 
 /* Dummy for now */
 char record_private_output[] = "XML with record number";
@@ -21,6 +22,8 @@ int QIO_write(QIO_Writer *out, XML_MetaData *xml_record,
   /* Dummy BinX string */
   char BinX[MAX_BINX];
 
+  printf("In QIO_write:\n");
+
   /* Create private record XML */
   /* This record should include the site order flag and a
      site list if needed */
@@ -35,8 +38,10 @@ int QIO_write(QIO_Writer *out, XML_MetaData *xml_record,
   XML_set(xml_record_private, record_private_output);
   
   /* Master node writes the private record XML record */
-  if(this_node == QIO_MASTER_NODE){
-    if(QIO_write_XML(out, xml_record_private))return 1;
+  if (this_node == QIO_MASTER_NODE)
+  {
+    if (QIO_write_XML(out, xml_record_private))
+      return 1;
     printf("QIO_write: private record XML = %s\n",
 	   XML_string(xml_record_private));
   }
@@ -45,8 +50,10 @@ int QIO_write(QIO_Writer *out, XML_MetaData *xml_record,
   XML_destroy(xml_record_private);
 
   /* Master node writes the user file XML record */
-  if(this_node == QIO_MASTER_NODE){
-    if(QIO_write_XML(out, xml_record))return 1;
+  if (this_node == QIO_MASTER_NODE)
+  {
+    if (QIO_write_XML(out, xml_record))
+      return 1;
     printf("QIO_write: user record XML = %s\n",
 	   XML_string(xml_record));
   }
@@ -55,8 +62,10 @@ int QIO_write(QIO_Writer *out, XML_MetaData *xml_record,
   /* This is a dummy for now */
   sprintf(BinX,"BinX %d bytes per datum",datum_size);
 
-  if(this_node == QIO_MASTER_NODE){
-    if(QIO_write_string(out, BinX, strlen(BinX)))return 1;
+  if (this_node == QIO_MASTER_NODE)
+  {
+    if (QIO_write_string(out, BinX, strlen(BinX))) 
+      return 1;
     printf("QIO_write: BinX = %s\n",BinX);
   }
   
@@ -67,12 +76,14 @@ int QIO_write(QIO_Writer *out, XML_MetaData *xml_record,
   printf("QIO_write(%d): wrote field\n",this_node);fflush(stdout);
 
   /* Master node writes the checksum */
-  if(this_node == QIO_MASTER_NODE){
+  if(this_node == QIO_MASTER_NODE)
+  {
     /* Insert the checksum into XML */
     /*** OMITTED FOR NOW ***/
     xml_checksum = XML_create(MAX_XML);
     XML_set(xml_checksum, "Checksum");
-    if(QIO_write_XML(out, xml_checksum))return 1;
+    if (QIO_write_XML(out, xml_checksum))
+      return 1;
     printf("QIO_write: checksum XML = %s\n",
 	   XML_string(xml_checksum));
   }

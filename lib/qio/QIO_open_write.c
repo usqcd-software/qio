@@ -5,6 +5,7 @@
 #include <dml.h>
 #include <xml.h>
 #include <stdio.h>
+#include <malloc.h>
 
 /* Dummy for now */
 char file_private_output[] = "XML with QIO version no and lattice size";

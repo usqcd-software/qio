@@ -4,6 +4,7 @@
 #include <lrl.h>
 #include <dml.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int DML_send_bytes(char *buf, int size, int tonode){
   printf("ERROR: called DML_send_bytes() in DML_vanilla.c\n");

@@ -3,6 +3,7 @@
 #include <xml.h>
 #include <string.h>
 #include <stdio.h>
+#include <malloc.h>
 
 /* Size of string in XML */
 size_t XML_bytes(XML_MetaData *xml){

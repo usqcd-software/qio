@@ -5,6 +5,7 @@
 #include <dml.h>
 #include <xml.h>
 #include <stdio.h>
+#include <string.h>
 
 int QIO_read(QIO_Reader *in, XML_MetaData *xml_record, 
 	     void (*put)(char *buf, const int coords[], void *arg),

@@ -4,17 +4,20 @@
 #include <lrl.h>
 #include <dml.h>
 #include <stdio.h>
+#include <malloc.h>
 
 /* Iterators for lexicographic order */
 
-void DML_lex_init(int *dim, int coords[], int latdim, int latsize[]){
+void DML_lex_init(int *dim, int coords[], int latdim, int latsize[])
+{
   int d;
   for(d = 0; d < latdim; d++)coords[d] = 0;
   *dim = 0;
 }
 
 /* Recursively update the coordinate counter */
-int DML_lex_next(int *dim, int coords[], int latdim, int latsize[]){
+int DML_lex_next(int *dim, int coords[], int latdim, int latsize[])
+{
   if(++coords[*dim] < latsize[*dim]){
     *dim = 0;
     return 1;
@@ -28,9 +31,10 @@ int DML_lex_next(int *dim, int coords[], int latdim, int latsize[]){
 
 /* Convert linear index to lexicographic coordinate */
 
-void DML_lex_coords(int coords[], int latdim, int latsize[], int rcv_coords){
+void DML_lex_coords(int coords[], int latdim, int latsize[], int rcv_coords)
+{
   int dim;
-  register index = rcv_coords;
+  int index = rcv_coords;
 
   for(dim = 0; dim < latdim; dim++){
     coords[dim] = index % latsize[dim];
@@ -43,8 +47,8 @@ void DML_lex_coords(int coords[], int latdim, int latsize[], int rcv_coords){
 int DML_serial_out(LRL_RecordWriter *lrl_record_out, 
 		   void (*get)(char *buf, const int coords[], void *arg),
 		   size_t size, void *arg, DML_Layout *layout,
-		   DML_Checksum *checksum){
-
+		   DML_Checksum *checksum)
+{
   char *buf;
   int current_node, new_node;
   int *coords; int dim;
@@ -55,6 +59,8 @@ int DML_serial_out(LRL_RecordWriter *lrl_record_out,
   /* Allocate buffer for datum */
   buf = (char *)malloc(size);
   if(buf == NULL)return 1;
+
+  printf("DML_serial_out\n");
 
   /* Initialize checksum */
   /*** OMITTED FOR NOW ****/

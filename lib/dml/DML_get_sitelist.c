@@ -3,17 +3,21 @@
 /* Extract all the data from the lattice field and send it to the LRL
    record writer */
 
+#include <stdlib.h>
 #include <lrl.h>
 #include <dml.h>
 
 int DML_list_output_sites(int sitelist[],
 			  int serpar, int siteorder, int volfmt, 
-			  int latdim, int latsize[]){
-
+			  int latdim, int latsize[])
+{
+#if 1
+  fprintf(stderr,"DML_list_output_sites: not implemented");
+  exit(1);
+#else
   /* Multidump format. Site order native.  Need local list. */
   if(volfmt == DML_MULTIFILE){
-    return 
-      DML_multidump_list(sitelist, latdim, latsize);
+    return DML_multidump_list(sitelist, latdim, latsize);
   }
 
   /* Serial write.  Site order is always lexicographic. No site list needed */
@@ -31,4 +35,5 @@ int DML_list_output_sites(int sitelist[],
     return
       DML_checkpoint_list(sitelist, latdim, latsize);
   }
+#endif
 }
