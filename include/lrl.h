@@ -4,6 +4,11 @@
 #include <stdio.h>
 #include "dime.h"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /* Dummy DIME tag for now */
 typedef char* DIME_tag;
 
@@ -40,5 +45,10 @@ int LRL_close_read_record(LRL_RecordReader *rr);
 int LRL_close_write_record(LRL_RecordWriter *rr);
 int LRL_close_read_file(LRL_FileReader *fr);
 int LRL_close_write_file(LRL_FileWriter *fr);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LRL_H */

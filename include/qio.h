@@ -22,9 +22,14 @@ enum {QIO_CREATE, QIO_TRUNCATE, QIO_APPEND};
 #define PARALLEL_READ 1
 #define PARALLEL_WRITE 0
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /* For collecting and passing layout information */
 typedef struct {
-  int (*node_number)(int coords[]);
+  int (*node_number)(const int coords[]);
   int *latsize;
   int latdim;
   size_t volume;
@@ -49,10 +54,10 @@ typedef struct {
   size_t *sitelist;
 } QIO_Reader;
 
-QIO_Writer *QIO_open_write(XML_MetaData *xml_file, char *filename, 
+QIO_Writer *QIO_open_write(XML_MetaData *xml_file, const char *filename, 
 			   int volfmt, int siteorder, int mode,
 			   QIO_Layout *layout);
-QIO_Reader *QIO_open_read(XML_MetaData *xml_file, char *filename, int volfmt,
+QIO_Reader *QIO_open_read(XML_MetaData *xml_file, const char *filename, int volfmt,
 			  QIO_Layout *layout);
 
 int QIO_close_write(QIO_Writer *out);
@@ -78,5 +83,9 @@ size_t QIO_read_field(QIO_Reader *in, int volfmt, XML_MetaData *xml_record,
 		   void (*put)(char *buf, int coords[], void *arg),
 		   int datum_size, void *arg, 
 		   DML_Checksum *checksum);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* QIO_H */

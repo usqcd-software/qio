@@ -9,12 +9,17 @@ enum {DML_SERIAL, DML_PARALLEL};
 enum {DML_LEX_ORDER, DML_NAT_ORDER};
 enum {DML_SINGLEFILE, DML_MULTIFILE};
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 typedef char DML_Checksum;  /* Dummy for now */
 
 /* For collecting and passing layout information */
 /* See qio.h for QIO_Layout */
 typedef struct {
-  int (*node_number)(int coords[]);
+  int (*node_number)(const int coords[]);
   int *latsize;
   int latdim;
   size_t volume;
@@ -71,4 +76,9 @@ int DML_parallel_in(LRL_RecordReader *lrl_record_in, int siteorder,
 		    void (*put)(char *buf, int coords[], void *arg),
 		    size_t size, void *arg, DML_Layout *layout,
 		    DML_Checksum *checksum);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* DML_H */
