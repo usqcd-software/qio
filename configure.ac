@@ -122,7 +122,8 @@ AM_CONDITIONAL(ARCH_PARSCALAR, [test "X${PARALLEL_ARCH}X" = "XparscalarX"])
 AC_CONFIG_SUBDIRS(lib/lrl/c-dime)
 
 # Configure makefiles
-AC_CONFIG_FILES([lib/Makefile
+AC_CONFIG_FILES([Makefile
+                 lib/Makefile
                  include/Makefile
                  lib/lrl/c-dime/Makefile])
 AC_OUTPUT
