@@ -4,7 +4,6 @@
 #include <lrl.h>
 #include <inttypes.h>
 #include <stdlib.h>
-#include <qio_config.h>
 
 /* File fragmentation */
 #define DML_SINGLEFILE 0
