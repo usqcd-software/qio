@@ -1,35 +1,11 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 1.0.beta2, detar@physics.utah.edu)
+AC_INIT(qio, 1.0.beta3, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
 AC_CONFIG_HEADER([include/qio_config.h])
 
 AM_INIT_AUTOMAKE
-
-dnl
-dnl
-dnl --with-xxxx and --enable-xxxx switches 
-dnl
-AC_ARG_ENABLE(qio, 
-  AC_HELP_STRING([--enable-qio],
-		 [ Enable QIO Subsystem (default on)]),
-  [ QIO_ENABLED=$enableval ],
-  [ QIO_ENABLED="yes"] 
-)
-
-if test "X${QIO_ENABLED}X" = "XyesX" ; then
-  AC_MSG_NOTICE([ Building QIO ])
-else 
-  if test "X${QIO_ENABLED}X" = "XnoX" ; then
-     AC_MSG_NOTICE([ NOT Building full QIO - Only LIME ])
-  else
-     AC_MSG_ERROR([ Error: Incorrect value for QIO_ENABLED: ${QIO_ENABLED}. Check --enable-qio ])
-  fi
-fi
-
-AM_CONDITIONAL(BUILD_QIO, [ test "X${QIO_ENABLED}X" = "XyesX" ])
-
 
 dnl
 dnl --enable-parallel-io
@@ -39,6 +15,15 @@ AC_ARG_ENABLE(parallel-io,
     [Only supported for parallel file systems with a parallel fseek]),
   [ac_parallel_io=1],
   [ac_parallel_io=0]
+)
+
+
+dnl --enable-parallel-arch argument
+AC_ARG_ENABLE(parallel-arch,
+  AC_HELP_STRING([--enable-parallel-arch=<arch>],
+    [Build QDP++ for parallel architecture <arch>]),
+  AC_SUBST(PARALLEL_ARCH, [$enableval]),
+  AC_SUBST(PARALLEL_ARCH, [parscalar])
 )
 
 
@@ -55,33 +40,69 @@ AC_ARG_WITH(qmp,
 
 
 dnl
-dnl Now check the given QMP
+dnl QIO only supports scalar and parscalar (basically, not-parallel and parallel)
+dnl for other cases, map it to one of these.
 dnl
-AC_MSG_NOTICE([ Checking QMP ])
+case ${PARALLEL_ARCH} in
+  scalarvec)
+    AC_MSG_NOTICE([Mapping architecture ${PARALLEL_ARCH} to  scalar])
+    AC_SUBST(LOCAL_PARALLEL_ARCH, [scalar])
+    ;;
+  parscalarvec)
+    AC_MSG_NOTICE([Mapping architecture ${PARALLEL_ARCH} to  parscalar])
+    AC_SUBST(LOCAL_PARALLEL_ARCH, [parscalar])
+    ;;
+  scalar)
+    AC_SUBST(LOCAL_PARALLEL_ARCH, [scalar])
+    ;;
+  parscalar)
+    AC_SUBST(LOCAL_PARALLEL_ARCH, [parscalar])
+    ;;
+  *)
+    AC_MSG_ERROR([ Unknown value for --enable-parallel-arch ])
+    ;;
+esac
 
-if test "X${QMP_HOME}X" = "XX" ; then
-  AC_PATH_PROG([QMP_CONFIG], [qmp-config], [])
-else
-  AC_PATH_PROG([QMP_CONFIG], [qmp-config], [], [${QMP_HOME}/bin ${PATH}])
-fi
+dnl Now check appropriate cases
+case ${LOCAL_PARALLEL_ARCH} in
+  scalar)
+    AC_SUBST(ARCHDEF_SUBSTITUTION, ARCH_SCALAR)
+    AC_MSG_NOTICE([ Scalar Build! Not checking for QMP ])
+    AC_SUBST(QMP_CFLAGS)
+    AC_SUBST(QMP_LDFLAGS)
+    AC_SUBST(QMP_LIBS)
+    ;;
+  parscalar)
+    AC_SUBST(ARCHDEF_SUBSTITUTION, ARCH_PARSCALAR)
+    AC_MSG_NOTICE([ Parscalar build! Checking for QMP ])
 
-if test "X${QMP_CONFIG}X" != "XX" ; then
-  AC_MSG_NOTICE([Found QMP configuration program ${QMP_CONFIG}])
-  AC_SUBST(QMP_CFLAGS,  "`${QMP_CONFIG} --cflags`")
-  AC_MSG_NOTICE([QMP compile flags: ${QMP_CFLAGS}])
-  AC_SUBST(QMP_LDFLAGS, "`${QMP_CONFIG} --ldflags`")
-  AC_MSG_NOTICE([QMP linking flags: ${QMP_LDFLAGS}])
-  AC_SUBST(QMP_LIBS,    "`${QMP_CONFIG} --libs`")
-  AC_MSG_NOTICE([QMP libraries flags: ${QMP_LIBS}])
-else 
-  AC_MSG_WARN([QMP configuration program qmp-config not found.])
-  AC_MSG_WARN([Set environment variables QMP_CFLAGS QMP_LDFAGS QMP_LIBS
-    before configure])
-fi
+    if test "X${QMP_HOME}X" = "XX" ; then
+      AC_PATH_PROG([QMP_CONFIG], [qmp-config], [])
+    else
+      AC_PATH_PROG([QMP_CONFIG], [qmp-config], [], [${QMP_HOME}/bin ${PATH}])
+    fi
 
+    if test "X${QMP_CONFIG}X" != "XX" ; then
+      AC_MSG_NOTICE([Found QMP configuration program ${QMP_CONFIG}])
+      AC_SUBST(QMP_CFLAGS,  "`${QMP_CONFIG} --cflags`")
+      AC_MSG_NOTICE([QMP compile flags: ${QMP_CFLAGS}])
+      AC_SUBST(QMP_LDFLAGS, "`${QMP_CONFIG} --ldflags`")
+      AC_MSG_NOTICE([QMP linking flags: ${QMP_LDFLAGS}])
+      AC_SUBST(QMP_LIBS,    "`${QMP_CONFIG} --libs`")
+      AC_MSG_NOTICE([QMP libraries flags: ${QMP_LIBS}])
+    else 
+      AC_MSG_WARN([QMP configuration program qmp-config not found.])
+      AC_MSG_WARN([Set environment variables QMP_CFLAGS QMP_LDFAGS QMP_LIBS
+        before configure])
+    fi
+    ;;
+  *)
+    AC_MSG_ERROR([ Unknown value for --enable-parallel-arch ])
+    ;;
+esac
 
 dnl
-dnl verify we can compile and link against QMP
+dnl verify we can compile and link against QMP, if needed
 dnl
 PAC_QMP_LINK_CC_FUNC(
   [${QMP_CFLAGS}],
@@ -93,14 +114,21 @@ PAC_QMP_LINK_CC_FUNC(
   [qmp_link_ok=no]
 )
 
-AC_MSG_CHECKING([if we can compile/link a simple QMP C program])
-if test "X${qmp_link_ok}X" = "XyesX" ; then
-  AC_MSG_RESULT(yes)
-else
-  AC_MSG_RESULT(no)
-  AC_MSG_ERROR([Cannot compile/link a basic QMP program!
-    Check QMP_CFLAGS, QMP_LDFLAGS, QMP_LIBS.])
-fi
+AC_MSG_CHECKING([if we can compile/link of a simple QMP C program])
+case ${LOCAL_PARALLEL_ARCH} in
+  parscalar)
+    if test "X${qmp_link_ok}X" = "XyesX" ; then
+      AC_MSG_RESULT(yes)
+    else
+      AC_MSG_RESULT(no)
+      AC_MSG_ERROR([Cannot compile/link a basic QMP C++ program!
+        Check QMP_CFLAGS, QMP_LDFLAGS, QMP_LIBS.])
+    fi
+    ;;
+  *)
+    AC_MSG_RESULT(ignored)
+    ;;
+esac
 
 
 AC_SUBST(QDP_CFLAGS)
@@ -131,6 +159,23 @@ AC_CHECK_HEADERS([malloc.h])
 ## AC_FUNC_MALLOC
 
 
+# Check for QMP route on parscalar
+if test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX" ; then 
+   QMP_BKUP_CFLAGS="${CFLAGS}"
+   QMP_BKUP_LDFLAGS="${LDFLAGS}"
+   QMP_BKUP_LIBS="${LIBS}"
+   AC_LANG_SAVE
+   CFLAGS="${CFLAGS} ${QMP_CFLAGS}"
+   LDFLAGS="${LDFLAGS} ${QMP_LDFLAGS}"
+   LIBS="${LIBS} ${QMP_LIBS}"
+   AC_CHECK_FUNCS(QMP_route)
+   CFLAGS="${QMP_BKUP_CFLAGS}"
+   LDFLAGS="${QMP_BKUP_LDFLAGS}"
+   LIBS="${LIBS}"
+   AC_LANG_RESTORE
+fi
+
+
 # Turn on parallel-io flag
 if test ${ac_parallel_io} -eq 1; then
   AC_DEFINE_UNQUOTED(QIO_USE_PARALLEL_READ, ${ac_parallel_io}, [Enable parallel file-system read])
@@ -138,6 +183,10 @@ if test ${ac_parallel_io} -eq 1; then
   AC_MSG_NOTICE([Parallel file-system extensions enabled]);
 fi
 
+
+# Now have all the options... Do some configuration 
+AM_CONDITIONAL(ARCH_SCALAR,    [test "X${LOCAL_PARALLEL_ARCH}X" = "XscalarX"])
+AM_CONDITIONAL(ARCH_PARSCALAR, [test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX"])
 
 # Configure subdir packages
 AC_CONFIG_SUBDIRS(other_libs/c-lime)
