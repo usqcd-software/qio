@@ -31,7 +31,7 @@ QIO_Reader *QIO_open_read(XML_MetaData *xml_file, const char *filename, int serp
     return NULL;
 
   dml_layout->node_number = layout->node_number;
-  dml_layout->latsize     = layout->latsize;
+  dml_layout->latsize     = latsize;
   dml_layout->latdim      = layout->latdim;
   dml_layout->volume      = layout->volume;
   dml_layout->this_node   = layout->this_node;
