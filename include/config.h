@@ -16,12 +16,4 @@
 /* For BinX record */
 #undef DO_BINX
 
-/* These are defined in qio_config.h  now */
-/* DEFINITELY WANT THIS AUTOCONF'ed !!!  (RGE) */
-/* See the AC_CHECK_FUNCS(QMP_route) in qdp++/configure.ac */
-/* #ifndef HAVE_QMP_ROUTE
-   #define HAVE_QMP_ROUTE
-   #endif
-*/
-
 #endif
