@@ -1,0 +1,129 @@
+Changes going from qio-1.1.6 to qio-2.0.1
+	
+	------------------------------
+	Changed structure
+	
+	QIO_Layout
+	
+	   has a new, required member
+	
+	   size_t (*num_sites)(int node);
+	
+	   The function call num_sites(node) should return the number of sites
+	   on the node "node".  Normally, this function would be provided by
+	   the same algorithm that provides node_number(), node_index() and
+	   get_coords().  Note that this member generalizes the int
+	   sites_on_node member that specifies the number of sites on the
+	   *current node*.  In 95% of our layouts, sites_on_node is the same
+	   for all nodes, but in current practice, MILC occasionally does use
+	   layouts that do not conform to this rule.
+	
+	   This function is used to determine the space needed for sitelists
+	   when several nodes share an I/O node.
+	
+	Unfortunately, this change necessitates trivial changes to the
+	QDP_read and QDP_write functions and to the QDP layout_hyper.c
+	function.
+	----------------------------------------------------------------------
+		
+	New structures to be passed in calling QIO_open_write or QIO_open_read
+	
+	typedef struct {
+	  int serpar;    /* Placeholder for specifying serial or 
+	                    parallel access */
+	  int volfmt;    /* QIO_UNKNOWN, QIO_SINGLEFILE, QIO_PARTFILE, 
+	                    QIO_MULTIFILE */
+	} QIO_Iflag;
+	
+	typedef struct {
+	  int serpar;    /* Placeholder for specifying serial or 
+	                    parallel access */
+	  int mode;      /* QIO_TRUNC or QIO_APPEND */
+	} QIO_Oflag;
+	
+	The macros QIO_TRUNC and QIO_APPEND are defined in qio.h and have the
+	same semantics as the corresponding Unix "open" flags.  QIO_UNKNOWN is
+	a new macro.
+	
+	These are implemented in the changed signatures:
+	
+	QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename, 
+				  QIO_Layout *layout, QIO_Iflag *iflag);
+	
+	QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename, 
+				    int volfmt, QIO_Layout *layout, 
+	                            QIO_Oflag *oflag);
+	
+	When a file "foo" is opened for reading, QIO tries to discover the
+	file type.  QIO first looks for a file named "foo".  If it is found,
+	it should be QIO_SINGLEFILE format.  If not, it looks for a file named
+	"foo.vol0000", expecting QIO_PARTFILE or QIO_MULTIFILE.  Now suppose
+	files named "foo" and "foo.vol0000" are both present.  This happens
+	during file conversion, and we need to tell QIO which one to open.
+	That is the purpose of this flag.  The open procedure is not fussy,
+	however.  The only behavioral change is that if you specify
+	QIO_PARTFILE or QIO_MULTIFILE here, QIO looks only for "foo.vol0000"
+	and ignores "foo", but autodetects the format and otherwise ignores
+	what you requested.  If you specify QIO_UNKNOWN or QIO_SINGLEFILE, it
+	behaves as it did before: first try "foo" then "foo.vol0000" and
+	otherwise ignore the request.
+	
+	There are no safeguards at present.  When we append to a file, there
+	is no checking whether the lattice size or sitelist agrees with what
+	came before.  So caveat emptor.
+	
+	Backward compatibility default behavior: If the iflag parameter is
+	NULL, it is assumed that iflag.serpar = QIO_SERIAL and iflag.volfmt =
+	QIO_UNKNOWN and if oflag is NULL, oflag.serpar = QIO_SERIAL and
+	oflag.mode = QIO_TRUNC.
+	
+	So if you have been calling these "open" functions with 0 for the last
+	parameter, you should get the default behavior.  The C++ compiler
+	might complain about not doing a cast, however.
+	
+	New debug level:
+	
+	QIO_VERB_MED
+	
+	(between QIO_VERB_LOW and QIO_VERB_REG)
+	
+	------------------------------
+
+	Added internal functions.  
+	
+	It is probably best to keep these functions for internal use for now,
+	because some knowledge of the record order is required in order to use
+	them without breaking something.  They are needed in the file
+	conversion codes.
+	
+	int QIO_set_reader_pointer(QIO_Reader *qio_in, off_t offset);
+	off_t QIO_get_reader_pointer(QIO_Reader *qio_in);
+	
+	They are needed to allow closing a reader and reopening it later to
+	resume reading.
+	
+	
+	int QIO_init_read_field(QIO_Reader *in, size_t datum_size, 
+	                      DML_Checksum *checksum, LIME_type *lime_type);
+	int QIO_seek_read_field_datum(QIO_Reader *in, 
+	            DML_SiteRank seeksite,
+	            void (*put)(char *buf, size_t index, int count, void *arg),
+	            int count, size_t datum_size, int word_size, void *arg);
+	int QIO_close_read_field(QIO_Reader *in, uint64_t *nbytes);
+	
+	These support random-access reading of a binary payload.  The data are
+	quantized according to the site, specified by the lexicographic rank
+	"seeksite".  QIO_init_read_field is called only when the reader is
+	poised to read the LIME record containing the binary data.
+	
+	int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
+	          int globaldata,
+	          size_t datum_size, DML_Checksum *checksum,
+	          const LIME_type lime_type);
+	int QIO_seek_write_field_datum(QIO_Writer *out, 
+	            DML_SiteRank seeksite,
+	            void (*get)(char *buf, size_t index, int count, void *arg),
+	            int count, size_t datum_size, int word_size, void *arg);
+	int QIO_close_write_field(QIO_Writer *out, uint64_t *nbytes);
+	
+	Same for random-access writing.

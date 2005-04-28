@@ -1,5 +1,6 @@
 /******** layout_hyper.c *********/
 /* adapted from SciDAC QDP Data Parallel API */
+/* Includes new entry "get_sites_on_node" */
 /* adapted from MIMD version 6 */
 
 /* ROUTINES WHICH DETERMINE THE DISTRIBUTION OF SITES ON NODES */
@@ -37,10 +38,10 @@
 
 /* The following globals are required:
 
-   QMP_get_number_of_nodes()
+   QMP_get_logical_topology()
+   QMP_logical_topology_is_declared()
    this_node
    QMP_abort()
-   sites_on_node
 
 */
 
@@ -49,6 +50,7 @@ static int *nsquares;     /* number of hypercubes in each direction */
 static int ndim;
 static int *size1[2], *size2;
 static int prime[] = {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53};
+static int sites_on_node;
 #define MAXPRIMES (sizeof(prime)/sizeof(int))
 
 void setup_layout(int len[], int nd, int numnodes)
@@ -202,3 +204,7 @@ void get_coords(int x[], int node, int index)
   }
 }
 
+/* The number of sites on the specified node */
+size_t num_sites(int node){
+  return sites_on_node;
+}

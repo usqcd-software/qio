@@ -40,10 +40,10 @@ int QIO_generic_read_record_data(QIO_Reader *in,
      (per site for field data or total for global data) */
   if(datum_size != 
      QIO_get_typesize(&(in->record_info)) * count){
+    printf("%s(%d): requested byte count %lu disagrees with the record %d * %d\n",
+	   myname,this_node,(unsigned long)datum_size,
+	   QIO_get_typesize(&(in->record_info)), count);
     if(this_node == in->layout->master_io_node){
-      printf("%s(%d): requested byte count %lu disagrees with the record %d * %d\n",
-	     myname,this_node,(unsigned long)datum_size,
-	     QIO_get_typesize(&(in->record_info)), count);
       printf("%s(%d): Record header says \n                         datatype %s globaltype %d \n                         precision %s colors %d spins %d count %d\n",
 	     myname,this_node,
 	     QIO_get_datatype(&(in->record_info)),

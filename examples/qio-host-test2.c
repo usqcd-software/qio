@@ -112,7 +112,7 @@ int main(int argc, char *argv[]){
   int numnodes;
 
   if(argc < 2){
-    fprintf(stderr,"Usage %s <numnodes> <0=single_to_part 1=part_to_single> <filename> nx ny nz nt ... \n",argv[0]);
+    fprintf(stderr,"Usage %s <numnodes> <0=single_to_part 1=part_to_single> <filename>\n",argv[0]);
     return 1;
   }
 

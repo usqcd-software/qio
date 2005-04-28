@@ -18,7 +18,7 @@ LRL_FileReader *LRL_open_read_file(const char *filename)
   LRL_FileReader *fr;
   FILE *fpt;
 
-  /* First check for a readable file */
+  /* Open and check for a readable file */
   fpt = fopen(filename,"r");
   if(fpt == NULL)return NULL;
 
@@ -35,6 +35,32 @@ LRL_FileReader *LRL_open_read_file(const char *filename)
   return fr;
 }
 
+/**
+ * Seek to a new file pointer position
+ *
+ * \param fr     File reader
+ * \param offset Absolute seek position.
+ */
+
+int LRL_set_reader_pointer(LRL_FileReader *fr, off_t offset){
+  int status;
+
+  /* Position file as requested */
+  status = limeSetReaderPointer(fr->dr, offset);
+  if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+  return LRL_SUCCESS;
+}
+
+/**
+ * Get the current file pointer position
+ *
+ * \param fr     File reader
+ */
+
+off_t LRL_get_reader_pointer(LRL_FileReader *fr){
+  return limeGetReaderPointer(fr->dr);  
+}
+
 /** 
  * Open a file for writing 
  *
@@ -42,7 +68,7 @@ LRL_FileReader *LRL_open_read_file(const char *filename)
  *
  * \return null if failure
  */
-LRL_FileWriter *LRL_open_write_file(const char *filename)
+LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
 {
   LRL_FileWriter *fw;
 
@@ -50,7 +76,14 @@ LRL_FileWriter *LRL_open_write_file(const char *filename)
   if (fw == NULL)
     return NULL;
 
-  fw->file = fopen(filename,"w");
+  /* Open according to requested mode */
+  if(mode == LRL_APPEND){
+    fw->file = fopen(filename,"a");
+  }
+  else{
+    fw->file = fopen(filename,"w");
+  }
+
   if (fw->file == NULL){
     printf("LRL_open_write_file: failed to open %s for writing\n",
 	   filename);
@@ -124,7 +157,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
  */
 LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fw, 
 					int msg_begin, int msg_end, 
-					off_t *rec_size, 
+					off_t rec_size, 
 					LIME_type lime_type)
 {
   LRL_RecordWriter *rw;
@@ -144,7 +177,7 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fw,
   rw->fw = fw;
 
   /* Write record */
-  h = limeCreateHeader(msg_begin, msg_end, lime_type, *rec_size);
+  h = limeCreateHeader(msg_begin, msg_end, lime_type, rec_size);
   status = limeWriteRecordHeader(h, rw->fw->dg);
 
   if (status < 0)
@@ -219,7 +252,7 @@ off_t LRL_write_bytes(LRL_RecordWriter *rw, char *buf,
 }
 
 
-/* For skipping ahead offset bytes from the current position in the record
+/* For seeking to offset bytes from the beginning of the record
    payload.  We are not allowed to go beyond the end of the
    payload. */
 
@@ -228,7 +261,7 @@ int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset)
   int status;
 
   if (rr == NULL || rr->fr == NULL)return LRL_ERR_SEEK;
-  status = limeReaderSeek(rr->fr->dr, offset, SEEK_CUR);
+  status = limeReaderSeek(rr->fr->dr, offset, SEEK_SET);
 
   if( status != LIME_SUCCESS ) 
   { 
@@ -238,7 +271,7 @@ int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset)
   return LRL_SUCCESS;
 }
 
-/* For skipping ahead offset bytes from the current position in the record
+/* For seeking to offset bytes from the beginning of the record
    payload.  We are not allowed to go beyond the end of the
    payload. */
 
@@ -255,7 +288,7 @@ int LRL_seek_write_record(LRL_RecordWriter *rw, off_t offset)
     return LRL_ERR_SEEK;
   }
 
-  status = limeWriterSeek(rw->fw->dg, offset, SEEK_CUR);
+  status = limeWriterSeek(rw->fw->dg, offset, SEEK_SET);
 
   if( status != LIME_SUCCESS ) 
   { 
@@ -339,7 +372,7 @@ int LRL_close_write_record(LRL_RecordWriter *rw)
   else return LRL_SUCCESS;
 }
 
-/** 
+/**
  * Close a file for reading
  *
  * \param fr   file buffer  ( Modify )

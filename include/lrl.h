@@ -13,6 +13,11 @@
 #define LRL_ERR_SKIP     (-4)
 #define LRL_ERR_CLOSE    (-5)
 
+/* For writing, either append or truncate */
+#define LRL_CREAT      0
+#define LRL_TRUNC      1
+#define LRL_APPEND     2
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -41,12 +46,14 @@ typedef struct {
 } LRL_RecordReader;
 
 LRL_FileReader *LRL_open_read_file(const char *filename);
-LRL_FileWriter *LRL_open_write_file(const char *filename);
+int LRL_set_reader_pointer(LRL_FileReader *, off_t offset);
+off_t LRL_get_reader_pointer(LRL_FileReader *fr);
+LRL_FileWriter *LRL_open_write_file(const char *filename, int mode);
 LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, off_t *rec_size, 
 				       LIME_type *lime_type, int *status);
 LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, 
 					int msg_begin, int msg_end, 
-					off_t *rec_size, 
+					off_t rec_size, 
 					LIME_type lime_type);
 off_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, 
 		       off_t nbytes);

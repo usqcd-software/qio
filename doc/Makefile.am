@@ -7,7 +7,7 @@ VPATH=$(DOCSRCDIR)
 
 LATEX = latex
 
-VER     = 1p1
+VER     = 2p0
 HTMLDIR = html
 PS      = qio_${VER}.ps
 SRC     = qio_${VER}.tex

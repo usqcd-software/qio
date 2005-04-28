@@ -10,13 +10,13 @@ uint64_t DML_stream_in(LRL_RecordReader *lrl_record_in, int globaldata,
 	     void (*put)(char *buf, size_t index, int count, void *arg),
 	     int count, size_t size, int word_size, void *arg, 
              DML_Layout *layout, DML_SiteList *sites, 
-             int volfmt, DML_Checksum *checksum)
+             int volfmt, int broadcast_globaldata, DML_Checksum *checksum)
 {
   /* Global data */
   if(globaldata == DML_GLOBAL){
     return DML_global_in(lrl_record_in,
                          put, count, size, word_size, arg, layout, 
-			 volfmt, checksum);
+			 volfmt, broadcast_globaldata, checksum);
   }
 
   /* Field data */

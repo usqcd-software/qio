@@ -172,3 +172,8 @@ get_coords(int x[], int node, int index)
   }
 }
 
+
+/* The number of sites on the specified node */
+size_t num_sites(int node){
+  return sites_on_node;
+}

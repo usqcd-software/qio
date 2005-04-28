@@ -23,10 +23,11 @@ QIO_Layout *create_mpp_layout(int numnodes, int *latsize, int latdim){
   layout->node_number = node_number;
   layout->node_index = node_index;
   layout->get_coords = get_coords;
+  layout->num_sites = num_sites;
   layout->latsize = latsize;
   layout->latdim = latdim;
   layout->volume = volume;
-  layout->sites_on_node = 0;  /* Ignored */
+  layout->sites_on_node = sites_on_node;
   layout->this_node = 0;      /* Reset */
   layout->number_of_nodes = numnodes;
   return layout;
@@ -51,6 +52,7 @@ int qio_host_test(QIO_Filesystem *fs, int argc, char *argv[])
   int *latsize;
   QIO_Reader *qio_in;
   char *filename;
+  char *newfilename;
 
   QIO_verbose(QIO_VERB_DEBUG);
 
@@ -73,20 +75,33 @@ int qio_host_test(QIO_Filesystem *fs, int argc, char *argv[])
   filename = argv[n++];
 
   /* Start from a dummy layout */
+  sites_on_node = 0;
   mpp_layout = create_mpp_layout(numnodes, NULL, 0);
   if(!mpp_layout)return 1;
 
   /* Get lattice dimensions from file */
-  qio_in = QIO_open_read_master(filename, mpp_layout, 0, fs->my_io_node,
-                       fs->master_io_node);
-  if(!qio_in)return 1;
+  if(part_to_single)
+    {
+      /* If converting part to single, add the path to the file name */
+      newfilename = QIO_set_filepath(fs,filename,fs->master_io_node());
+      qio_in = QIO_open_read_master(newfilename, mpp_layout, 
+				    NULL, fs->my_io_node,fs->master_io_node);
+      free(newfilename);
+    }
+  else
+    {
+      /* If converting single to part, open the single file */
+      qio_in = QIO_open_read_master(filename, mpp_layout, 
+				    NULL, fs->my_io_node,fs->master_io_node);
+    }
 
+  if(!qio_in)return 1;
   latdim = QIO_get_reader_latdim(qio_in);
   latsize = QIO_get_reader_latsize(qio_in);
 
   /* Now create the real layout functions */
-  mpp_layout = create_mpp_layout(numnodes, latsize, latdim);
   setup_layout(latsize, latdim, numnodes);
+  mpp_layout = create_mpp_layout(numnodes, latsize, latdim);
 
   if(!mpp_layout)return 1;
 

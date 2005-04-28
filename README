@@ -7,11 +7,11 @@ If you like to build QIO in a separate, sibling build directory,
 create the build directory and then from that directory, run (for
 example)
 
-../qio-1.1.5/configure \
-     --prefix=$HOME/scidac/qio/local \
+../qio-1.1.6/configure \
+     --prefix=$HOME/scidac/qio \
      CC=gcc \
      CFLAGS="-O3" \
-     QMP_CFLAGS=-I$QMPPREFIX/include \
-     QMP_LDFLAGS=-L$QMPPREFIX/lib \
-     QMP_LIBS=-lqmp
+     --with-qmp=$HOME/scidac/qmp \
+     --disable-qmp-route
+
 

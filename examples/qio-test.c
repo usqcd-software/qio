@@ -30,9 +30,11 @@ QIO_Writer *open_test_output(char *filename, int volfmt, char *myname){
   QIO_string_set(xml_file_out,xml_write_file);
 
   /* Open the file for writing */
-  outfile = QIO_open_write(xml_file_out, filename, volfmt, &layout, 0);
+  outfile = QIO_open_write(xml_file_out, filename, volfmt, &layout, NULL);
+  printf("%s(%d): QIO_write returns address %x\n",myname,this_node,outfile);
   if(outfile == NULL){
     printf("%s(%d): QIO_open_write returned NULL\n",myname,this_node);
+    fflush(stdout);
     return NULL;
   }
   QIO_string_destroy(xml_file_out);
@@ -123,7 +125,7 @@ QIO_Reader *open_test_input(char *filename, char *myname){
   xml_file_in = QIO_string_create();
 
   /* Open the file for reading */
-  infile = QIO_open_read(xml_file_in, filename, &layout, 0);
+  infile = QIO_open_read(xml_file_in, filename, &layout, NULL);
   if(infile == NULL){
     printf("%s(%d): QIO_open_read returns NULL.\n",myname,this_node);
     return NULL;
@@ -250,11 +252,13 @@ int qio_test(int volfmt, int argc, char *argv[]){
   setup_layout(lattice_size, 4, QMP_get_number_of_nodes());
   printf("%s(%d) layout set for %d nodes\n",myname,this_node,
 	 QMP_get_number_of_nodes());
+  sites_on_node = num_sites(this_node);
 
   /* Build the layout structure */
   layout.node_number     = node_number;
   layout.node_index      = node_index;
   layout.get_coords      = get_coords;
+  layout.num_sites       = num_sites;
   layout.latsize         = lattice_size;
   layout.latdim          = lattice_dim;
   layout.volume          = volume;

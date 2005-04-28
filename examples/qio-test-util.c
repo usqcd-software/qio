@@ -8,7 +8,7 @@ void print_m(suN_matrix *a)
   
   for ( i=0; i< NCLR; i++)
     {
-      printf("%lf %lf %lf %lf %lf %lf\n",a->e[i][0].re,a->e[i][0].im,a->e[i][1].re,a->e[i][1].im,a->e[i][2].re,a->e[i][2].im);
+      printf("%f %f %f %f %f %f\n",a->e[i][0].re,a->e[i][0].im,a->e[i][1].re,a->e[i][1].im,a->e[i][2].re,a->e[i][2].im);
     }
   
   return;

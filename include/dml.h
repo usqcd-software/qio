@@ -7,6 +7,7 @@
 #include "qio_config.h"
 
 /* File fragmentation */
+#define DML_UNKNOWN   -1
 #define DML_SINGLEFILE 0
 #define DML_MULTIFILE  1
 #define DML_PARTFILE   2
@@ -20,11 +21,6 @@
 /* Multinode access to the same file */
 #define DML_SERIAL     0
 #define DML_PARALLEL   1
-
-/* For writing, either append or truncate */
-#define DML_TRUNC      0
-#define DML_APPEND     2
-
 
 /* Limits size of read and write buffers (bytes) 2^18 for now */
 #ifndef QIO_DML_BUF_BYTES
@@ -54,12 +50,14 @@ typedef struct {
   int (*node_number)(const int coords[]);
   int (*node_index)(const int coords[]);
   void (*get_coords)(int coords[], int node, const int index);
+  size_t (*num_sites)(int node);
   int *latsize;
   int latdim;
   size_t volume;
   size_t sites_on_node;
   int this_node;
   int number_of_nodes;
+  int broadcast_globaldata;
 
   /* I/O partitions */
   int (*ionode)(int node);
@@ -71,7 +69,42 @@ typedef struct {
   int use_list;
   DML_SiteRank first, current_rank;
   size_t current_index, number_of_io_sites;
+  int number_of_my_ionodes;
 } DML_SiteList;
+
+
+/* For saving the state of DML_partition_out */
+typedef struct {
+  LRL_RecordWriter *lrl_rw; /* LRL record writer */
+  char *outbuf;             /* Allocated output buffer */
+  char *buf;                /* Current location in output buffer */
+  int *coords;              /* Workspace for coordinates */
+  DML_Checksum *checksum;   /* Running checksum for this node */
+  int current_node;         /* Current output node */
+  int my_io_node;           /* The node to which I write */
+  uint64_t nbytes;          /* Running total of bytes for this node */
+  size_t isite;             /* Count of sites processed */
+  size_t buf_sites;         /* Current site in the output buffer */
+  size_t max_buf_sites;     /* Size of output buffer in sites */
+  size_t max_dest_sites;    /* Total sites written by this node */
+} DML_RecordWriter;
+
+/* For saving the state of DML_partition_in */
+typedef struct {
+  LRL_RecordReader *lrl_rr; /* LRL record reader */
+  char *inbuf;              /* Allocated input buffer */
+  int *coords;              /* Workspace for coordinates */
+  DML_Checksum *checksum;   /* Running checksum for this node */
+  int current_node;         /* Current input node */
+  int my_io_node;           /* The node to which I write */
+  DML_SiteRank rcv_coords;  /* Current input coordinate rank */
+  uint64_t nbytes;          /* Running total of bytes for this node */
+  size_t isite;             /* Count of sites processed */
+  size_t buf_extract;       /* Number of sites in the input buffer */
+  size_t buf_sites;         /* Current site in the input buffer */
+  size_t max_buf_sites;     /* Size of input buffer in sites */
+  size_t max_send_sites;    /* Total sites to be read by this node */
+} DML_RecordReader;
 
 uint64_t DML_stream_out(LRL_RecordWriter *lrl_record_out, int globaldata,
 	   void (*get)(char *buf, size_t index, int count, void *arg),
@@ -88,12 +121,8 @@ uint64_t DML_stream_in(LRL_RecordReader *lrl_record_in, int globaldata,
 	     void (*put)(char *buf, size_t index, int count, void *arg),
 	     int count, size_t size, int word_size, void *arg, 
              DML_Layout *layout, DML_SiteList *sites, 
-	     int volfmt, DML_Checksum *checksum);
+	     int volfmt, int broadcast_global, DML_Checksum *checksum);
 
-size_t DML_stream_global_in(LRL_RecordWriter *lrl_record_in,
-                            void *buf,
-                            size_t size, int word_size, DML_Layout *layout,
-                            DML_Checksum *checksum);
 
 /* DML internal utilities */
 
@@ -124,19 +153,45 @@ void DML_global_xor(uint32_t *x);
 int DML_big_endian(void);
 void DML_byterevn(char *buf, size_t size, int word_size);
 size_t DML_max_buf_sites(size_t size, int factor);
-char *DML_allocate_buf(size_t size, size_t max_buf_sites, int this_node);
+char *DML_allocate_buf(size_t size, size_t max_buf_sites);
+size_t DML_seek_write_buf(LRL_RecordWriter *lrl_record_out, 
+			  DML_SiteRank seeksite, size_t size,
+			  char *lbuf, size_t buf_sites, size_t max_buf_sites, 
+			  size_t isite, size_t max_dest_sites, 
+			  uint64_t *nbytes, char *myname, 
+			  int this_node, int *err);
 size_t DML_write_buf_next(LRL_RecordWriter *lrl_record_out, size_t size,
 			  char *lbuf, size_t buf_sites, size_t max_buf_sites, 
 			  size_t isite, size_t max_dest_sites, 
 			  uint64_t *nbytes, char *myname, 
 			  int this_node, int *err);
-size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, int size,
+size_t DML_seek_read_buf(LRL_RecordReader *lrl_record_in, 
+			 DML_SiteRank seeksite, size_t size,
+			 char *lbuf, size_t *buf_extract, size_t buf_sites, 
+			 size_t max_buf_sites, size_t isite, 
+			 size_t max_send_sites, 
+			 uint64_t *nbytes, char *myname, int this_node,
+			 int *err);
+size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, size_t size,
 			 char *lbuf, size_t *buf_extract, size_t buf_sites, 
 			 size_t max_buf_sites, size_t isite, 
 			 size_t max_send_sites, 
 			 uint64_t *nbytes, char *myname, int this_node,
 			 int *err);
 int DML_my_ionode(int volfmt, DML_Layout *layout);
+DML_RecordWriter *DML_partition_open_out(
+	   LRL_RecordWriter *lrl_record_out, size_t size, 
+	   size_t set_buf_sites, DML_Layout *layout, DML_SiteList *sites,
+	   int volfmt, DML_Checksum *checksum);
+int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
+	   void (*get)(char *buf, size_t index, int count, void *arg),
+	   DML_SiteRank seeksite, int count, size_t size, int word_size, 
+           void *arg, DML_Layout *layout);
+int DML_partition_allsitedata_out(DML_RecordWriter *dml_record_out, 
+	   void (*get)(char *buf, size_t index, int count, void *arg),
+	   int count, size_t size, int word_size, void *arg, 
+ 	   DML_Layout *layout, DML_SiteList *sites);
+uint64_t DML_partition_close_out(DML_RecordWriter *dml_record_out);
 uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out, 
 	   void (*get)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t size, int word_size, void *arg, 
@@ -156,6 +211,19 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 	     void (*put)(char *buf, size_t index, int count, void *arg),
 	     int count, size_t size, int word_size, void *arg, 
 	     DML_Layout *layout, DML_Checksum *checksum);
+DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in, 
+	  size_t size, size_t set_buf_sites, DML_Layout *layout, 
+	  DML_SiteList *sites, int volfmt, DML_Checksum *checksum);
+int DML_partition_sitedata_in(DML_RecordReader *dml_record_in, 
+	  void (*put)(char *buf, size_t index, int count, void *arg),
+	  DML_SiteRank rcv_coords, int count, size_t size, int word_size, 
+          void *arg, DML_Layout *layout);
+int DML_partition_allsitedata_in(DML_RecordReader *dml_record_in, 
+	  void (*put)(char *buf, size_t index, int count, void *arg),
+	  int count, size_t size, int word_size, void *arg, 
+	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
+	  DML_Checksum *checksum);
+uint64_t DML_partition_close_in(DML_RecordReader *dml_record_in);
 uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  int count, size_t size, int word_size, void *arg, 
@@ -164,7 +232,7 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 size_t DML_global_in(LRL_RecordReader *lrl_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  int count, size_t size, int word_size, void *arg, 
-	  DML_Layout* layout, int volfmt, 
+          DML_Layout* layout, int volfmt, int broadcast_global,
 	  DML_Checksum *checksum);
 
 void DML_broadcast_bytes(char *buf, size_t size, int this_node, int from_node);

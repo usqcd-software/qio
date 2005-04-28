@@ -18,14 +18,17 @@ typedef struct
 {
   char *data;
   size_t datum_size;
+  int word_size;
   size_t volume;
 } s_field;
 
-int QIO_init_scalar_field(s_field *field,int vol,size_t datum_size)
+static int QIO_init_scalar_field(s_field *field,int vol,size_t datum_size, 
+			  int word_size)
 {
   size_t bytes;
-  field->datum_size = datum_size;
-  field->volume = vol;
+  field->datum_size  = datum_size;
+  field->word_size   = word_size;
+  field->volume      = vol;
   bytes = datum_size*vol;
 
   field->data = (char *) malloc(bytes);
@@ -37,6 +40,11 @@ int QIO_init_scalar_field(s_field *field,int vol,size_t datum_size)
   return 0;
 }
 
+static void QIO_free_scalar_field(s_field *field)
+{
+  free(field->data);
+}
+
 typedef struct
 {
   s_field *field;
@@ -44,19 +52,52 @@ typedef struct
   int master_io_node;
 } get_put_arg;
 
-void QIO_init_get_put_arg(get_put_arg *arg, s_field *field, int node,
-			  int master_io_node)
+typedef struct
+{
+  get_put_arg *arg;
+  int node;
+  int master_io_node;
+  QIO_Reader *reader;
+} read_seek_arg;
+
+typedef struct
+{
+  get_put_arg *arg;
+  int node;
+  int master_io_node;
+  QIO_Writer *writer;
+} write_seek_arg;
+
+/* Populate a pass-through structure for factory functions */
+static void QIO_init_get_put_arg(get_put_arg *arg, s_field *field, int node,
+				 int master_io_node)
 {
   arg->field = field;
   arg->node = node;
   arg->master_io_node = master_io_node;
 }
 
-void QIO_free_scalar_field(s_field *field)
+static void QIO_init_read_seek_arg(read_seek_arg *arg_seek, get_put_arg *arg,
+				   QIO_Reader *reader, int node,
+				   int master_io_node)
 {
-  free(field->data);
+  arg_seek->arg            = arg;
+  arg_seek->node           = node;
+  arg_seek->master_io_node = master_io_node;
+  arg_seek->reader         = reader;
 }
 
+static void QIO_init_write_seek_arg(write_seek_arg *arg_seek, get_put_arg *arg,
+				    QIO_Writer *writer, int node, 
+				    int master_io_node)
+{
+  arg_seek->arg            = arg;
+  arg_seek->node           = node;
+  arg_seek->master_io_node = master_io_node;
+  arg_seek->writer         = writer;
+}
+
+/* Convert precision code to bytes */
 int QIO_bytes_of_word(char *type)
 {
   int value=0;
@@ -83,16 +124,19 @@ int QIO_bytes_of_word(char *type)
 }
 
 
-
-void check_scalar_layout(QIO_Layout *s_layout, QIO_Layout *layout)
+/* my_io_node function for host should be called only for node 0 */
+int QIO_host_my_io_node(int node)
 {
-  /* Force the number of sites to be the entire lattice
-     This is probably not necessary*/
-  
-  if (layout->sites_on_node != layout->volume)
-    s_layout->sites_on_node = layout->volume ;
+  return node;
 }
 
+/* master I/O node for host */
+int QIO_host_master_io_node( void )
+{
+  return 0;
+}
+
+/* Factory functions for readers and writers */
 
 /* Copy a chunk of data of length "datum_size" from the input buffer
    to the field */
@@ -101,7 +145,10 @@ void QIO_scalar_put( char *s1 , size_t scalar_index, int count, void *s2 )
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   size_t datum_size = field->datum_size;
-  char *dest = field->data + scalar_index*datum_size;
+  /* Since we are processing data one site at a time, our "field" holds
+     data for only one site and we ignore the scalar index */
+  char *dest = field->data;
+
   memcpy(dest,s1,datum_size);
 }
 
@@ -113,29 +160,108 @@ void QIO_scalar_put_global( char *s1 , size_t scalar_index,
 {
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
-  size_t datum_size = field->datum_size;
-  char *dest = field->data;
 
-  /* For the scalar case we ignore the scalar_index */
+  size_t datum_size = field->datum_size;
+  /* For global data we ignore the scalar_index */
+  char *dest        = field->data;
+
   memcpy(dest,s1,datum_size);
 }
 
 
-/* Copy a chunk of data of length "datum_size" from the input buffer
-   to the field */
-void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
+/* Seek and read one site's worth of data from the input file and copy
+   it to the output buffer */
+void QIO_scalar_get( char *s1, size_t ionode_index, int count, void *s2 )
+{
+  read_seek_arg *arg_seek = (read_seek_arg *)s2;
+  get_put_arg *arg   = arg_seek->arg;    /* The arg for input */
+  int ionode_node    = arg_seek->node; 
+  s_field *field_in  = arg->field;
+  QIO_Reader *infile = arg_seek->reader;
+  size_t datum_size = field_in->datum_size;
+  char *src         = field_in->data;
+  int word_size     = field_in->word_size;
+  int scalar_index;
+  int status;
+
+  /* Convert site rank ionode_index to scalar_index */
+  scalar_index = QIO_ionode_to_scalar_index(ionode_node,ionode_index);
+
+  /* Read the field at location "scalar_index" and put it into
+     field_in using the QIO_scalar_put factory function */
+  status = 
+    QIO_seek_read_field_datum(infile, scalar_index, QIO_scalar_put,
+			      count, datum_size, word_size, 
+			      (void *)arg);
+  if(status != QIO_SUCCESS){
+    printf("QIO_scalar_get seek-read field returned %d\n", status);
+  }
+  else{
+    memcpy(s1,src,datum_size);
+  }
+}
+
+/* Copy the global data of length "datum_size" from the field to the
+   output buffer */
+void QIO_scalar_get_global( char *s1 , size_t ionode_index, 
+			    int count, void *s2 )
+{
+  get_put_arg *arg = (get_put_arg *)s2;
+  s_field *field     = arg->field;
+  int node           = arg->node;
+  int master_io_node = arg->master_io_node;
+  size_t datum_size = field->datum_size;
+  char *src         = field->data;
+
+  /* Copy buffer only for the master node and ignore the ionode_index */
+  if(node == master_io_node)
+    memcpy(s1,src,datum_size);
+}
+
+void QIO_part_get( char *s1 , size_t scalar_index, int count, void *s2 )
 {
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
-  int ionode_node = arg->node;
   size_t datum_size = field->datum_size;
+  /* Since we are processing data one site at a time, our "field" holds
+     data for only one site and we ignore the scalar index */
+  char *src = field->data;;
+
+  memcpy(s1,src,datum_size);
+}
+
+
+/* Copy a chunk of data of length "datum_size" from the input buffer
+   and seek and write it to the single file */
+void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
+{
+  write_seek_arg *arg_seek = (write_seek_arg *)s2;
+  get_put_arg *arg         = arg_seek->arg;
+  int ionode_node          = arg_seek->node;
+  QIO_Writer *outfile      = arg_seek->writer;
+  s_field *field_in        = arg->field;
+  size_t datum_size        = field_in->datum_size;
+  char *dest               = field_in->data;
+  int word_size            = field_in->word_size;
   int scalar_index;
-  char *dest;
+  int status;
+
+  /* Copy the input buffer to field_in */
+  memcpy(dest,s1,datum_size);
 
   /* Convert ionode_index to scalar_index */
   scalar_index = QIO_ionode_to_scalar_index(ionode_node,ionode_index);
-  dest = field->data + scalar_index*datum_size;
-  memcpy(dest,s1,datum_size);
+
+  /* Write the field to the host single file at the location
+     "scalar_index", getting it from field_in using the QIO_part_get
+     factory function */
+  status =
+    QIO_seek_write_field_datum(outfile, scalar_index, QIO_part_get,
+			       count, datum_size, word_size,
+			       (void *)arg);
+  if(status != QIO_SUCCESS){
+    printf("QIO_part_put: QIO_seek_write_field_datum returned %d\n", status);
+  }
 }
 
 
@@ -156,46 +282,7 @@ void QIO_part_put_global( char *s1 , size_t ionode_index, int count, void *s2 )
 }
 
 
-/* Copy a chunk of data of length "datum_size" from the field to the
-   output buffer */
-void QIO_scalar_get( char *s1 , size_t ionode_index, int count, void *s2 )
-{
-  get_put_arg *arg = (get_put_arg *)s2;
-  s_field *field = arg->field;
-  int ionode_node = arg->node;
-  size_t datum_size = field->datum_size;
-  int scalar_index;
-  char *src;
-
-  /* Convert ionode_index to scalar_index */
-  scalar_index = QIO_ionode_to_scalar_index(ionode_node,ionode_index);
-  src = field->data + scalar_index*datum_size;
-  memcpy(s1,src,datum_size);
-}
-
-void QIO_part_get( char *s1 , size_t scalar_index, int count, void *s2 )
-{
-  get_put_arg *arg = (get_put_arg *)s2;
-  s_field *field = arg->field;
-  size_t datum_size = field->datum_size;
-  char *src = field->data + scalar_index*datum_size;
-  memcpy(s1,src,datum_size);
-}
-
-/* my_io_node function for host should be called only for node 0 */
-int QIO_host_my_io_node(int node)
-{
-  return node;
-}
-
-/* master I/O node for host */
-int QIO_host_master_io_node( void )
-{
-  return 0;
-}
-
-
-int QIO_set_this_node(QIO_Filesystem *fs, QIO_Layout *layout, int node)
+int QIO_set_this_node(QIO_Filesystem *fs, const QIO_Layout *layout, int node)
 {
   if ( fs->number_io_nodes < layout->number_of_nodes)
     return fs->io_node[node];
@@ -203,6 +290,7 @@ int QIO_set_this_node(QIO_Filesystem *fs, QIO_Layout *layout, int node)
     return node;
 }
 
+/* Append the file name to a possibly node-dependent directory path */
 char *QIO_set_filepath(QIO_Filesystem *fs, 
 		  const char * const filename, int node)
 {
@@ -232,29 +320,118 @@ char *QIO_set_filepath(QIO_Filesystem *fs,
   return newfilename;
 }
 
+
+/* Open a partition file for reading and read the file header and sitelist */
+
+static QIO_Reader *QIO_open_read_partfile(int io_node_rank, QIO_Iflag *iflag,
+					  const char *filename,
+					  QIO_Layout *ionode_layout,
+					  const QIO_Layout *layout,
+					  QIO_Filesystem *fs)
+{
+  char *newfilename;
+  int volfmt;
+  QIO_Reader *infile;
+  int status;
+  char myname[] = "QIO_open_read_partfile";
+
+  /* Pretend we are the ionode */
+  ionode_layout->this_node = 
+    QIO_set_this_node(fs,layout,io_node_rank);
+  
+  /* Set output path according to MULTI/SINGLE PATH flag */
+  newfilename = QIO_set_filepath(fs,filename,io_node_rank);
+  
+  /* Open master ionode file to read */
+  infile = QIO_open_read_master(newfilename,ionode_layout,
+				iflag,fs->my_io_node,fs->master_io_node);
+  if(infile == NULL)return NULL;
+
+  /* Check the volume format */
+  volfmt = infile->volfmt;
+
+  if (volfmt != QIO_PARTFILE){
+    printf("%s(%d) File %s volume format must be PARTFILE.  Found %d\n",
+	   myname, io_node_rank, newfilename,infile->volfmt);
+    return NULL;
+  }
+
+  /* Open nonmaster ionode file to read */
+  status = QIO_open_read_nonmaster(infile, newfilename, iflag);
+  if(status != QIO_SUCCESS)return NULL;
+  
+  /* Read site list from master ionode file */
+  status = QIO_read_check_sitelist(infile);
+  if(status != QIO_SUCCESS)return NULL;
+
+  return infile;
+}
+
+
+/* Open a partition file for writing */
+
+static QIO_Writer *QIO_open_write_partfile(int io_node_rank, int mode,
+					   int volfmt, const char *filename,
+					   QIO_Layout *ionode_layout,
+					   const QIO_Layout *layout,
+					   QIO_Filesystem *fs)
+{
+  char *newfilename;
+  QIO_Writer *outfile;
+  QIO_Oflag oflag;
+
+  oflag.serpar = QIO_SERIAL;
+  oflag.mode   = mode;
+
+  /* Pretend we are the ionode */
+  ionode_layout->this_node = QIO_set_this_node(fs,layout,io_node_rank);
+  
+  /* Set output path according to MULTI/SINGLE PATH flag */
+  newfilename = QIO_set_filepath(fs,filename,io_node_rank);
+  
+  /* Open to write with truncation if the file exists */
+  outfile = QIO_generic_open_write(newfilename,volfmt,
+				   ionode_layout,&oflag,
+				   fs->my_io_node,fs->master_io_node);
+  return outfile;
+}
+
+
+/********************************************************************/
+/*  Convert SINGLEFILE to PARTFILE                                  */
+/********************************************************************/
+
 int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout)
 {
   QIO_Layout *scalar_layout, *ionode_layout;
   QIO_String *xml_file_in, *xml_record_in;
-  QIO_String *xml_file_out, *xml_record_out, *xml_checksum;
+  QIO_String *xml_file_out, *xml_record_out;
   QIO_Reader *infile;
-  QIO_Writer **outfile;
+  QIO_Writer *outfile;
   QIO_RecordInfo rec_info;
-  DML_Checksum checksum_out, checksum;
-  QIO_ChecksumInfo *checksum_info;
-  uint64_t nbytes,totnbytes;
+  QIO_Oflag oflag;
+  DML_Checksum checksum, checksum_out, checksum_in;
+  uint64_t nbytes_out, totnbytes_out, nbytes_in, totnbytes_in;
   int *msg_begin, *msg_end;
   int i,status,master_io_node_rank;
   int number_io_nodes = fs->number_io_nodes;
   int master_io_node = fs->master_io_node();
-  size_t total_bytes,datum_size;
-  int typesize,datacount,vol,globaldata,wordsize,volfmt;
+  uint64_t total_bytes;
+  size_t datum_size;
+  int typesize,datacount,globaldata,word_size,volfmt;
+  LIME_type lime_type = NULL;
   char *newfilename;
   s_field field_in;
   get_put_arg arg;
+  read_seek_arg arg_seek;
+  QIO_ChecksumInfo *checksum_info_expect;
   char myname[] = "QIO_single_to_part";
  
+  /* Default values */
+  oflag.mode = QIO_TRUNC;
+  oflag.serpar = QIO_SERIAL;
+  
   if(number_io_nodes <= 1){
    printf("%s: No conversion since number_io_nodes %d <= 1\n",
 	  myname,number_io_nodes);
@@ -264,16 +441,13 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   /* Create the file XML */
   xml_file_in = QIO_string_create();
   
-  /* Create scalar layout structure */
-  scalar_layout = QIO_create_scalar_layout(layout, fs);
-  
-  /* Create scalar layout structure */
+  /* Create the MPP io_node layout structure */
   ionode_layout = QIO_create_ionode_layout(layout, fs);
   
-  /* Check on the scalar layout */
-  check_scalar_layout(scalar_layout,layout);
+  /* Create the scalar host layout structure */
+  scalar_layout = QIO_create_scalar_layout(layout, fs);
   
-  /* Which entry in the table is the master node? */
+  /* Which entry in the table is the MPP master ionode? */
   master_io_node_rank = QIO_get_io_node_rank(master_io_node);
   if(master_io_node_rank < 0){
     printf("%s: Bad Filesystem structure.  Master node %d is not an I/O node\n",
@@ -281,10 +455,11 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
     return QIO_ERR_BAD_IONODE;
   }
 
-  /* Open the file for reading */
-  infile = QIO_open_read_master(filename, scalar_layout, 0,
+  /* Open the input master file for reading */
+  infile = QIO_open_read_master(filename, scalar_layout, NULL,
 				QIO_host_my_io_node,
 				QIO_host_master_io_node);
+  if(infile == NULL)return QIO_ERR_OPEN_READ;
   
   if (infile->volfmt != QIO_SINGLEFILE)
     {
@@ -293,28 +468,22 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       return QIO_ERR_BAD_VOLFMT;
     }
   
-  /* Needed to initialize site list */
+  /* Read site list */
   status = QIO_read_check_sitelist(infile);
   if(status != QIO_SUCCESS)return status;
 
+  /* Read user file XML from input master */
   status = QIO_read_user_file_xml(xml_file_in, infile);
   if(status != QIO_SUCCESS)return status;
   
-  /* Create output file XML */
+  /* Copy user file XML for eventual output */
   xml_file_out = QIO_string_create();
   QIO_string_copy(xml_file_out, xml_file_in);
-  
   
   /* Set the output volfmt */
   volfmt = QIO_PARTFILE;
   
-  outfile = (QIO_Writer **) malloc (sizeof(QIO_Writer *)*number_io_nodes);
-  if(!outfile){
-    printf("%s: Can't malloc outfiles (%f MB)\n", myname,
-	   sizeof(QIO_Writer *)*((float)number_io_nodes)/1e6);
-    return QIO_ERR_ALLOC;
-  }
-
+  /* Make space for message flags */
   msg_begin = (int *)malloc(sizeof(int)*number_io_nodes);
   msg_end   = (int *)malloc(sizeof(int)*number_io_nodes);
   if(!msg_begin || !msg_end){
@@ -322,173 +491,295 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
     return QIO_ERR_ALLOC;
   }
   
+  /* Open all partition files and write the file header information
+     and site list.  Then close for now */
   for (i=0; i < number_io_nodes; i++)
     {
-      /* Set this_node */
-      ionode_layout->this_node = QIO_set_this_node(fs,layout,i);
-      
-      /* Set output path according to MULTI/SINGLE PATH flag */
-      newfilename = QIO_set_filepath(fs,filename,i);
-      if(status)return status;
-      
-      /* Open to write */
-      outfile[i] = QIO_generic_open_write(xml_file_out,newfilename,volfmt,
-             ionode_layout,0,fs->my_io_node,fs->master_io_node);
-      
+      /* Open the partition file for writing */
+      outfile = QIO_open_write_partfile(i, QIO_TRUNC, volfmt, filename,
+					ionode_layout, layout, fs);
+      if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
+	
+      /* Write the appropriate file header including site list */
+      status = QIO_write_file_header(outfile, xml_file_out);
+      if(status != QIO_SUCCESS){
+	printf("%s: Can't write file header on %s\n", myname,
+	       newfilename);
+	return status;
+      }
+
+      /* Close the file for now */
+      QIO_close_write(outfile);
       free(newfilename);
-      
     }
   
-  /***** iterate on records up to EOF ***********/
+  /***** iterate on field/globaldata records up to EOF ***********/
+  /* We assume the canonical order of SciDAC records */
   while (1)
     {
-      /* Create the record XML */
-      xml_record_in = QIO_string_create();
       
-      /* Read the record info */
+      /* Initialize message flags for output records */
+      for(i = 0; i < number_io_nodes; i++){
+	msg_begin[i] = 1; msg_end[i] = 0;
+      }
+
+      /* Read the private record info or if EOF, quit the loop */
       status = QIO_read_private_record_info(infile, &rec_info);
       if (status==QIO_EOF)break;
       if (status!=QIO_SUCCESS) return status;
 
+      /* Parse the record info */
+      datacount  = QIO_get_datacount(&rec_info);
+      typesize   = QIO_get_typesize(&rec_info);
+      word_size  = QIO_bytes_of_word(QIO_get_precision(&rec_info));
+      globaldata = QIO_get_globaldata(&rec_info);
+      datum_size = typesize*datacount;
+      
+      /* Create and read the input user record XML */
+      xml_record_in = QIO_string_create();
       status = QIO_read_user_record_info(infile, xml_record_in);
       if (status!=QIO_SUCCESS) return status;
       
-      datacount = QIO_get_datacount(&rec_info);
-      typesize = QIO_get_typesize(&rec_info);
-      wordsize = QIO_bytes_of_word(QIO_get_precision(&rec_info));
-      datum_size = typesize*datacount;
+      /* Reopen the master ionode file */
+      outfile = QIO_open_write_partfile(master_io_node, QIO_APPEND, volfmt, 
+					filename, ionode_layout, layout, fs);
+      if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
       
-      /* Create a field */
-      globaldata = QIO_get_globaldata(&rec_info);
-      if( globaldata == QIO_GLOBAL) vol = 1;
-      else vol = scalar_layout->volume;
-      
-      QIO_init_scalar_field(&field_in,vol,datum_size);
-      QIO_init_get_put_arg(&arg, &field_in, QIO_host_master_io_node(),
-			   QIO_host_master_io_node());
-      /* Read data */
-      /* Factory function depends on global/field type */
-      if( globaldata == QIO_GLOBAL)
-	status = 
-	  QIO_read_record_data(infile,QIO_scalar_put_global,datum_size,
-			       wordsize,&arg);
-      else
-	status = 
-	  QIO_read_record_data(infile,QIO_scalar_put,datum_size,
-			       wordsize,&arg);
-      if(status != QIO_SUCCESS)return status;
-      
-      if(globaldata == QIO_GLOBAL)total_bytes = datum_size;
-      else total_bytes = layout->volume * datum_size;
-
-      /* Set record XML */
+      /* Copy the user record XML */
       xml_record_out = QIO_string_create();
       QIO_string_copy(xml_record_out, xml_record_in);
       
-      totnbytes = 0;
-      DML_checksum_init(&checksum_out);
-      for (i=0; i < number_io_nodes; i++)
-	{
+      /* Write the record header to the master_io_node file */
+      /* This includes the private record XML and user record XML */
+      status = QIO_write_record_info(outfile, &rec_info, datum_size, word_size,
+				     xml_record_out, 
+				     &msg_begin[master_io_node_rank], 
+				     &msg_end[master_io_node_rank]);
+      if(status != QIO_SUCCESS)return status;
+
+      /* Next we process the payload.  Processing depends on whether
+	 we have global data or a field */
+
+      if( globaldata == QIO_GLOBAL){
+
+	/* Read global data in its entirety and write it all to the
+	   the master_io_node file */
+
+	/* Allocate space for the global data */
+	status = QIO_init_scalar_field(&field_in,1,datum_size,word_size);
+	if(status != QIO_SUCCESS)return status;
+
+	/* Prepare to read */
+	QIO_init_get_put_arg(&arg, &field_in, QIO_host_my_io_node(0),
+			     QIO_host_master_io_node());
+	/* Read the data from the host file */
+	QIO_suppress_global_broadcast(infile);  /* Scalar operation here */
+	status = 
+	  QIO_generic_read_record_data(infile,QIO_scalar_put_global,datum_size,
+				       word_size,&arg, &checksum_in, 
+				       &nbytes_in);
+	if(status != QIO_SUCCESS)return status;
+
+	/* Expected output byte count */
+	total_bytes = datum_size;
+	totnbytes_in = nbytes_in;
+
+	/* Prepare to write */
+	QIO_init_get_put_arg(&arg, &field_in, ionode_layout->this_node,
+			     master_io_node);
+
+	/* Write the global data */
+	status = QIO_write_record_data(outfile, &rec_info,
+				       QIO_scalar_get_global, 
+				       datum_size, word_size, 
+				       &arg, &checksum_out, &nbytes_out,
+				       &msg_begin[master_io_node_rank], 
+				       &msg_end[master_io_node_rank]);
+	if(status != QIO_SUCCESS)return status;
+	totnbytes_out = nbytes_out;
+
+      } /* global data */
+
+      else{
+
+	/* Write the field data. */
+	
+	/* Prepare the input file for reading the site data via random
+	   access */
+	
+	status = QIO_init_read_field(infile, datum_size, &checksum_in, 
+				     &lime_type);
+	if(status != QIO_SUCCESS)return status;
+	
+	/* Allocate space for the field datum for one site */
+	status = QIO_init_scalar_field(&field_in,1,datum_size,word_size);
+	if(status != QIO_SUCCESS)return status;
+	
+	/* Prepare to read */
+	QIO_init_get_put_arg(&arg, &field_in, 
+			     QIO_host_my_io_node(0),
+			     QIO_host_master_io_node());
+	
+	/* Expected total for the entire field */
+	total_bytes = layout->volume * datum_size;
+	totnbytes_out = 0;
+	DML_checksum_init(&checksum_out);
+	
+	/*  Cycle through all the partition files, copying one site at
+	    a time */
+	
+	for(i = 0; i < number_io_nodes; i++){
 	  
-	  ionode_layout->this_node = QIO_set_this_node(fs,layout,i);
-	  QIO_init_get_put_arg(&arg, &field_in, ionode_layout->this_node,
-			       master_io_node);
+	  /* Reopen the partition file for appending */
+	  outfile = QIO_open_write_partfile(i, QIO_APPEND, 
+					    volfmt, filename, 
+					    ionode_layout, layout, fs);
+	  if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
+
+	  /* Prepare part file output */
+	  QIO_init_read_seek_arg(&arg_seek, &arg, infile,
+				    ionode_layout->this_node,
+				    master_io_node);
 	  
-	  status = QIO_generic_write(outfile[i], &rec_info, xml_record_out, 
-				     QIO_scalar_get, datum_size, wordsize, 
-				     &arg, &checksum, &nbytes,
-				     &msg_begin[i], &msg_end[i]);
+	  /* Write the data.  The factory function QIO_scalar_get
+	     seeks and reads from the input file */
+	  status = 
+	    QIO_write_record_data(outfile, &rec_info, QIO_scalar_get, 
+				  datum_size, word_size, &arg_seek, 
+				  &checksum, &nbytes_out, 
+				  &msg_begin[i], &msg_end[i]);
 	  if(status != QIO_SUCCESS)return status;
-	  /* Add partial byte count to total */
-	  totnbytes += nbytes;
+	  
+	  /* Add partial byte count to total output bytes */
+	  totnbytes_out += nbytes_out;
 	  /* Add partial checksum to total */
 	  DML_checksum_peq(&checksum_out, &checksum);
-	}
 
-      /* Compare byte count with expected record size */
-      if(totnbytes != total_bytes)
-	{
-	  printf("%s: bytes written %lu != expected rec_size %lu\n",
-		 myname, (unsigned long)totnbytes, (unsigned long)total_bytes);
-	  return QIO_ERR_BAD_WRITE_BYTES;
+	  /* Close the file for now */
+	  QIO_close_write(outfile);
+	  free(newfilename);
 	}
+	
+	/* Close the input field. (File remains open) */
+	status = QIO_close_read_field(infile, &totnbytes_in);
+	if(status != QIO_SUCCESS)return status;
+
+	/* Reopen the master_io_node file for writing the checksum */
+	outfile = QIO_open_write_partfile(master_io_node, QIO_APPEND, volfmt, 
+					  filename, ionode_layout, layout, fs);
+	if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
+
+      } /* field data */
+	
+      /* Check that input byte count matches total expected */
+      if(total_bytes != totnbytes_in){
+	printf("Input byte count %llu does not match expected %llu\n",
+	       (unsigned long long)nbytes_in, 
+	       (unsigned long long)total_bytes);
+	return QIO_ERR_BAD_READ_BYTES;
+      }
       
-      /* Build and write checksum record */
-      checksum_info = QIO_create_checksum_info(checksum_out.suma,
-					       checksum_out.sumb);
-      xml_checksum = QIO_string_create();
-      QIO_encode_checksum_info(xml_checksum, checksum_info);
-
-      msg_end[master_io_node_rank] = 1;
-      if ((status = 
-	   QIO_write_string(outfile[master_io_node_rank], 
-			    msg_begin[master_io_node_rank], 
-			    msg_end[master_io_node_rank], xml_checksum,
-			    (const LIME_type)"scidac-checksum"))
-	  != QIO_SUCCESS){
-	printf("%s: Error writing checksum\n",myname);
+      /* Check that input byte and output byte counts match */
+      if(totnbytes_out != totnbytes_in){
+	printf("Input byte count %llu does not match output %llu\n",
+	       (unsigned long long)totnbytes_in, 
+	       (unsigned long long)totnbytes_out);
+	return QIO_ERR_BAD_READ_BYTES;
+      }
+      
+      /* Compare checksums */
+      if(checksum_in.suma != checksum_out.suma ||
+	 checksum_in.sumb != checksum_out.sumb){
+	printf("%s Input checksum %0x %0x != output checksum %0x %0x.\n",
+	       myname,
+	       checksum_in.suma, checksum_in.sumb,
+	       checksum_out.suma, checksum_out.sumb);
+	return QIO_CHECKSUM_MISMATCH;
+      }
+      
+      /* Read the checksum record and compare with what we got */
+      
+      checksum_info_expect = QIO_read_checksum(infile);
+      if(checksum_info_expect == NULL)return QIO_ERR_CHECKSUM_INFO;
+      
+      status = QIO_compare_checksum(0, checksum_info_expect, &checksum_in);
+      if(status != QIO_SUCCESS){
+	printf("%s Input data checksum does not match input file checksum\n",
+	       myname);
 	return status;
       }
-
-      if(QIO_verbosity() >= QIO_VERB_REG){
-	printf("%s: Wrote field. datatype %s globaltype %d \n              precision %s colors %d spins %d count %d\n",
-	       myname,
+      QIO_destroy_checksum_info(checksum_info_expect);
+      
+      /* Write checksum record */
+      status = QIO_write_checksum(outfile, &checksum_out);
+      
+      if(QIO_verbosity() >= QIO_VERB_LOW){
+	if(globaldata == QIO_GLOBAL)printf("Global data\n");
+	else printf("Field data\n");
+	printf("  %s\n  Datatype %s\n  precision %s colors %d spins %d count %d\n",
+	       QIO_string_ptr(xml_record_in),
 	       QIO_get_datatype(&rec_info),
-	       QIO_get_globaldata(&rec_info),
 	       QIO_get_precision(&rec_info),
 	       QIO_get_colors(&rec_info),
 	       QIO_get_spins(&rec_info),
 	       QIO_get_datacount(&rec_info));
 	
-	printf("%s: checksum string = %s\n",
-	       myname,QIO_string_ptr(xml_checksum));
+	printf("  Checksums %0x %0x\n",
+	       checksum_out.suma, checksum_out.sumb);
       }
       
-      QIO_string_destroy(xml_checksum);
+      QIO_free_scalar_field(&field_in);
+      
+      /* Close the master_io_node file for now */
+      QIO_close_write(outfile);
+      
       QIO_string_destroy(xml_record_in);
       QIO_string_destroy(xml_record_out);
-      QIO_free_scalar_field(&field_in);
-      QIO_destroy_checksum_info(checksum_info);
-      
     }
   /************* end iteration on records *********/
   
-  QIO_close_read(infile);
   QIO_string_destroy(xml_file_in);
   
-  
-  for (i=0; i < number_io_nodes; i++)
-    QIO_close_write(outfile[i]);
-
   QIO_delete_scalar_layout(scalar_layout);
   QIO_delete_ionode_layout(ionode_layout);
-
+  
   return QIO_SUCCESS;
 }
+
+/********************************************************************/
+/*  Convert PARTFILE to SINGLEFILE                                  */
+/********************************************************************/
 
 int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout)
 {
   QIO_Layout *scalar_layout, *ionode_layout;
   QIO_String *xml_file_in, *xml_record_in;
-  QIO_String *xml_file_out, *xml_record_out, *xml_checksum;
-  QIO_Reader **infile;
+  QIO_String *xml_file_out, *xml_record_out;
+  QIO_Reader *infile;
   QIO_Writer *outfile;
-  QIO_RecordInfo rec_info;
+  QIO_RecordInfo rec_info, rec_info_in;
+  QIO_Iflag iflag;
   DML_Checksum checksum_out, checksum_in, checksum;
-  QIO_ChecksumInfo *checksum_info_out, *checksum_info_expect;
-  uint64_t nbytes,totnbytes;
+  QIO_ChecksumInfo *checksum_info_expect, *checksum_info_tmp;
+  uint64_t nbytes_in,nbytes_out,totnbytes_out,totnbytes_in;
   int msg_begin, msg_end;
   int i,status,master_io_node_rank;
   int number_io_nodes = fs->number_io_nodes;
   int master_io_node = fs->master_io_node();
   size_t total_bytes,datum_size;
-  int typesize,datacount,vol,globaldata,wordsize,volfmt;
-  char *newfilename;
+  int typesize,datacount,globaldata,word_size;
+  LIME_type lime_type_out = NULL, lime_type_in;
+  off_t *offset;
   s_field field_in;
   get_put_arg arg;
+  write_seek_arg arg_seek;
   FILE *check;
   char myname[] = "QIO_part_to_single";
+
+  /* Default values */
+  iflag.serpar = QIO_SERIAL;
+  iflag.volfmt = QIO_PARTFILE;
 
   /* Sanity checks */
 
@@ -499,8 +790,9 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
    return 1;
   }
 
-  /* The single file target must not exist.  Otherwise, QIO_open_read
-     confuses it with the input partition file. */
+  /* The single file target must not exist.  Otherwise, because it is
+     designed to autodetect the file format, QIO_open_read can't tell
+     whether to open it or the input partition file. */
   
   check = fopen(filename,"r");
   if(check){
@@ -510,16 +802,27 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
     return 1;
   }
 
-  /* Create scalar layout structure */
-  scalar_layout = QIO_create_scalar_layout(layout, fs);
-
-  /* Check on the scalar layout */
-  check_scalar_layout(scalar_layout,layout);
+  /* Allocate space for input file offsets */
+  /* We use these to mark our place in each file so we can reopen them
+     and continue reading from where we left off */
+  offset = (off_t *)malloc(number_io_nodes * sizeof(off_t));
+  if(offset == NULL){
+    printf("%s No space for offsets\n",myname);
+    return QIO_ERR_ALLOC;
+  }
+  /* Indicates we haven't determined the offset, yet */
+  for(i = 0; i < number_io_nodes; i++)
+    offset[i] = -1;
   
-  /* Create scalar layout structure */
+  /* Create the MPP ionode layout structure */
   ionode_layout = QIO_create_ionode_layout(layout, fs);
+  if(ionode_layout == NULL)return QIO_ERR_ALLOC;
 
-  /* Which entry in the table is the master node? */
+  /* Create the scalar layout structure */
+  scalar_layout = QIO_create_scalar_layout(layout, fs);
+  if(scalar_layout == NULL)return QIO_ERR_ALLOC;
+
+  /* Which entry in the table is the MPP master ionode? */
   master_io_node_rank = QIO_get_io_node_rank(master_io_node);
   if(master_io_node_rank < 0){
     printf("%s: Bad Filesystem structure.  Master node %d is not an I/O node\n",
@@ -527,281 +830,308 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
     return QIO_ERR_BAD_IONODE;
   }
 
-  /* Open the files for reading */
-  infile = (QIO_Reader **) malloc (sizeof(QIO_Reader *)*number_io_nodes);
-  if(!infile){
-    printf("%s: Can't malloc infiles (%f MB)\n",
-           myname,sizeof(QIO_Writer *)*((float)number_io_nodes)/1e6);
-    return QIO_ERR_ALLOC;
-  }
-  
-  /* Open master I/O file and check volume format */
-  i = master_io_node_rank;
+  /* Open the master ionode file, read private file info and sitelist */
+  infile = QIO_open_read_partfile(master_io_node_rank, &iflag, filename, 
+				  ionode_layout, layout, fs);
+  if(infile == NULL)return QIO_ERR_OPEN_READ;
 
-  /* Set this node */
-  ionode_layout->this_node = QIO_set_this_node(fs,layout,i);
-  
-  /* Set output path according to MULTI/SINGLE PATH flag */
-  newfilename = QIO_set_filepath(fs,filename,i);
-  
-  /* Open to read */
-  infile[i] = QIO_open_read_master(newfilename,ionode_layout,
-				   0,fs->my_io_node,fs->master_io_node);
-  /* Check the volume format */
-  volfmt = infile[i]->volfmt;
-
-  if (volfmt != QIO_PARTFILE){
-    printf("%s(%d) File %s volume format must be PARTFILE.  Found %d\n",
-	   myname, i, newfilename,infile[i]->volfmt);
-    return QIO_ERR_FILE_INFO;
-  }
-      
-  /* Create input file XML */
+  /* Read user file XML from input master */
   xml_file_in = QIO_string_create();
-
-  for (i=0; i < number_io_nodes; i++)
-    {
-      /* Set this node */
-      ionode_layout->this_node = QIO_set_this_node(fs,layout,i);
-      
-      if(i != master_io_node_rank){
-	
-	/* Set output path according to MULTI/SINGLE PATH flag */
-	newfilename = QIO_set_filepath(fs,filename,i);
-
-	/* Open to read */
-	infile[i] = QIO_open_read_master(newfilename,ionode_layout,
-					 0,fs->my_io_node,fs->master_io_node);
-
-	/* Set volume format */
-	infile[i]->volfmt = volfmt;
-      }
-      
-      status = QIO_open_read_nonmaster(infile[i],newfilename);
-      if(status != QIO_SUCCESS)return status;
-      
-      status = QIO_read_check_sitelist(infile[i]);
-      if(status != QIO_SUCCESS)return status;
-      
-      status = QIO_read_user_file_xml(xml_file_in, infile[i]);
-      if(status != QIO_SUCCESS)return status;
-      
-      free(newfilename);
-      
-    }
+  status = QIO_read_user_file_xml(xml_file_in, infile);
+  if(status != QIO_SUCCESS)return status;
   
-  /* Create output file XML */
+  /* Close the master ionode file temporarily, saving the current
+     position, which should be just before the first data message */
+  offset[master_io_node_rank] = QIO_get_reader_pointer(infile);
+  status = QIO_close_read(infile);
+  if(status != QIO_SUCCESS)return status;
+
+  /* Copy user file XML for eventual output */
   xml_file_out = QIO_string_create();
   QIO_string_copy(xml_file_out, xml_file_in);
   
-  /* Open the files for writing */
-  outfile =  QIO_generic_open_write(xml_file_out,filename,QIO_SINGLEFILE,
-				    scalar_layout, 0,
+  /* Copy user file XML for output */
+  xml_file_out = QIO_string_create();
+  QIO_string_copy(xml_file_out, xml_file_in);
+
+  /* Open the host single file and write the header, including user file
+     XML */
+
+  outfile =  QIO_generic_open_write(filename,QIO_SINGLEFILE,
+				    scalar_layout, NULL,
 				    QIO_host_my_io_node,
 				    QIO_host_master_io_node);
   
+  if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
+
+  status = QIO_write_file_header(outfile, xml_file_out);
+  if(status != QIO_SUCCESS)return status;
+
   /***** iterate on records up to EOF ***********/
   
   while (1)
     {
-      /* Create the record XML */
-      xml_record_in = QIO_string_create();
       
-      /* Read the record info from the master file */
-      status = QIO_read_private_record_info(infile[master_io_node_rank], 
-					    &rec_info);
-      if (status!=QIO_SUCCESS) return status;
-      if (status==QIO_EOF)break;
+      /* Reopen the master ionode file, read private file info and sitelist */
+      infile = QIO_open_read_partfile(master_io_node_rank, &iflag, filename,
+				      ionode_layout, layout, fs);
+      if(infile == NULL)return QIO_ERR_OPEN_READ;
       
-      /* Set state for the remaining files */
-
-      for(i = 0; i < number_io_nodes; i++)if(i != master_io_node_rank)
-	{
-	  /* Copy master record info to nonmaster reader */
-	  infile[i]->record_info = rec_info;
-	  status = QIO_read_private_record_info(infile[i], &rec_info);
-	  if (status!=QIO_SUCCESS) return status;
-	  if (status==QIO_EOF)break;
-	}
-
-      datacount  = QIO_get_datacount(&rec_info);
-      typesize   = QIO_get_typesize(&rec_info);
-      wordsize   = QIO_bytes_of_word(QIO_get_precision(&rec_info));
-      datum_size = typesize*datacount;
-      globaldata = QIO_get_globaldata(&rec_info);
-
-      /* Read the user record info from the master */
-
-      status = QIO_read_user_record_info(infile[master_io_node_rank], 
-					 xml_record_in);
+      /* Skip to where we left off */
+      status = QIO_set_reader_pointer(infile,offset[master_io_node_rank]);
       if(status != QIO_SUCCESS)return status;
-      
-      /* Set state for the remaining files */
 
-      for(i = 0; i < number_io_nodes; i++)if(i != master_io_node_rank)
-	{
-	  /* Copy master user record info to nonmaster reader */
-	  QIO_string_copy(infile[i]->xml_record, xml_record_in);
-	  status = QIO_read_user_record_info(infile[i], xml_record_in);
-	  if (status!=QIO_SUCCESS) return status;
-	}
+      /* Read the next record info from the master ionode file.
+	 Stop when we reach the end of file. */
+      status = QIO_read_private_record_info(infile, &rec_info_in);
+      if (status==QIO_EOF) break;
+      if (status!=QIO_SUCCESS) return status;
+      
+      /* Collect record format data */
+      datacount   = QIO_get_datacount(&rec_info_in);
+      typesize    = QIO_get_typesize(&rec_info_in);
+      word_size   = QIO_bytes_of_word(QIO_get_precision(&rec_info_in));
+      globaldata  = QIO_get_globaldata(&rec_info_in);
+      datum_size  = typesize*datacount;
+
+      /* Read the user record info from the master ionode file. */
+      xml_record_in = QIO_string_create();
+      status = QIO_read_user_record_info(infile, xml_record_in);
+      if(status != QIO_SUCCESS)return status;
+
+      /* Set the output record XML and write the private and user
+	 record XML to the host single file */
+      xml_record_out = QIO_string_create();
+      QIO_string_copy(xml_record_out, xml_record_in);
+      
+      status = QIO_write_record_info(outfile, &rec_info_in, 
+				     datum_size, word_size,
+				     xml_record_out,
+				     &msg_begin, &msg_end);
+      if(status != QIO_SUCCESS)return status;
+
+      /* Process the record according to type: global data or field data */
 
       if( globaldata == QIO_GLOBAL)
 	{
-	  vol = 1;
+	  /* Global data.  Read the data in its entirety and write it */
+
+	  /* Allocate space for the global data */
+	  status = QIO_init_scalar_field(&field_in,1,datum_size,word_size);
+	  if(status != QIO_SUCCESS)return status;
+
+	  /* Read the data */
+	  QIO_init_get_put_arg(&arg, &field_in, ionode_layout->this_node,
+			       master_io_node);
+	  QIO_suppress_global_broadcast(infile);  /* Scalar operation here */
+	  status = 
+	    QIO_generic_read_record_data(infile, QIO_part_put_global,
+					 datum_size, word_size,
+					 &arg,&checksum_in,&nbytes_in);
+	  if(status != QIO_SUCCESS)return status;
+
+	  /* Read checksum data */
+	  checksum_info_expect = QIO_read_checksum(infile);
+	  if(checksum_info_expect == NULL)return QIO_ERR_CHECKSUM_INFO;
+	  
+	  /* Expected output byte count */
 	  total_bytes = datum_size;
+	  totnbytes_in = nbytes_in;
+	  
+	  /* Write the global data to the host single file */
+	  QIO_init_get_put_arg(&arg, &field_in, QIO_host_my_io_node(0),
+			       QIO_host_master_io_node());
+
+	  status = QIO_write_record_data(outfile, &rec_info_in,
+					 QIO_scalar_get_global, 
+					 datum_size, word_size, 
+					 &arg, &checksum_out, &nbytes_out,
+					 &msg_begin, &msg_end);
+	  if(status != QIO_SUCCESS)return status;
+	  totnbytes_out = nbytes_out;
+
+	  /* Close the master ionode file temporarily, saving the current
+	     position, which should be just before the next data message */
+	  offset[master_io_node_rank] = QIO_get_reader_pointer(infile);
+	  status = QIO_close_read(infile);
+	  if(status != QIO_SUCCESS)return status;
 	}
       else
 	{
-	  vol = layout->volume;
-	  total_bytes = layout->volume * datum_size;
-	}
-      
-      /* Create space for holding the binary data */
-      QIO_init_scalar_field(&field_in,vol,datum_size);
-      
-      totnbytes = 0;
-      DML_checksum_init(&checksum_in);
-      for (i=0; i < number_io_nodes; i++)
-	{
-	  ionode_layout->this_node = QIO_set_this_node(fs,layout,i);
-	  
-	  QIO_init_get_put_arg(&arg, &field_in, ionode_layout->this_node,
-			       master_io_node);
+	  /* Write the field data */
 
-	  /* Read data.  Factory function depends on global/field type */
-	  if( globaldata == QIO_GLOBAL)
-	    status = 
-	      QIO_generic_read_record_data(infile[i],QIO_part_put_global,
-					   datum_size, wordsize,
-					   &arg,&checksum,&nbytes);
-	  else
-	    status = 
-	      QIO_generic_read_record_data(infile[i],QIO_part_put,
-					   datum_size,wordsize,
-					   &arg,&checksum,&nbytes);
-	  if(status != QIO_EOF && status != QIO_SUCCESS)return status;
+	  /* We need the LIME type for the record data. So we peek at
+	     the header for LIME record for the binary data in the
+	     master ionode file.  Also initialize checksum_in */
 	  
-	  if(status == QIO_EOF) 
-	    printf("%s: ERROR. io_node_rank %d reached end of file\n",
-		   myname,i);
+	  status = QIO_init_read_field(infile, datum_size, 
+				       &checksum_in, &lime_type_in);
+	  if(status != QIO_SUCCESS)return status;
+
+	  /* Copy LIME type */
+	  lime_type_out = (char *)malloc(strlen(lime_type_in)+1);
+	  strncpy(lime_type_out,lime_type_in,strlen(lime_type_in)+1);
+
+	  /* Now close the master ionode file.  We will reread the
+	     private and user file xml later */
+	  status = QIO_close_read(infile);
+	  if(status != QIO_SUCCESS)return status;
+
+	  /* Prepare to write the output field to the host single file */
+	  status = QIO_init_write_field(outfile, msg_begin, msg_end,
+					QIO_FIELD, datum_size, &checksum_out,
+					lime_type_out);
+	  if(status != QIO_SUCCESS)return status;
+	  free(lime_type_out);
+	  lime_type_out = NULL;
+
+	  /* Input byte counting and checksums */
+	  total_bytes = layout->volume * datum_size;
+	  totnbytes_in = 0;
+	  DML_checksum_init(&checksum_in);
+
+	  /* Create space for holding the binary data for one site */
+	  status = QIO_init_scalar_field(&field_in,1,datum_size,word_size);
+	  if(status != QIO_SUCCESS)return status;
+      
+	  /* Prepare to write */
+	  QIO_init_get_put_arg(&arg, &field_in, 
+			       QIO_host_my_io_node(0),
+			       QIO_host_master_io_node());
+	
+	  /* Cycle through all the partition files, reading and
+	     copying one site at a time.  The factory "put" function
+	     writes the site data to the large file. */
 	  
-	  if(status != QIO_EOF)
-	    {
-	      /* Add partial byte count to total */
-	      totnbytes += nbytes;
-	      
-	      /* Add partial checksum to total */
-	      DML_checksum_peq(&checksum_in, &checksum);
+	  for(i = 0; i < number_io_nodes; i++){
+	  
+	    /* Open the ionode file for reading */
+	    infile = QIO_open_read_partfile(i, &iflag, filename, 
+					    ionode_layout, layout, fs);
+	    if(infile == NULL)return QIO_ERR_OPEN_READ;
+	    
+	    /* Position the file for the next data message */
+	    if(offset[i] >= 0)
+	      status = QIO_set_reader_pointer(infile,offset[i]);
+	    if(status != QIO_SUCCESS)return status;
+
+	    /* Reread the record info or set state */
+	    status = QIO_read_private_record_info(infile, &rec_info);
+	    if(status != QIO_SUCCESS)return status;
+
+	    /* The nonmaster node files don't have any record info, so
+               we copy the master ionode record info into the reader.
+	    */
+	    infile->record_info = rec_info_in;
+	    
+	    /* Reread the user record info or set state */
+	    status = QIO_read_user_record_info(infile, xml_record_in);
+	    if(status != QIO_SUCCESS)return status;
+	    
+	    /* Prepare host single file output */
+	    QIO_init_write_seek_arg(&arg_seek, &arg, outfile,
+				    ionode_layout->this_node,
+				    master_io_node);
+	    
+	    /* Read the record data, writing it to the host single
+	       file via the factory function QIO_part_put */
+	    status = 
+	      QIO_generic_read_record_data(infile,QIO_part_put,datum_size,
+					   word_size,&arg_seek,
+					   &checksum, &nbytes_in);
+	    if(status != QIO_SUCCESS)return status;
+
+	    /* Add partial checksum to total */
+	    DML_checksum_peq(&checksum_in, &checksum);
+
+	    /* Read checksum data. Only the master ionode has it, so
+	       grab it when we process the master ionode file */
+	    checksum_info_tmp = QIO_read_checksum(infile);
+	    if(i == master_io_node_rank){
+	      if(checksum_info_tmp == NULL)return QIO_ERR_CHECKSUM_INFO;
+	      checksum_info_expect = checksum_info_tmp;
 	    }
-	}
-      /* Compare byte count with expected record size */
-      if(totnbytes != total_bytes)
+	    
+	    /* Add partial byte count to total output bytes */
+	    totnbytes_in += nbytes_in;
+
+	    /* Close the file temporarily */
+	    offset[i] = QIO_get_reader_pointer(infile);
+	    status = QIO_close_read(infile);
+	    if(status != QIO_SUCCESS)return status;
+	  }
+
+	  /* Close the output field (file remains open) */
+	  status = QIO_close_write_field(outfile, &totnbytes_out);
+	  if(status != QIO_SUCCESS)return QIO_ERR_CLOSE;
+
+	} /* else field */
+      
+      /* Compare output byte count with expected total record size */
+      if(totnbytes_out != total_bytes)
 	{
-	  printf("%s: ERROR bytes written %lu != expected rec_size %lu\n",
-		 myname,
-		 (unsigned long)totnbytes, (unsigned long)total_bytes);
+	  printf("%s: bytes written %lu != expected rec_size %lu\n",
+		 myname, (unsigned long)totnbytes_out, 
+		 (unsigned long)total_bytes);
 	  return QIO_ERR_BAD_WRITE_BYTES;
 	}
+
+      /* Compare input and output byte counts */
+      if(totnbytes_in != totnbytes_out){
+	  printf("%s: bytes written %lu != bytes read %lu\n",
+		 myname, (unsigned long)totnbytes_in, 
+		 (unsigned long)totnbytes_out);
+	  return QIO_ERR_BAD_WRITE_BYTES;
+      }
       
-      /* Get checksum from master */
-
-      checksum_info_expect = QIO_read_checksum(infile[master_io_node_rank]);
-      if(checksum_info_expect == NULL)return QIO_ERR_CHECKSUM_INFO;
-
-      /* Set state for the remaining files */
-
-      for(i = 0; i < number_io_nodes; i++)if(i != master_io_node_rank)
-	QIO_read_checksum(infile[i]);
+      /* Compare input and output checksums */
+      if(checksum_in.suma != checksum_out.suma ||
+	 checksum_in.sumb != checksum_out.sumb){
+	printf("%s Input checksum %0x %0x != output checksum %0x %0x.\n",
+	       myname,
+	       checksum_in.suma, checksum_in.sumb,
+	       checksum_out.suma, checksum_out.sumb);
+	return QIO_CHECKSUM_MISMATCH;
+      }
       
+      /* Compare the computed input checksums with checksum on the
+	 input file */
       status = QIO_compare_checksum(master_io_node, 
 				    checksum_info_expect, &checksum_in);
       if (status != QIO_SUCCESS) return status;
       
-#ifdef undef 
-#endif
-      
-      /* Set record XML */
-      xml_record_out = QIO_string_create();
-      QIO_string_copy(xml_record_out, xml_record_in);
-      
-      QIO_init_get_put_arg(&arg, &field_in, scalar_layout->this_node,
-			   master_io_node);
-      nbytes = 0;
-      DML_checksum_init(&checksum_out);
-      status = QIO_generic_write(outfile, &rec_info, xml_record_out,
-				 QIO_part_get, datum_size, wordsize,
-				 &arg, &checksum_out, &nbytes,
-				 &msg_begin, &msg_end);
-      if(status != QIO_SUCCESS)return status;
-      
-      checksum_info_out = QIO_create_checksum_info(checksum_out.suma,
-                                               checksum_out.sumb);
-      xml_checksum = QIO_string_create();
-      QIO_encode_checksum_info(xml_checksum, checksum_info_out);
-      
-      msg_end = 1;
-      if ((status =
-           QIO_write_string(outfile,
-                            msg_begin,
-                            msg_end, xml_checksum,
-                            (const LIME_type)"scidac-checksum"))
-          != QIO_SUCCESS){
-        printf("%s: Error writing checksum\n",myname);
-        return status;
-      }
-      
-      /* Compare output byte count with input byte count */
-      if(totnbytes != nbytes)
-	{
-	  printf("%s: ERROR: bytes written %lu != expected bytes %lu\n",
-		 myname,
-		 (unsigned long)totnbytes, (unsigned long)nbytes);
-	  return QIO_ERR_BAD_WRITE_BYTES;
-	}
-      
-      /* Compare output checksum with input checksum */
-      status = QIO_compare_checksum_info(checksum_info_out, 
-					 checksum_info_expect,
-					 myname,master_io_node);
-      if(status != QIO_SUCCESS){
-	printf("%s: ERROR. Output file checksum disagrees with input checksum\n",
-	       myname);
-	return status;
-      }
-      
+      /* Write checksum record to host single file */
+      status = QIO_write_checksum(outfile, &checksum_out);
+      if(status != QIO_SUCCESS)return status;      
 
-      if(QIO_verbosity() >= QIO_VERB_REG){
-	printf("%s: Wrote field. datatype %s globaltype %d \n precision %s colors %d spins %d count %d\n",
-	       myname,
+      if(QIO_verbosity() >= QIO_VERB_LOW){
+	if(globaldata == QIO_GLOBAL)printf("Global data\n");
+	else printf("Field data\n");
+	printf("  %s\n  Datatype %s\n  precision %s colors %d spins %d count %d\n",
+	       QIO_string_ptr(xml_record_out),
 	       QIO_get_datatype(&rec_info),
-	       QIO_get_globaldata(&rec_info),
 	       QIO_get_precision(&rec_info),
 	       QIO_get_colors(&rec_info),
 	       QIO_get_spins(&rec_info),
 	       QIO_get_datacount(&rec_info));
 	
-	printf("%s: checksum string = %s\n",
-	       myname,QIO_string_ptr(xml_checksum));
-	
+	printf("  Checksums %0x %0x\n",
+	       checksum_out.suma, checksum_out.sumb);
       }
-
-      QIO_string_destroy(xml_checksum);
+      
+      QIO_free_scalar_field(&field_in);
+      
       QIO_string_destroy(xml_record_in);
       QIO_string_destroy(xml_record_out);
-      QIO_free_scalar_field(&field_in);
+     
       QIO_destroy_checksum_info(checksum_info_expect);
-      QIO_destroy_checksum_info(checksum_info_out);
-      
     }
   /************* end iteration on records *********/
-  
-  for (i=0; i < number_io_nodes; i++)
-    QIO_close_read(infile[i]);
-  QIO_string_destroy(xml_file_in);
-  
-  
+
+  /* Close the master_io_node file */
   QIO_close_write(outfile);
+  
+  QIO_string_destroy(xml_file_in);
   
   QIO_delete_scalar_layout(scalar_layout);
   QIO_delete_ionode_layout(ionode_layout);

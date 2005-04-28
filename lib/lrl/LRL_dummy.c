@@ -1,4 +1,4 @@
-/* LRL_read_bytes.c */
+/* LRL_dummy.c */
 /* Dummy */
 /* LIME ignored */
 
@@ -7,7 +7,7 @@
 #include <malloc.h>
 #include <stdlib.h>
 
-LRL_FileReader *LRL_open_read_file(const char *filename){
+LRL_FileReader *LRL_open_read_file(const char *filename, off_t seek){
   LRL_FileReader *fr;
 
   fr = (LRL_FileReader *)malloc(sizeof(LRL_FileReader));
@@ -16,6 +16,8 @@ LRL_FileReader *LRL_open_read_file(const char *filename){
   /*** Ignore mode for now ***/
   fr->file = fopen(filename,"r");
   if(fr->file == NULL)return NULL;
+
+  fseeko(fr->file, seek, SEEK_SET);
 
   return fr;
 }
@@ -50,7 +52,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, size_t *rec_size,
   return rr;
 }
 
-LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size, 
+LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t rec_size, 
 					LIME_tag tag){
   LRL_RecordWriter *rr;
   
@@ -61,7 +63,7 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, size_t *rec_size,
   rr->fr = fr;
 
   /* Write byte size of record */
-  if(fwrite(rec_size, 1, sizeof(size_t), fr->file) != sizeof(size_t))
+  if(fwrite(&rec_size, 1, sizeof(size_t), fr->file) != sizeof(size_t))
     return NULL;  
 
   return rr;
@@ -102,11 +104,14 @@ int LRL_close_write_record(LRL_RecordWriter *rr){
   return LRL_SUCCESS;
 }
 
-int LRL_close_read_file(LRL_FileReader *fr){
-  if(fr == NULL)return LRL_SUCCESS;
+off_t LRL_close_read_file(LRL_FileReader *fr){
+  off_t offset;
+
+  if(fr == NULL)return 0;
+  offset = ftello(fr->file);
   fclose(fr->file);
   free(fr);
-  return LRL_SUCCESS;
+  return offset;
 }
 
 int LRL_close_write_file(LRL_FileWriter *fr){

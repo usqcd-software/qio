@@ -16,7 +16,7 @@
 /*****************************************/
 
 QIO_Reader *QIO_create_reader(const char *filename, 
-			      QIO_Layout *layout, QIO_ioflag iflag,
+			      QIO_Layout *layout, QIO_Iflag *iflag,
 			      int (*io_node)(int), int (*master_io_node)())
 {
   QIO_Reader *qio_in;
@@ -39,18 +39,20 @@ QIO_Reader *QIO_create_reader(const char *filename,
   if (dml_layout == NULL || layout == NULL)
     return NULL;
 
-  dml_layout->node_number        = layout->node_number;
-  dml_layout->node_index         = layout->node_index;
-  dml_layout->get_coords         = layout->get_coords;
-  dml_layout->latsize            = latsize;
-  dml_layout->latdim             = layout->latdim;
-  dml_layout->volume             = layout->volume;
-  dml_layout->sites_on_node      = layout->sites_on_node;
-  dml_layout->this_node          = layout->this_node;
-  dml_layout->number_of_nodes    = layout->number_of_nodes;
-			         
-  dml_layout->ionode             = io_node;
-  dml_layout->master_io_node     = master_io_node();
+  dml_layout->node_number          = layout->node_number;
+  dml_layout->node_index           = layout->node_index;
+  dml_layout->get_coords           = layout->get_coords;
+  dml_layout->num_sites            = layout->num_sites;
+  dml_layout->latsize              = latsize;
+  dml_layout->latdim               = layout->latdim;
+  dml_layout->volume               = layout->volume;
+  dml_layout->sites_on_node        = layout->sites_on_node;
+  dml_layout->this_node            = layout->this_node;
+  dml_layout->number_of_nodes      = layout->number_of_nodes;
+			           
+  dml_layout->ionode               = io_node;
+  dml_layout->master_io_node       = master_io_node();
+  dml_layout->broadcast_globaldata = 1;
 
   /* Construct the reader handle */
   qio_in = (QIO_Reader *)malloc(sizeof(QIO_Reader));
@@ -63,17 +65,35 @@ QIO_Reader *QIO_create_reader(const char *filename,
   qio_in->sites       = NULL;
   qio_in->read_state  = QIO_RECORD_INFO_PRIVATE_NEXT;
   qio_in->xml_record  = NULL;
-  qio_in->volfmt      = 0;
   DML_checksum_init(&(qio_in->last_checksum));
+
+  if(iflag == NULL){
+    /* Default values */
+    qio_in->serpar = QIO_SERIAL;
+    qio_in->volfmt = QIO_UNKNOWN;
+  }
+  else{
+    /* Only serial reading is supported for now */
+    /* qio_in->serpar = iflag->serpar; */
+    qio_in->serpar = QIO_SERIAL;
+    qio_in->volfmt = iflag->volfmt;
+  }
 
   /* First, only the global master node opens the file, regardless of
      whether it will be read by all nodes */
 
   if(this_node == dml_layout->master_io_node){
-    if(QIO_verbosity() >= QIO_VERB_DEBUG)
-      printf("%s(%d): Calling LRL_open_read_file %s\n",
-	     myname,this_node,filename);
-    lrl_file_in = LRL_open_read_file(filename);
+    /* If the format is SINGLEFILE the file name is as specified by
+       "filename".  If it is PARTFILE or MULTIFILE, the name is formed
+       by adding a volume number extension to the "filename" string.
+       If the volume format is unknown or single file, we try
+       "filename" first. */
+    if(qio_in->volfmt == QIO_UNKNOWN || qio_in->volfmt == QIO_SINGLEFILE){
+      if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	printf("%s(%d): Calling LRL_open_read_file %s\n",
+	       myname,this_node,filename);
+      lrl_file_in = LRL_open_read_file(filename);
+    }
     if(lrl_file_in == NULL){
       /* If plain filename fails, try filename with volume number suffix */
       newfilename = QIO_filename_edit(filename,QIO_PARTFILE, this_node);
@@ -95,15 +115,21 @@ QIO_Reader *QIO_create_reader(const char *filename,
   return qio_in;
 }
 
+
+/* Used during file conversion on a scalar machine */
+void QIO_suppress_global_broadcast(QIO_Reader *qio_in){
+  qio_in->layout->broadcast_globaldata = 0;
+}
+
 /*******************************************/
 /* Read private file info from master file */
 /*******************************************/
 
-QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in, 
-					 DML_Layout *dml_layout)
+QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in)
 {
   QIO_String *xml_file_private;
   QIO_FileInfo *file_info_found = NULL;
+  DML_Layout *dml_layout = qio_in->layout;
   int this_node = dml_layout->this_node;
   LIME_type lime_type = NULL;
   int status;
@@ -192,6 +218,35 @@ int QIO_set_latdim(QIO_Reader *qio_in, int latdim, int *latsize)
   return QIO_SUCCESS;
 }
 
+/*****************************************/
+/* In case we are reading intermittently,
+   set the file pointer                  */
+/*****************************************/
+
+int QIO_set_reader_pointer(QIO_Reader *qio_in, off_t offset)
+{
+  int status;
+
+  if(QIO_verbosity() >= QIO_VERB_DEBUG)
+    printf("QIO_set_reader_pointer(%d): Setting to %llu\n",
+	   qio_in->layout->this_node, (unsigned long long)offset);
+  status = LRL_set_reader_pointer(qio_in->lrl_file_in, offset);
+  if(status != LRL_SUCCESS)
+    return QIO_ERR_BAD_SEEK;
+  return QIO_SUCCESS;
+}
+
+off_t QIO_get_reader_pointer(QIO_Reader *qio_in)
+{
+  off_t offset;
+
+  offset = LRL_get_reader_pointer(qio_in->lrl_file_in);
+
+  if(QIO_verbosity() >= QIO_VERB_DEBUG)
+    printf("QIO_get_reader_pointer(%d): Got %llu\n",
+	   qio_in->layout->this_node, (unsigned long long)offset);
+  return offset;
+}
 
 
 /****************************************************************/
@@ -223,14 +278,15 @@ int QIO_check_file_info(DML_Layout *dml_layout, QIO_FileInfo *file_info_found)
   return QIO_SUCCESS;
 }
 
-/*******************************************************************/
-/* Master I/O node opens the file for reading and reads the header */
-/*******************************************************************/
-/* Gets the volume format code from the file header */
+/************************************************************************/
+/* All nodes create the reader.  Master I/O node opens the file and
+   reads the private file XML */
+/************************************************************************/
+/* Other nodes just create the reader */
 
 QIO_Reader *QIO_open_read_master(const char *filename, 
-			  QIO_Layout *layout, QIO_ioflag iflag,
-			  int (*io_node)(int), int (*master_io_node)())
+				 QIO_Layout *layout, QIO_Iflag *iflag,
+				 int (*io_node)(int), int (*master_io_node)())
 {
   QIO_Reader *qio_in;
   DML_Layout *dml_layout;
@@ -256,7 +312,7 @@ QIO_Reader *QIO_open_read_master(const char *filename,
   if(this_node == dml_layout->master_io_node){
 
     /* Read the private file info from the master file */
-    file_info_found = QIO_read_private_file_info(qio_in, dml_layout);
+    file_info_found = QIO_read_private_file_info(qio_in);
 
     /* Compare what we found with what we expected */
     /* If latdim <= 0 we read in discovery mode and accept
@@ -282,6 +338,7 @@ QIO_Reader *QIO_open_read_master(const char *filename,
 
    QIO_destroy_file_info(file_info_found);
   }
+
   /* Return what we have read so far */
   return qio_in;
 }
@@ -336,26 +393,38 @@ int QIO_broadcast_file_reader_info(QIO_Reader *qio_in, int discover_dims)
 
 
 /*********************************************************************/
-/* Act on the volume format.  Other nodes open their file (if needed)*/
+/* Other nodes open their file (if needed)                           */
 /*********************************************************************/
 
-int QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename){
+int QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
+			    QIO_Iflag *iflag){
 
   DML_Layout *dml_layout = qio_in->layout;
   int this_node = dml_layout->this_node;
   LRL_FileReader *lrl_file_in = NULL;
+  int serpar;
   char *newfilename;
   char myname[] = "QIO_open_read_nonmaster";
 
   /* Open any additional file handles as needed */
   /* Read the sitelist if needed */
 
+  if(iflag == NULL){
+    /* Default values */
+    serpar = QIO_SERIAL;
+  }
+  else{
+    /* We don't support parallel reading, yet */
+    serpar = QIO_SERIAL;
+    /* serpar = iflag->serpar; */
+  }
+
   if(qio_in->volfmt == QIO_SINGLEFILE)
     {
       /* One file for all nodes */
       if(this_node == dml_layout->master_io_node){
-	if(QIO_verbosity() >= QIO_VERB_LOW)
-	  printf("%s(%d): opened %s for reading in singlefile mode\n",
+	if(QIO_verbosity() >= QIO_VERB_MED)
+	  printf("%s(%d): Opened %s for reading in singlefile mode\n",
 		 myname,this_node,filename);fflush(stdout);
       }
     }
@@ -363,8 +432,9 @@ int QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename){
     {
       /* One file per machine partition in lexicographic order */
       if(this_node == dml_layout->master_io_node){
-	printf("%s(%d): opened %s for reading in partfile mode\n",
-	       myname,this_node,filename);fflush(stdout);
+	if(QIO_verbosity() >= QIO_VERB_MED)
+	  printf("%s(%d): Opened %s for reading in partfile mode\n",
+		 myname,this_node,filename);fflush(stdout);
       }
 
       /* All the partition I/O nodes open their files.  */
@@ -393,8 +463,9 @@ int QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename){
     {
       /* One file per node */
       if(this_node == dml_layout->master_io_node){
-	printf("%s(%d): opened %s for reading in multifile mode\n",
-	       myname,this_node,filename);fflush(stdout);
+	if(QIO_verbosity() >= QIO_VERB_MED)
+	  printf("%s(%d): Opened %s for reading in multifile mode\n",
+		 myname,this_node,filename);fflush(stdout);
       }
       /* The non-master nodes open their files */
       if(this_node != dml_layout->master_io_node){
@@ -496,7 +567,7 @@ int QIO_read_user_file_xml(QIO_String *xml_file, QIO_Reader *qio_in){
 /**************************************/
 
 QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename, 
-			  QIO_Layout *layout, QIO_ioflag iflag){
+			  QIO_Layout *layout, QIO_Iflag *iflag){
   QIO_Reader *qio_in;
   DML_Layout *dml_layout;
   char myname[] = "QIO_open_read";
@@ -518,7 +589,7 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
   status = QIO_broadcast_file_reader_info(qio_in, layout->latdim <= 0);
 
   /* Read the rest of the header */
-  status = QIO_open_read_nonmaster(qio_in, filename);
+  status = QIO_open_read_nonmaster(qio_in, filename, iflag);
   if(status != QIO_SUCCESS)return NULL;
 
   status = QIO_read_check_sitelist(qio_in);

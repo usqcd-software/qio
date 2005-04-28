@@ -60,7 +60,7 @@ int main(int argc, char *argv[]){
 
   /* Check arguments and process layout parameters */
 
-  if(argc < 2){
+  if(argc < 3){
     fprintf(stderr,"Usage %s <0 (sing to part)|1 (part to sing)> <filename> < layoutfile\n",argv[0]);
     return 1;
   }

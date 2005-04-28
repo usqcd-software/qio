@@ -23,6 +23,7 @@ QIO_Layout *create_mpp_layout(int numnodes, int *latsize, int latdim){
   layout->node_number = node_number;
   layout->node_index = node_index;
   layout->get_coords = get_coords;
+  layout->num_sites = num_sites;
   layout->latsize = latsize;
   layout->latdim = latdim;
   layout->volume = volume;
@@ -79,7 +80,7 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   QIO_Reader *qio_in;
   char *filename;
 
-  QIO_verbose(QIO_VERB_REG);
+  QIO_verbose(QIO_VERB_LOW);
 
   /* Command line options */
 

@@ -40,6 +40,7 @@ int DML_lex_next(int *dim, int coords[], int latdim, int latsize[])
   }
 }
 
+/*------------------------------------------------------------------*/
 /* Convert linear lexicographic rank to lexicographic coordinate */
 
 void DML_lex_coords(int coords[], const int latdim, const int latsize[], 
@@ -54,6 +55,7 @@ void DML_lex_coords(int coords[], const int latdim, const int latsize[],
   }
 }
 
+/*------------------------------------------------------------------*/
 /* Convert coordinate to linear lexicographic rank (inverse of
    DML_lex_coords) */
 
@@ -68,6 +70,7 @@ DML_SiteRank DML_lex_rank(const int coords[], int latdim, int latsize[])
   return rank;
 }
 
+/*------------------------------------------------------------------*/
 /* Make temporary space for coords */
 
 int *DML_allocate_coords(int latdim, char *myname, int this_node){
@@ -79,6 +82,7 @@ int *DML_allocate_coords(int latdim, char *myname, int this_node){
 }
 
 
+/*------------------------------------------------------------------*/
 /* The message structure holds the site datum and site rank */
 
 /* Accessor: Size of message */
@@ -86,6 +90,7 @@ size_t DML_msg_sizeof(size_t size){
   return size + sizeof(DML_SiteRank);
 }
 
+/*------------------------------------------------------------------*/
 /* Constructor*/
 char *DML_allocate_msg(size_t size, char *myname, int this_node){
   char *msg;
@@ -96,16 +101,19 @@ char *DML_allocate_msg(size_t size, char *myname, int this_node){
   return msg;
 }
 
+/*------------------------------------------------------------------*/
 /* Accessor: Pointer to datum member of msg */
 char *DML_msg_datum(char *msg, size_t size){
   return msg;
 }
 
+/*------------------------------------------------------------------*/
 /* Accessor: Pointer to rank member of msg */
 DML_SiteRank *DML_msg_rank(char *msg, size_t size){
   return (DML_SiteRank *)(msg + size);
 }
 
+/*------------------------------------------------------------------*/
 /* Count the sitelist for partitioned I/O format */
 /* Return code 0 = success; 1 = failure */
 int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
@@ -113,10 +121,13 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   int *coords;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
+  int node;
   int this_node = layout->this_node;
+  int number_of_nodes = layout->number_of_nodes;
   size_t volume = layout->volume;
   int my_io_node = layout->ionode(this_node);
-  int number_of_io_sites;
+  size_t number_of_io_sites;
+  int number_of_my_ionodes;
   int send_node;
   char myname[] = "DML_count_partition_sitelist";
 
@@ -124,6 +135,18 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   coords = DML_allocate_coords(latdim, myname, this_node);
   if(!coords)return 1;
 
+  /* Iterate over all nodes, adding up the sites my partition
+     writes and counting the number of nodes in my partition */
+  number_of_my_ionodes = 0;
+  number_of_io_sites = 0;
+  for(node = 0; node < number_of_nodes; node++){
+    if(layout->ionode(node) == my_io_node){
+      number_of_io_sites += layout->num_sites(node);
+      number_of_my_ionodes++;
+    }
+  }
+
+#if 0  
   /* Iterate over all sites, storing the lexicographic index
      only for the sites on my partition */
   number_of_io_sites = 0;
@@ -137,17 +160,20 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
       if(layout->ionode(send_node) == my_io_node)
 	number_of_io_sites++;
     }
+#endif
 
   sites->number_of_io_sites = number_of_io_sites;
+  sites->number_of_my_ionodes = number_of_my_ionodes;
   free(coords);
   return 0;
 }
 
+/*------------------------------------------------------------------*/
 /* Create sitelist structure (but not the sitelist, yet) */
 DML_SiteList *DML_init_sitelist(int volfmt, DML_Layout *layout){
   DML_SiteList *sites;
   int this_node = layout->this_node;
-  int number_of_io_sites;
+  size_t number_of_io_sites;
   char myname[] = "DML_init_sitelist";
 
   sites = (DML_SiteList *)malloc(sizeof(DML_SiteList));
@@ -198,6 +224,7 @@ DML_SiteList *DML_init_sitelist(int volfmt, DML_Layout *layout){
 
 }
 
+/*------------------------------------------------------------------*/
 /* Compare site lists. Return 0 if all sites in the list agree and 1
    otherwise */
 
@@ -212,6 +239,7 @@ int DML_compare_sitelists(DML_SiteRank *lista, DML_SiteRank *listb, size_t n){
   return 0;
 }
 
+/*------------------------------------------------------------------*/
 /* Free the sitelist structure */
 void DML_free_sitelist(DML_SiteList *sites){
   if(sites == NULL)return;
@@ -219,6 +247,7 @@ void DML_free_sitelist(DML_SiteList *sites){
   free(sites);
 }
 
+/*------------------------------------------------------------------*/
 /* Fill the sitelist for multifile format */    
 /* Return code 0 = success; 1 = failure */
 int DML_fill_multifile_sitelist(DML_Layout *layout, DML_SiteList *sites){
@@ -246,17 +275,24 @@ int DML_fill_multifile_sitelist(DML_Layout *layout, DML_SiteList *sites){
   return 0;
 }
 
+/*------------------------------------------------------------------*/
 /* Fill the sitelist for partitioned I/O format */
 /* Return code 0 = success; 1 = failure */
 int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
-  size_t index;
+  size_t index, index2, node_index;
   DML_SiteRank rank;
   int *coords;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
+  int node;
+  int node_sites;
   int this_node = layout->this_node;
-  size_t volume = layout->volume;
   int my_io_node = layout->ionode(this_node);
+  int number_of_nodes = layout->number_of_nodes;
+  size_t number_of_io_sites = sites->number_of_io_sites;
+  DML_SiteRank *list        = sites->list;
+  DML_SiteRank tmp;
+  size_t volume = layout->volume;
   int send_node;
   char myname[] = "DML_fill_partition_sitelist";
 
@@ -264,6 +300,38 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   coords = DML_allocate_coords(latdim, myname, this_node);
   if(!coords)return 1;
 
+  /* Fill the list in storage order first */
+  index = 0;
+  for(node = 0; node < number_of_nodes; node++){
+    /* Find the nodes on my partition */
+    if(layout->ionode(node) == my_io_node){
+      node_sites = layout->num_sites(node);
+      for(node_index = 0; node_index < node_sites; node_index++){
+	layout->get_coords(coords,node,node_index);
+	list[index] = DML_lex_rank(coords,latdim,latsize);
+	index++;
+      }
+    }
+  }
+  if(index != number_of_io_sites){
+    printf("%s(%d) Internal error. Can't count I/O sites\n",
+	   myname,this_node);
+    return 1;
+  }
+
+  /* Put the site list in ascending lexicographic rank order */
+  /* Dumb sort algorithm */
+  for(index = 0; index < number_of_io_sites-1; index++){
+    for(index2 = index+1; index2 < number_of_io_sites; index2++){
+      if(list[index] > list[index2]){
+	tmp = list[index];
+	list[index] = list[index2];
+	list[index2] = tmp;
+      }
+    }
+  }
+  
+#if 0
   /* Iterate over all sites, storing the lexicographic index
      only for the sites on my partition */
   index = 0;
@@ -280,10 +348,12 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
 	index++;
       }
     }
+#endif
   free(coords);
   return 0;
 }
 
+/*------------------------------------------------------------------*/
 /* Create and populate the sitelist for output */
 /* Return code 0 = success; 1 = failure */
 int DML_fill_sitelist(DML_SiteList *sites, int volfmt, 
@@ -318,6 +388,7 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt,
   return 0;
 }
 
+/*------------------------------------------------------------------*/
 /* Read and check the sitelist for input */
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
@@ -386,6 +457,7 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 }
 
 
+/*------------------------------------------------------------------*/
 /* Initialize site iterator for I/O processing */
 /* Returns lexicographic rank of the first site */
 DML_SiteRank DML_init_site_loop(DML_SiteList *sites){
@@ -399,6 +471,7 @@ DML_SiteRank DML_init_site_loop(DML_SiteList *sites){
   }
 }
 
+/*------------------------------------------------------------------*/
 /* Iterator for sites processed by I/O */
 /* Returns 0 when iteration is complete. 1 when not and updates rank. */
 int DML_next_site_loop(DML_SiteRank *rank, DML_SiteList *sites){
@@ -414,6 +487,7 @@ int DML_next_site_loop(DML_SiteRank *rank, DML_SiteList *sites){
   return 1;
 }
  
+/*------------------------------------------------------------------*/
 /* Checksum "class" */
 /* We do a crc32 sum on the site data -- then do two lexicographic-
    rank-based bit rotations and XORs on the resulting crc32
@@ -453,6 +527,7 @@ void DML_checksum_peq(DML_Checksum *total, DML_Checksum *checksum){
 }
 
 
+/*------------------------------------------------------------------*/
 /* Is this a big endian architecture? Return 1 or 0. */
 int DML_big_endian(void)
 {
@@ -519,6 +594,7 @@ void DML_byterevn(char *buf, size_t size, int word_size){
   }
 }
 
+/*------------------------------------------------------------------*/
 /* Read and write buffer management */
 
 /* Compute number of sites worth of data that fit in allowed space */
@@ -527,18 +603,16 @@ size_t DML_max_buf_sites(size_t size, int factor){
   return ((size_t)DML_BUF_BYTES/(size*factor))*factor;
 }
 
-char *DML_allocate_buf(size_t size, size_t max_buf_sites, int this_node){
+/*------------------------------------------------------------------*/
+char *DML_allocate_buf(size_t size, size_t max_buf_sites){
   char *lbuf;
-  char myname[] = "DML_allocate_buf";
 
   if(max_buf_sites == 0)return NULL;
   lbuf = (char*)malloc(max_buf_sites*size);
-  if(!lbuf)
-    printf("%s(%d): Can't malloc lbuf\n",myname,this_node);
-    
   return lbuf;
 }
 
+/*------------------------------------------------------------------*/
 /* Increment buffer count. Write buffer when full or last site processed */
 size_t DML_write_buf_next(LRL_RecordWriter *lrl_record_out, size_t size,
 			  char *lbuf, size_t buf_sites, size_t max_buf_sites, 
@@ -566,9 +640,103 @@ size_t DML_write_buf_next(LRL_RecordWriter *lrl_record_out, size_t size,
   return new_buf_sites;
 }
 
+/*------------------------------------------------------------------*/
+/* Seek and write buffer.
+   For now we work with only one site at a time */
+
+size_t DML_seek_write_buf(LRL_RecordWriter *lrl_record_out, 
+			  DML_SiteRank seeksite, size_t size,
+			  char *lbuf, size_t buf_sites, size_t max_buf_sites, 
+			  size_t isite, size_t max_dest_sites, 
+			  uint64_t *nbytes, char *myname, 
+			  int this_node, int *err){
+
+  size_t new_buf_sites = buf_sites + 1;
+
+  /* Seeking makes buffering more complicated.  We take the easy way
+     out until we are forced to find an intelligent way to do this */
+
+  max_buf_sites = 1;  /* Force a max one-site buffer. Should be
+			 changed in the future. */
+
+  *err = 0;
+  
+  /* write buffer when full or last site processed */
+  if( (new_buf_sites == max_buf_sites) || (isite == max_dest_sites - 1))
+    {
+      /* Seek to the appropriate position in the record */
+      if(LRL_seek_write_record(lrl_record_out,(off_t)size*seeksite)
+	 != LRL_SUCCESS){
+	*err = -1;
+	return 0;
+      }
+      /* Write to the current position */
+      if(LRL_write_bytes(lrl_record_out,lbuf,new_buf_sites*size)
+	 != new_buf_sites*size){
+	printf("%s(%d) write error\n",myname,this_node);
+	*err = -1;
+	return 0;
+      }
+      *nbytes += new_buf_sites*size;
+      /* Reset buffer */
+      memset((void *)lbuf, 0, max_buf_sites*size);
+      new_buf_sites = 0;
+    }
+  return new_buf_sites;
+}
+
+/*------------------------------------------------------------------*/
+/* Seek and read buffer.  We work with only one site at a time for now */
+
+
+size_t DML_seek_read_buf(LRL_RecordReader *lrl_record_in, 
+			 DML_SiteRank seeksite, size_t size,
+			 char *lbuf, size_t *buf_extract, size_t buf_sites, 
+			 size_t max_buf_sites, size_t isite, 
+			 size_t max_send_sites, 
+			 uint64_t *nbytes, char *myname, int this_node,
+			 int *err){
+  /* Number of available sites in read buffer */
+  size_t new_buf_sites = buf_sites;   
+
+  /* Seeking makes buffering more complicated.  We take the easy way
+     out until we are forced to find an intelligent way to do this */
+
+  max_buf_sites = 1;  /* Force a max one-site buffer. Should be
+			 changed in the future. */
+  *err = 0;
+
+  if(*buf_extract == buf_sites){  
+    /* new buffer length  = remaining sites, but never bigger 
+       than the buffer capacity */
+    new_buf_sites = max_send_sites - isite;
+    if(new_buf_sites > max_buf_sites) new_buf_sites = max_buf_sites; 
+
+    /* Seek to the appropriate position in the record */
+    if(LRL_seek_read_record(lrl_record_in,(off_t)size*seeksite)
+       != LRL_SUCCESS){
+      *err = -1;
+      return 0;
+    }
+
+    /* Fill the buffer */
+    if( LRL_read_bytes(lrl_record_in, lbuf, new_buf_sites*size) 
+	!= new_buf_sites*size){
+      printf("%s(%d) read error\n", myname,this_node); 
+      *err = -1;
+      return 0;
+    }
+    *nbytes += new_buf_sites*size;
+    *buf_extract = 0;  /* reset counter */
+  }  /* end of the buffer read */
+
+  return new_buf_sites;
+}
+
+/*------------------------------------------------------------------*/
 /* Get new buffer if no data remains to be processed */
 
-size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, int size,
+size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, size_t size,
 			 char *lbuf, size_t *buf_extract, size_t buf_sites, 
 			 size_t max_buf_sites, size_t isite, 
 			 size_t max_send_sites, 
@@ -598,6 +766,7 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, int size,
   return new_buf_sites;
 }
 
+/*------------------------------------------------------------------*/
 /* Determine the node that does my I/O */
 int DML_my_ionode(int volfmt, DML_Layout *layout){
 
@@ -616,6 +785,239 @@ int DML_my_ionode(int volfmt, DML_Layout *layout){
   }
 }
 
+/*------------------------------------------------------------------*/
+
+/* The following four procedures duplicate the functionality
+   of DML_partition_out.  They were broken out to allow
+   finer high-level control of record writing.  After they
+   have been tested, they will replace DML_partition_out */
+
+/* See DML_partition_out below for a description */
+/* This routine opens a record and prepares to write a field */
+
+DML_RecordWriter *DML_partition_open_out(
+	   LRL_RecordWriter *lrl_record_out, size_t size, 
+	   size_t set_buf_sites, DML_Layout *layout, DML_SiteList *sites,
+	   int volfmt, DML_Checksum *checksum)
+{
+  char *outbuf;
+  int *coords;
+  int this_node = layout->this_node;
+  int my_io_node;
+  int latdim = layout->latdim;
+  size_t max_buf_sites;
+  DML_RecordWriter *dml_record_out;
+  char myname[] = "DML_partition_open_out";
+
+  dml_record_out = (DML_RecordWriter *)malloc(sizeof(DML_RecordWriter));
+  if(!dml_record_out){
+    printf("%s(%d): No space for DML_RecordWriter\n",myname,this_node);
+    return NULL;
+  }
+
+  /* Get my I/O node */
+  my_io_node = DML_my_ionode(volfmt, layout);
+
+  /* Allocate buffer for writing or sending data */
+  /* I/O node needs a large buffer.  Others only enough for one site */
+  /* But if set_buf_sites > 0 it determines the size of the buffer */
+  if(this_node == my_io_node){
+    max_buf_sites = DML_max_buf_sites(size,1);
+    if(set_buf_sites > 0)max_buf_sites = set_buf_sites;
+  }
+  else{
+    max_buf_sites = 1;
+  }
+
+  outbuf = DML_allocate_buf(size,max_buf_sites);
+  if(!outbuf){
+    printf("%s(%d) can't malloc outbuf\n",myname,this_node);
+    return 0;
+  }
+
+  /* Allocate lattice coordinate */
+  coords = DML_allocate_coords(latdim, myname, this_node);
+  if(!coords){free(outbuf);return NULL;}
+  
+  /* Initialize checksum */
+  DML_checksum_init(checksum);
+  
+  /* Save/set the initial state */
+
+  dml_record_out->lrl_rw          = lrl_record_out;
+  dml_record_out->outbuf          = outbuf;
+  dml_record_out->buf             = outbuf;
+  dml_record_out->coords          = coords;
+  dml_record_out->checksum        = checksum;
+  dml_record_out->current_node    = my_io_node;
+  dml_record_out->my_io_node      = my_io_node;
+  dml_record_out->nbytes          = 0;
+  dml_record_out->isite           = 0;
+  dml_record_out->buf_sites       = 0;
+  dml_record_out->max_buf_sites   = max_buf_sites;
+  dml_record_out->max_dest_sites  = sites->number_of_io_sites;
+
+  return dml_record_out;
+}
+
+/*------------------------------------------------------------------*/
+/* See DML_partition_out below for a description */
+/* This procedure writes one site's worth of data to an open record at
+   a position specified by the site rank "seeksite" relative to the
+   beginning of the binary data */
+
+int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
+	   void (*get)(char *buf, size_t index, int count, void *arg),
+	   DML_SiteRank snd_coords, int count, size_t size, int word_size, 
+	   void *arg, DML_Layout *layout)
+{
+
+  LRL_RecordWriter *lrl_record_out = dml_record_out->lrl_rw;
+  char *outbuf                     = dml_record_out->outbuf;
+  char *buf                        = dml_record_out->buf;
+  int *coords                      = dml_record_out->coords;
+  DML_Checksum *checksum           = dml_record_out->checksum;
+  int current_node	           = dml_record_out->current_node;
+  int my_io_node                   = dml_record_out->my_io_node;
+  uint64_t nbytes                  = dml_record_out->nbytes;
+  size_t isite                     = dml_record_out->isite;
+  size_t buf_sites                 = dml_record_out->buf_sites;
+  size_t max_buf_sites             = dml_record_out->max_buf_sites;
+  size_t max_dest_sites            = dml_record_out->max_dest_sites;
+
+  int this_node    = layout->this_node;
+  int latdim       = layout->latdim;
+  int *latsize     = layout->latsize;
+
+  int new_node;
+  int err;
+  char scratch_buf[4] = "\0\0\0\0";
+  char myname[] = "DML_partition_sitedata_out";
+
+  /* Convert lexicographic rank to coordinates */
+  DML_lex_coords(coords, latdim, latsize, snd_coords);
+  
+  /* Node that has this data and sends it to my_io_node */
+  new_node = layout->node_number(coords);
+  
+  /* Send nodes must wait for a ready signal from the I/O node
+     to prevent message pileups on the I/O node */
+  
+  /* CTS only if changing data source node */
+  if(new_node != current_node){
+    DML_clear_to_send(scratch_buf,4,my_io_node,new_node);
+    current_node = new_node;
+  }
+  
+  /* Fetch site data and copy to the write buffer */
+  if(this_node == current_node){
+    /* Fetch directly to the buffer */
+    buf = outbuf + size*buf_sites;
+    get(buf,layout->node_index(coords),count,arg);
+  }
+  
+  /* Send result to my I/O node. Avoid I/O node sending to itself. */
+  if (current_node != my_io_node) 
+    {
+#if 1
+      /* Data from any other node is received in the I/O node write buffer */
+      if(this_node == my_io_node){
+	buf = outbuf + size*buf_sites;
+      }
+      DML_route_bytes(buf,size,current_node,my_io_node);
+#else
+      /* Data from any other node is received in the I/O node write buffer */
+      if(this_node == my_io_node){
+	buf = outbuf + size*buf_sites;
+	DML_get_bytes(buf,size,current_node);
+      }
+      
+      /* All other nodes send the data */
+      if(this_node == current_node){
+	DML_send_bytes(buf,size,my_io_node);
+      }
+#endif
+    }
+  
+  /* my_io_node writes the data */
+  if(this_node == my_io_node)
+    {
+      /* Do byte reordering before checksum */
+      if (! DML_big_endian())
+	DML_byterevn(buf, size, word_size);
+      
+      /* Update checksum */
+      DML_checksum_accum(checksum, snd_coords, buf, size);
+      
+      /* Write the buffer when full */
+      
+      buf_sites = DML_seek_write_buf(lrl_record_out, snd_coords, size,
+				     outbuf, buf_sites, max_buf_sites, 
+				     isite, max_dest_sites, &nbytes,
+				     myname, this_node, &err);
+      if(err < 0) {return 1;}
+    }
+  isite++;
+
+  /* Save changes to state */
+
+  dml_record_out->current_node    = current_node;
+  dml_record_out->nbytes          = nbytes;
+  dml_record_out->isite           = isite;
+  dml_record_out->buf_sites       = buf_sites;
+
+  return 0;
+}
+  
+/*------------------------------------------------------------------*/
+/* See DML_partition_out below for a description */
+/* This routine closes an open record and cleans up */
+
+/* See DML_partition_out below for a description */
+/* This writes one site's worth of data to an open record */
+
+int DML_partition_allsitedata_out(DML_RecordWriter *dml_record_out, 
+	   void (*get)(char *buf, size_t index, int count, void *arg),
+	   int count, size_t size, int word_size, void *arg, 
+           DML_Layout *layout, DML_SiteList *sites)
+{
+
+  DML_SiteRank snd_coords;
+
+  /* Iterate over all sites processed by this I/O partition */
+
+  snd_coords      = DML_init_site_loop(sites);
+  do {
+    if(DML_partition_sitedata_out(dml_record_out, get,
+		  snd_coords, count, size, word_size, arg, layout) != 0)
+      return 1;
+    
+  } while(DML_next_site_loop(&snd_coords, sites));
+  
+  return 0;
+}
+
+  
+/* See DML_partition_out below for a description */
+/* This routine closes an open record and cleans up */
+
+uint64_t DML_partition_close_out(DML_RecordWriter *dml_record_out)
+{
+
+  uint64_t nbytes = dml_record_out->nbytes;
+
+  if(dml_record_out == NULL)return 0;
+  if(dml_record_out->coords != NULL)
+    free(dml_record_out->coords);
+  if(dml_record_out->outbuf != NULL)
+    free(dml_record_out->outbuf);
+  free(dml_record_out);
+
+  /* Number of bytes written by this node only */
+  return nbytes;
+}
+
+/*------------------------------------------------------------------*/
 /* Each I/O node (or the master node) receives data from all of its
    nodes and writes it to its file.
    Returns the checksum and number of bytes written by this node only */
@@ -625,14 +1027,6 @@ int DML_my_ionode(int volfmt, DML_Layout *layout){
    disjoint from the corresponding set for any other I/O node.  This
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
    PARTFILE modes. */
-
-
-  /* To avoid deadlocks, our general-purpose read algorithm requires
-     that the set of nodes receiving sites from a given I/O node must
-     be disjoint from the set for any other node.  It is sufficient to
-     require that all sites in a given node's sitelist must be
-     assigned to that node for I/O.  That requirement works for
-     multifile and partitioned I/O. */
 
 uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out, 
 	   void (*get)(char *buf, size_t index, int count, void *arg),
@@ -664,13 +1058,13 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     max_buf_sites = 1;
 
 
-  outbuf = DML_allocate_buf(size,max_buf_sites,this_node);
+  outbuf = DML_allocate_buf(size,max_buf_sites);
   if(!outbuf){
     printf("%s(%d) can't malloc outbuf\n",myname,this_node);
     return 0;
   }
 
-  scratch_buf = DML_allocate_buf(4,1,this_node);
+  scratch_buf = DML_allocate_buf(4,1);
   if(!scratch_buf){
     printf("%s(%d) can't malloc scratch_buf\n",myname,this_node);
     return 0;
@@ -683,9 +1077,6 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   
   /* Initialize checksum */
   DML_checksum_init(checksum);
-  
-  /* Barrier */
-  DML_sync();
   
 #ifdef DML_DEBUG
   if (! DML_big_endian())
@@ -779,6 +1170,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   return nbytes;
 }
 
+/*------------------------------------------------------------------*/
 /* The master node fetches the global data in one call to "get"  and writes */
 /* Returns the number of bytes written */
 
@@ -854,8 +1246,11 @@ uint64_t DML_multifile_out(LRL_RecordWriter *lrl_record_out,
 
   /* Allocate buffer for writing */
   max_buf_sites = DML_max_buf_sites(size,1);
-  lbuf = DML_allocate_buf(size,max_buf_sites,this_node);
-  if(!lbuf)return 0;
+  lbuf = DML_allocate_buf(size,max_buf_sites);
+  if(!lbuf){
+    printf("%s(%d): Can't malloc lbuf\n",myname,this_node);
+    return 0;
+  }
 
   /* Allocate coordinate */
   coords = DML_allocate_coords(layout->latdim,myname,this_node);
@@ -904,6 +1299,7 @@ uint64_t DML_multifile_out(LRL_RecordWriter *lrl_record_out,
 
 } /* DML_multifile_out */
 
+/*------------------------------------------------------------------*/
 /* Each node reads its data from its own private file.  The order of
    sites is assumed to be sequential according to the layout storage
    order. */
@@ -928,7 +1324,7 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 
   /* Allocate buffer for reading */
   max_buf_sites = DML_max_buf_sites(size,1);
-  lbuf = DML_allocate_buf(size,max_buf_sites,this_node);
+  lbuf = DML_allocate_buf(size,max_buf_sites);
   if(!lbuf)return 0;
 
   /* Allocate coordinate */
@@ -980,6 +1376,224 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
   return nbytes;
 }
 
+/*------------------------------------------------------------------*/
+/* The following four procedures duplicate the functionality
+   of DML_partition_in.  They were broken out to allow
+   finer high-level control of record reading.  After they
+   have been tested, they will replace DML_partition_in */
+
+/* See DML_partition_in below for a description */
+/* This routine opens a record and prepares to read a field */
+
+DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in, 
+	  size_t size, size_t set_buf_sites, DML_Layout *layout, 
+ 	  DML_SiteList *sites, int volfmt, DML_Checksum *checksum)
+{
+  char *inbuf;
+  int my_io_node;
+  int *coords;
+  int this_node = layout->this_node;
+  int latdim = layout->latdim;
+  size_t max_buf_sites;
+  DML_RecordReader *dml_record_in;
+  char myname[] = "DML_partition_open_in";
+
+  dml_record_in = (DML_RecordReader *)malloc(sizeof(DML_RecordReader));
+  if(!dml_record_in){
+    printf("%s(%d): No space for DML_RecordReader\n",myname,this_node);
+    return NULL;
+  }
+
+  /* Get my I/O node */
+  my_io_node = DML_my_ionode(volfmt, layout);
+
+  /* Allocate buffer for reading or receiving data */
+  /* I/O node needs a large buffer.  Others only enough for one site */
+  if(this_node == my_io_node){
+    max_buf_sites = DML_max_buf_sites(size,1);
+    if(set_buf_sites > 0)max_buf_sites = set_buf_sites;
+  }
+  else
+    max_buf_sites = 1;
+
+ 
+  inbuf = DML_allocate_buf(size,max_buf_sites);
+  if(!inbuf){
+    printf("%s(%d) can't malloc inbuf\n",myname,this_node);
+    return 0;
+  }
+ 
+
+  /* Allocate coordinate counter */
+  coords = DML_allocate_coords(latdim, myname, this_node);
+  if(!coords){free(inbuf); return 0;}
+  
+  /* Initialize checksum */
+  DML_checksum_init(checksum);
+
+#ifdef DML_DEBUG
+  if (! DML_big_endian())
+    printf("%s(%d): byte reversing %d\n",myname,this_node,word_size);
+#endif
+
+  /* Save/set the initial state */
+
+  dml_record_in->lrl_rr          = lrl_record_in;
+  dml_record_in->inbuf           = inbuf;
+  dml_record_in->coords          = coords;
+  dml_record_in->checksum        = checksum;
+  dml_record_in->current_node    = my_io_node;
+  dml_record_in->my_io_node      = my_io_node;
+  dml_record_in->nbytes          = 0;
+  dml_record_in->isite           = 0;
+  dml_record_in->buf_sites       = 0;
+  dml_record_in->buf_extract     = 0;
+  dml_record_in->max_buf_sites   = max_buf_sites;
+  dml_record_in->max_send_sites  = sites->number_of_io_sites;
+
+  return dml_record_in;
+}
+
+/*------------------------------------------------------------------*/
+/* See DML_partition_in below for a description */
+/* This routine opens a record and prepares to read a field */
+
+int DML_partition_sitedata_in(DML_RecordReader *dml_record_in, 
+	  void (*put)(char *buf, size_t index, int count, void *arg),
+	  DML_SiteRank rcv_coords, int count, size_t size, int word_size, 
+	  void *arg, DML_Layout *layout)
+{
+
+  LRL_RecordReader *lrl_record_in  = dml_record_in->lrl_rr;
+  char *inbuf                      = dml_record_in->inbuf;
+  int *coords                      = dml_record_in->coords;
+  DML_Checksum *checksum           = dml_record_in->checksum;
+  int current_node	           = dml_record_in->current_node;
+  int my_io_node                   = dml_record_in->my_io_node;
+  uint64_t nbytes                  = dml_record_in->nbytes;
+  size_t isite                     = dml_record_in->isite;
+  size_t buf_sites                 = dml_record_in->buf_sites;
+  size_t buf_extract               = dml_record_in->buf_extract;
+  size_t max_buf_sites             = dml_record_in->max_buf_sites;
+  size_t max_send_sites            = dml_record_in->max_send_sites;
+  char *buf;
+
+  int this_node = layout->this_node;
+  int latdim    = layout->latdim;
+  int *latsize  = layout->latsize;
+
+  int dest_node;
+  int err;
+  char myname[] = "DML_partition_sitedata_in";
+
+  /* Convert lexicographic rank to coordinates */
+  DML_lex_coords(coords, latdim, latsize, rcv_coords);
+  
+  /* The node that gets the next datum */
+  dest_node = layout->node_number(coords);
+  
+  if(this_node == my_io_node){
+    /* I/O node reads the next value */
+    buf_sites = DML_seek_read_buf(lrl_record_in, rcv_coords, size,
+				  inbuf, &buf_extract, buf_sites,
+				  max_buf_sites, isite, 
+				  max_send_sites, &nbytes,
+				  myname, this_node, &err);
+    
+    if(err < 0){return 1;}
+    /* Location of new datum on I/O node */
+    buf = inbuf + size*buf_extract;
+  }
+
+  /* Send result to destination node. Avoid I/O node sending to itself. */
+  if (dest_node != my_io_node) {
+#if 1
+    DML_route_bytes(buf,size,my_io_node,dest_node);
+#else
+    /* If destination elsewhere, send it */
+    if(this_node == my_io_node){
+      DML_send_bytes(buf, size, dest_node);
+    }
+    
+    /* Other nodes receive from the master node */
+    if(this_node == dest_node){
+      DML_get_bytes(buf, size, my_io_node);
+    }
+#endif
+  }
+  
+  /* Process data before inserting */
+  if(this_node == dest_node){
+    
+    /* Accumulate checksum */
+    DML_checksum_accum(checksum, rcv_coords, buf, size);
+    
+    /* Do byte reversal if necessary */
+    if (! DML_big_endian())
+      DML_byterevn(buf, size, word_size);
+    
+    /* Store the data */
+    put(buf,layout->node_index(coords),count,arg);
+  }
+  
+  buf_extract++;
+  isite++;
+
+  /* Save changes to state */
+
+  dml_record_in->current_node    = current_node;
+  dml_record_in->nbytes          = nbytes;
+  dml_record_in->isite           = isite;
+  dml_record_in->buf_sites       = buf_sites;
+  dml_record_in->buf_extract     = buf_extract;
+
+  return 0;
+}
+
+/*------------------------------------------------------------------*/
+/* See DML_partition_in below for a description */
+/* This routine opens a record and prepares to read a field */
+
+int DML_partition_allsitedata_in(DML_RecordReader *dml_record_in, 
+	  void (*put)(char *buf, size_t index, int count, void *arg),
+	  int count, size_t size, int word_size, void *arg, 
+	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
+	  DML_Checksum *checksum)
+{
+
+  DML_SiteRank rcv_coords;
+
+  rcv_coords = DML_init_site_loop(sites);
+  do {
+    if(DML_partition_sitedata_in(dml_record_in, put, rcv_coords,
+		  count, size, word_size, arg, layout) != 0)
+      return 1;
+
+  }  while(DML_next_site_loop(&rcv_coords, sites));
+
+  return 0;
+}
+
+/*------------------------------------------------------------------*/
+/* See DML_partition_in below for a description */
+/* This routine opens a record and prepares to read a field */
+
+uint64_t DML_partition_close_in(DML_RecordReader *dml_record_in)
+{
+  uint64_t nbytes = dml_record_in->nbytes;
+
+  if(dml_record_in == NULL)return 0;
+  if(dml_record_in->coords != NULL)
+    free(dml_record_in->coords);
+  if(dml_record_in->inbuf != NULL)
+    free(dml_record_in->inbuf);
+  free(dml_record_in);
+
+  /* return the number of bytes read by this node only */
+  return nbytes;
+}
+
+/*------------------------------------------------------------------*/
 /* Each I/O node (or the master I/O node) reads data from its file and
    distributes it to its nodes.
    Returns the number of bytes read by this node only */
@@ -989,13 +1603,6 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
    disjoint from the corresponding set for any other I/O node.  This
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
    PARTFILE modes. */
-
-  /* To avoid deadlocks, our general-purpose read algorithm requires
-     that the set of nodes receiving sites from a given I/O node must
-     be disjoint from the set for any other node.  It is sufficient to
-     require that all sites in a given node's sitelist must be
-     assigned to that node for I/O.  That requirement works for
-     multifile and partitioned I/O. */
 
 uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
@@ -1026,8 +1633,8 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
     max_buf_sites = 1;
 
  
-   inbuf = DML_allocate_buf(size,max_buf_sites,this_node);
-  if(!inbuf){
+   inbuf = DML_allocate_buf(size,max_buf_sites);
+   if(!inbuf){
     printf("%s(%d) can't malloc inbuf\n",myname,this_node);
     return 0;
   }
@@ -1039,9 +1646,6 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
   
   /* Initialize checksum */
   DML_checksum_init(checksum);
-
-  /* Unlimited barrier */
-  DML_sync();
 
 #ifdef DML_DEBUG
   if (! DML_big_endian())
@@ -1120,6 +1724,7 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
   return nbytes;
 }
 
+/*------------------------------------------------------------------*/
 /* The master node reads all the global data at once,
    broadcasts to all nodes and calls "put" */
 
@@ -1128,7 +1733,7 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 size_t DML_global_in(LRL_RecordReader *lrl_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  int count, size_t size, int word_size, void *arg, 
-	  DML_Layout* layout, int volfmt, 
+          DML_Layout* layout, int volfmt, int broadcast_globaldata,
 	  DML_Checksum *checksum)
 {
   char *buf;
@@ -1162,11 +1767,19 @@ size_t DML_global_in(LRL_RecordReader *lrl_record_in,
     
   }
 
-  /* Broadcast the result to node bufs */
-  DML_broadcast_bytes(buf, size, this_node, layout->master_io_node);
-
-  /* All nodes store their data. Unused site index is 0. */
-  put(buf,0,count,arg);
+  /* We turn off broadcasting, for example, if we are doing
+     single-processor file conversion */
+  if(broadcast_globaldata){
+    /* Broadcast the result to node bufs */
+    DML_broadcast_bytes(buf, size, this_node, layout->master_io_node);
+    /* All nodes store their data. Unused site index is 0. */
+    put(buf,0,count,arg);
+  }
+  else{
+    /* Only the master I/O node stores its data */
+    if(this_node == layout->master_io_node)
+      put(buf,0,count,arg);
+  }
 
   free(buf);
   return nbytes;

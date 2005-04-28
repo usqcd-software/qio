@@ -11,7 +11,7 @@
 
 \begin{document}
 \title{
-   Input/Output for QCD \\{\large Version 1.1}
+   Input/Output for QCD \\{\large Version 2.0}
 }
 \author{ SciDAC Software Coordinating Committee}
 
@@ -242,6 +242,7 @@ typedef struct {
   /* Data distribution */
   int (*node_number)(const int coords[]);
   int (*node_index)(const int coords[]);
+  size_t (*num_sites)(int node);
   void (*get_coords)(int coords[], int node, int index);
   int *latsize;
   int latdim;
@@ -257,11 +258,13 @@ The data distribution (layout) structure has nine members.  The
 returning the number of the node that has the specified lattice
 coordinate.  The \verb|node_index| member returns the storage order
 index for the site on its node.  The \verb|get_coords| member maps the
-node number and index values to lattice coordinates. The next two
-members specify the lattice coordinate extent and spacetime
-dimensionality.  The sixth member specifies the full spacetime volume.
-The seventh, the number of sites on the current node, the eighth, the
-number of the present node, and the ninth, the total number of nodes.
+node number and index values to lattice coordinates. The
+\verb|num_sites| member returns the number of sites on the specified
+node. The next two members specify the lattice coordinate extent and
+spacetime dimensionality.  The seventh member specifies the full
+spacetime volume.  The eighth, the number of sites on the current
+node, the ninth, the number of the present node, and the ninth, the
+total number of nodes.
 
 Here is an illustration of how the layout structure is loaded from the
 data in our implementation of the QDP/C API prior to a
@@ -273,6 +276,7 @@ QIO_Layout layout;
 layout.node_number = QDP_node_number;
 layout.node_index  = QDP_index;
 layout.get_coords = QDP_get_coords;
+layout.num_sites = QDP_num_sites;
 layout.latdim = QDP_ndim();
 layout.latsize = (int *)malloc(layout->latdim*sizeof(int));
 QDP_latsize(layout.latsize);
@@ -453,6 +457,9 @@ The following accessors perform self-evident functions:
 
 \subsection{Opening and closing binary files}
 
+The file opening procedures differ, depending on whether the file is
+opened for reading or writing.
+
 \paragraph{Open a file for writing}
 
 \begin{flushleft}
@@ -460,7 +467,7 @@ The following accessors perform self-evident functions:
   \hline
   Prototype      & \verb|QIO_Writer *QIO_open_write(|\QIOstring \verb|*xml_file,|\\
 		 & \verb| char *filename, int volfmt, QIO_Layout *layout, | \\
-                 & \verb| QIO_ioflag oflag);| \\
+                 & \verb| QIO_Oflag *oflag);| \\
   Purpose        & Opens a named file for writing and writes the file metadata. \\
 \hline
   Example  & \verb|QIO_Writer *outfile;| \\
@@ -489,8 +496,41 @@ plain character array, use the command
 \end{flushleft}
 
 The next-to-last argument is the \verb|layout| structure.  It is
-assumed that the user has prepared it as described above.  The
-\verb|oflag| parameter is reserved for future enhancements.
+assumed that the user has prepared it as described above.
+
+The \verb|QIO_Oflag| structure is defined as follows:
+%
+\begin{verbatim}
+typedef struct {
+  int serpar;    /* Placeholder for specifying serial or 
+                    parallel access */
+  int mode;      /* QIO_TRUNC or QIO_APPEND */
+} QIO_Oflag;
+\end{verbatim}
+%
+
+It contains parameters that control whether the file is to be
+truncated or data is to be appended and has a placeholder for future
+use for specifying whether the file is to be written in parallel or
+serially.  At present only serial writing is supported.  The structure
+is initialized as in the following example:
+
+%
+\begin{verbatim}
+   QIO_Oflag oflag;
+   oflag.serpar = QIO_SERIAL;
+   oflag.mode   = QIO_TRUNC;
+\end{verbatim}
+%
+
+These are the default values used when the \verb|&oflag| parameter is
+passed as a null pointer.
+
+Caution: If a file is opened for appending, QIO presently does not
+verify that the fields being appended conform to the lattice
+dimensions and layout of the fields already present.
+
+
 
 \paragraph{Open a file for reading}
 
@@ -499,7 +539,7 @@ assumed that the user has prepared it as described above.  The
   \hline
   Prototype      & \verb|QIO_Reader *QIO_open_read(|\QIOstring \verb|*xml_file,|\\
                  & \verb|  char *filename, QIO_Layout *layout, |\\
-                 & \verb|  QIO_ioflag iflag);|\\
+                 & \verb|  QIO_Iflag *iflag);|\\
   Purpose        & Opens a named file for reading and reads the file metadata. \\
 \hline
   Example  & \verb|QIO_Reader *infile;| \\
@@ -519,8 +559,42 @@ reallocated to a sufficient size by QIO.  The other arguments have the
 same meaning as with \verb|QIO_open_write|.  The volume format is
 auto-detected so is not specified by the calling program.  It is
 assumed that the user has prepared the \verb|layout| argument as
-described above.  The \verb|iflag| parameter is reserved for future
-enhancements.
+described above.
+
+The \verb|QIO_Iflag| structure is defined as follows:
+%
+%
+\begin{verbatim}
+typedef struct {
+  int serpar;    /* Placeholder for specifying serial or 
+                    parallel access */
+  int volfmt;    /* QIO_UNKNOWN, QIO_SINGLEFILE, QIO_PARTFILE, 
+                    QIO_MULTIFILE */
+} QIO_Iflag;
+\end{verbatim}
+%
+
+A file is usually opened with automatic detection of the file format.
+However, confusion arises when the file appears in both formats in the
+same directory.  In that case the \verb|volfmt| member is needed to
+specify a preference.  Otherwise, the parameter can be safely passed
+as \verb|QIO_UNKNOWN| or \verb|QIO_SINGLEFILE|, regardless of the file
+format, and the format will be set according to the existing file.
+The structure also has a placeholder for future use for specifying
+whether the file is to be read in parallel or serially.  At present
+only serial reading is supported.  The structure is initialized as in
+the following example:
+
+%
+\begin{verbatim}
+   QIO_Iflag iflag;
+   iflag.serpar = QIO_SERIAL;
+   iflag.mode   = QIO_UNKNOWN;
+\end{verbatim}
+%
+These are the default values used when the \verb|&iflag| parameter is
+passed as a null pointer.
+
 
 In normal operation the user specifies the lattice dimension in the
 \verb|QIO_Layout| structure, and an error condition occurs, if the
@@ -742,6 +816,43 @@ the full record as though this call had not been made.
  \end{tabular}
 \end{flushleft}
 %
+
+\paragraph{Set and determine the verbosity level}
+
+A user can control the verbosity of QIO\@.  Choices in increasing
+degree of chatter are
+%
+\begin{verbatim}
+QIO_VERB_OFF   
+QIO_VERB_LOW   
+QIO_VERB_MED   
+QIO_VERB_REG   
+QIO_VERB_DEBUG 
+\end{verbatim}
+%
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_verbose(int level);| \\
+\hline
+  Example  & \verb|oldlevel = QIO_verbose(QIO_OFF);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+A user can also inquire about the current verbosity level with the
+following function.
+
+%
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|level = QIO_verbosity();| \\
+ \end{tabular}
+\end{flushleft}
+%
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{File format conversion}
