@@ -2,7 +2,7 @@
 INCFLAGS=-I@top_srcdir@/include -I@top_srcdir@/other_libs/c-lime/include
 
 AM_CFLAGS = $(INCFLAGS) @QMP_CFLAGS@
-VPATH = @top_srcdir@/lib
+VPATH += @top_srcdir@/lib
 VPATH += @top_srcdir@/include
 VPATH += @top_srcdir@/other_libs/c-lime/include
 
