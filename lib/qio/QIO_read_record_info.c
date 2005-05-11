@@ -131,6 +131,8 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 		      sizeof(QIO_RecordInfo), this_node, 
 		      in->layout->master_io_node);
   
+  memcpy(record_info, &(in->record_info), sizeof(QIO_RecordInfo));
+
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d): Done broadcasting private record info\n",
 	   myname,this_node);
