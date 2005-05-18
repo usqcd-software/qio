@@ -1,12 +1,6 @@
 
-INCFLAGS=-I@top_srcdir@/include -I@top_srcdir@/other_libs/c-lime/include
-
-AM_CFLAGS = $(INCFLAGS) @QMP_CFLAGS@
-VPATH += @top_srcdir@/lib
-VPATH += @top_srcdir@/include
-VPATH += @top_srcdir@/other_libs/c-lime/include
-
-HDRS = qio.h qioxml.h dml.h lrl.h qio_string.h lime.h qio_config.h
+AM_CFLAGS = -I@top_srcdir@/include -I@top_srcdir@/other_libs/c-lime/include \
+            -I@top_builddir@/include -I@top_builddir@/other_libs/c-lime/include @QMP_CFLAGS@
 
 lib_LIBRARIES = libqio.a
 
@@ -48,6 +42,3 @@ if ARCH_PARSCALAR
   libqio_a_SOURCES = $(GENERIC_SRCS) $(DML_PARSCALAR)
   EXTRA_libqio_a_SOURCES = $(DML_SCALAR)
 endif
-
-# Need this header as part of libqio_a_sources
-nodist_libqio_a_SOURCES = $(HDRS)

@@ -1,16 +1,27 @@
 ## Process this file with automake to produce Makefile.in
 
-AM_CFLAGS  = -I@top_srcdir@/include -I@top_srcdir@/other_libs/c-lime/include @QMP_CFLAGS@
+AM_CFLAGS  = -I@top_srcdir@/include -I@top_srcdir@/other_libs/c-lime/include \
+             -I@top_builddir@/include -I@top_builddir@/other_libs/c-lime/include @QMP_CFLAGS@
 AM_LDFLAGS = -L../lib -L../other_libs/c-lime/lib @QMP_LDFLAGS@
-LDADD      = -lqio -llime -lqmp -lm
+LDADD      = -lqio -llime @QMP_LIBS@ @LIBS@ -lm
 
-check_PROGRAMS = qio-test1         \
-                 qio-test2         \
-                 qio-test3         \
-		 qio-host-test1    \
-		 qio-host-test2    \
-		 qio-convert-mesh-singlefs
+# programs for all architectures
+check_PROGRAMS = 
 
+# Only scalar arch
+if ARCH_SCALAR
+check_PROGRAMS += 
+endif
+
+# Only parallel arch
+if ARCH_PARSCALAR
+check_PROGRAMS += qio-test1         \
+                  qio-test2         \
+                  qio-test3         \
+		  qio-host-test1    \
+		  qio-host-test2    \
+		  qio-convert-mesh-singlefs
+endif
 
 ADD_MPP_SOURCE = qio-test.c qio-test-util.c layout_hyper.c qio-test.h
 ADD_HOST_SOURCE = qio-host-test.c layout_hyper.c qio-test.h
