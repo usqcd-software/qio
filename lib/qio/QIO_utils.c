@@ -435,7 +435,7 @@ int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type *lime_type){
 int QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type){
   int this_node = in->layout->this_node;
   int volfmt = in->volfmt;
-  char myname[] = "QIO_read_sitelist";
+  /* char myname[] = "QIO_read_sitelist"; */
   int status = QIO_SUCCESS;
 
   /* SINGLEFILE format has no sitelist */
@@ -636,8 +636,7 @@ int QIO_read_field(QIO_Reader *in, int globaldata,
       printf("%s(%d): rec_size mismatch: found %lu expected %lu\n",
 	     myname, this_node, (unsigned long)announced_rec_size, 
 	     (unsigned long)expected_rec_size);
-      status =  QIO_ERR_BAD_READ_BYTES;
-      return NULL;
+      return QIO_ERR_BAD_READ_BYTES;
     }
   }
 

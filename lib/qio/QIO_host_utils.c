@@ -19,7 +19,7 @@ typedef struct {
   int *node_number;
   int n;
   int max;
-  size_t num_sites;
+  int num_sites;
 } QIO_IOFamilyMember;
 
 /* Table of size "number_io_nodes" maps io_node rank to list of node
@@ -157,7 +157,7 @@ void QIO_ionode_get_coords(int coords[], int ionode_node, int ionode_index){
 }
 
 /* The fake number of sites on the given node. */
-size_t QIO_ionode_num_sites(int node)
+int QIO_ionode_num_sites(int node)
 {
   int k = QIO_ionode_to_rank[node];
 
@@ -175,12 +175,14 @@ int QIO_create_io_node_table(){
   int i,j,k,maxinit,io_node;
   int number_of_nodes = QIO_mpp_layout.number_of_nodes;
   int number_io_nodes = QIO_mpp_fs.number_io_nodes;
+  size_t next,sum;
+#if 0
   int latdim = QIO_mpp_layout.latdim;
   int *latsize = QIO_mpp_layout.latsize;
   size_t volume = QIO_mpp_layout.volume;
   int *coords;
-  size_t next,sum;
   DML_SiteRank site_rank;
+#endif
 
   /* Create array for the inverse of the fs->io_node table */
   QIO_ionode_to_rank = (int *)calloc(number_of_nodes, sizeof(int));
@@ -398,7 +400,7 @@ void QIO_scalar_get_coords(int coords[], int node, int index){
   DML_lex_coords(coords, latdim, latsize, (DML_SiteRank)index);
 }
 
-size_t QIO_scalar_num_sites(int node){
+int QIO_scalar_num_sites(int node){
   return QIO_mpp_layout.volume;
 }
 

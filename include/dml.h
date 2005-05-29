@@ -50,7 +50,7 @@ typedef struct {
   int (*node_number)(const int coords[]);
   int (*node_index)(const int coords[]);
   void (*get_coords)(int coords[], int node, const int index);
-  size_t (*num_sites)(int node);
+  int (*num_sites)(int node);
   int *latsize;
   int latdim;
   size_t volume;

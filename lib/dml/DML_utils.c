@@ -117,19 +117,21 @@ DML_SiteRank *DML_msg_rank(char *msg, size_t size){
 /* Count the sitelist for partitioned I/O format */
 /* Return code 0 = success; 1 = failure */
 int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
-  DML_SiteRank rank;
   int *coords;
   int latdim = layout->latdim;
-  int *latsize = layout->latsize;
   int node;
   int this_node = layout->this_node;
   int number_of_nodes = layout->number_of_nodes;
-  size_t volume = layout->volume;
   int my_io_node = layout->ionode(this_node);
   size_t number_of_io_sites;
   int number_of_my_ionodes;
-  int send_node;
   char myname[] = "DML_count_partition_sitelist";
+#if 0
+  DML_SiteRank rank;
+  int *latsize = layout->latsize;
+  size_t volume = layout->volume;
+  int send_node;
+#endif
 
   /* Space for a coordinate vector */
   coords = DML_allocate_coords(latdim, myname, this_node);
@@ -280,7 +282,6 @@ int DML_fill_multifile_sitelist(DML_Layout *layout, DML_SiteList *sites){
 /* Return code 0 = success; 1 = failure */
 int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   size_t index, index2, node_index;
-  DML_SiteRank rank;
   int *coords;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
@@ -292,9 +293,12 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   size_t number_of_io_sites = sites->number_of_io_sites;
   DML_SiteRank *list        = sites->list;
   DML_SiteRank tmp;
+  char myname[] = "DML_fill_partition_sitelist";
+#if 0
+  DML_SiteRank rank;
   size_t volume = layout->volume;
   int send_node;
-  char myname[] = "DML_fill_partition_sitelist";
+#endif
 
   /* Space for a coordinate vector */
   coords = DML_allocate_coords(latdim, myname, this_node);
@@ -1476,7 +1480,7 @@ int DML_partition_sitedata_in(DML_RecordReader *dml_record_in,
   size_t buf_extract               = dml_record_in->buf_extract;
   size_t max_buf_sites             = dml_record_in->max_buf_sites;
   size_t max_send_sites            = dml_record_in->max_send_sites;
-  char *buf;
+  char *buf=NULL;
 
   int this_node = layout->this_node;
   int latdim    = layout->latdim;

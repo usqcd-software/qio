@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 2.0.2, detar@physics.utah.edu)
+AC_INIT(qio, 2.0.3, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
@@ -140,6 +140,7 @@ esac
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_RANLIB
+AC_CHECK_TOOL(AR, ar, [ar])
 
 dnl
 dnl verify we can compile and link against QMP, if needed

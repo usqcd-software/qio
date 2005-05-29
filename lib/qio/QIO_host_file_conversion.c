@@ -421,7 +421,6 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   size_t datum_size;
   int typesize,datacount,globaldata,word_size,volfmt;
   LIME_type lime_type = NULL;
-  char *newfilename;
   s_field field_in;
   get_put_arg arg;
   read_seek_arg arg_seek;
@@ -503,14 +502,13 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       /* Write the appropriate file header including site list */
       status = QIO_write_file_header(outfile, xml_file_out);
       if(status != QIO_SUCCESS){
-	printf("%s: Can't write file header on %s\n", myname,
-	       newfilename);
+	printf("%s: Can't write file header to %s part %i\n", myname,
+	       filename, i);
 	return status;
       }
 
       /* Close the file for now */
       QIO_close_write(outfile);
-      free(newfilename);
     }
   
   /***** iterate on field/globaldata records up to EOF ***********/
@@ -657,7 +655,6 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 
 	  /* Close the file for now */
 	  QIO_close_write(outfile);
-	  free(newfilename);
 	}
 	
 	/* Close the input field. (File remains open) */
@@ -761,7 +758,7 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
   QIO_RecordInfo rec_info, rec_info_in;
   QIO_Iflag iflag;
   DML_Checksum checksum_out, checksum_in, checksum;
-  QIO_ChecksumInfo *checksum_info_expect, *checksum_info_tmp;
+  QIO_ChecksumInfo *checksum_info_expect=NULL, *checksum_info_tmp;
   uint64_t nbytes_in,nbytes_out,totnbytes_out,totnbytes_in;
   int msg_begin, msg_end;
   int i,status,master_io_node_rank;

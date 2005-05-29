@@ -101,13 +101,12 @@ char *QIO_string_ptr(QIO_String *qs)
 
 void QIO_string_copy(QIO_String *dest, QIO_String *src)
 {
-  size_t len;
   if(src == NULL)return;
   if(dest == NULL)return;
   if(src == dest ) return;
 
   if( src->length > 0 ) { 
-    len = src->length;
+    size_t len = src->length;
 #if 1
     if( dest->string ) { free(dest->string); }
     dest->string = (char *)malloc(len);
@@ -125,9 +124,9 @@ void QIO_string_copy(QIO_String *dest, QIO_String *src)
   else { 
     if( dest->string != NULL ) { 
       free(dest->string); 
+      dest->string=NULL;
     }
-    dest->string=NULL;
-    dest->length=len;
+    dest->length=0;
   }
     
 }
