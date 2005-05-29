@@ -31,7 +31,7 @@ QIO_Writer *open_test_output(char *filename, int volfmt, char *myname){
 
   /* Open the file for writing */
   outfile = QIO_open_write(xml_file_out, filename, volfmt, &layout, NULL);
-  printf("%s(%d): QIO_write returns address %x\n",myname,this_node,outfile);
+  printf("%s(%d): QIO_write returns address %x\n",myname,this_node,(unsigned int)outfile);
   if(outfile == NULL){
     printf("%s(%d): QIO_open_write returned NULL\n",myname,this_node);
     fflush(stdout);

@@ -19,7 +19,7 @@ void setup_layout(int len[], int nd, int numnodes);
 int node_number(const int x[]);
 int node_index(const int x[]);
 void get_coords(int x[], int node, int index);
-size_t num_sites(int node);
+int num_sites(int node);
 EXTERN int sites_on_node;
 EXTERN int this_node;
 

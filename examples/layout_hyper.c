@@ -160,7 +160,7 @@ int node_index(const int x[])
 
 void get_coords(int x[], int node, int index)
 {
-  int i, p, r, s, si;
+  int i, p, s, si;
   si = index;
 
   s = 0;
@@ -205,6 +205,6 @@ void get_coords(int x[], int node, int index)
 }
 
 /* The number of sites on the specified node */
-size_t num_sites(int node){
+int num_sites(int node){
   return sites_on_node;
 }
