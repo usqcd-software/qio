@@ -63,9 +63,9 @@ am__libqio_a_SOURCES_DIST = qio/QIO_close_read.c qio/QIO_close_write.c \
 	qio/QIO_open_write.c qio/QIO_read.c qio/QIO_read_record_data.c \
 	qio/QIO_read_record_info.c qio/QIO_string.c qio/QIO_utils.c \
 	qio/QIO_write.c qio/QIO_host_file_conversion.c \
-	qio/QIO_host_utils.c dml/DML_crc32.c dml/DML_stream_in.c \
-	dml/DML_stream_out.c dml/DML_utils.c lrl/LRL_main.c \
-	dml/DML_parscalar.c dml/DML_route.c dml/DML_scalar.c
+	qio/QIO_host_utils.c dml/DML_crc32.c dml/DML_utils.c \
+	lrl/LRL_main.c dml/DML_parscalar.c dml/DML_route.c \
+	dml/DML_scalar.c
 am__objects_1 = QIO_close_read.$(OBJEXT) QIO_close_write.$(OBJEXT) \
 	QIO_info.$(OBJEXT) QIO_next_record.$(OBJEXT) \
 	QIO_open_read.$(OBJEXT) QIO_open_write.$(OBJEXT) \
@@ -73,8 +73,7 @@ am__objects_1 = QIO_close_read.$(OBJEXT) QIO_close_write.$(OBJEXT) \
 	QIO_read_record_info.$(OBJEXT) QIO_string.$(OBJEXT) \
 	QIO_utils.$(OBJEXT) QIO_write.$(OBJEXT) \
 	QIO_host_file_conversion.$(OBJEXT) QIO_host_utils.$(OBJEXT)
-am__objects_2 = DML_crc32.$(OBJEXT) DML_stream_in.$(OBJEXT) \
-	DML_stream_out.$(OBJEXT) DML_utils.$(OBJEXT)
+am__objects_2 = DML_crc32.$(OBJEXT) DML_utils.$(OBJEXT)
 am__objects_3 = LRL_main.$(OBJEXT)
 am__objects_4 = $(am__objects_1) $(am__objects_2) $(am__objects_3)
 am__objects_5 = DML_parscalar.$(OBJEXT) DML_route.$(OBJEXT)
@@ -215,8 +214,6 @@ QIO_SRCS = \
 
 DML_GENERIC = \
    dml/DML_crc32.c \
-   dml/DML_stream_in.c \
-   dml/DML_stream_out.c \
    dml/DML_utils.c
 
 DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c dml/DML_route.c
@@ -304,8 +301,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_parscalar.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_route.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_scalar.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_stream_in.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_stream_out.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/DML_utils.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/LRL_main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/QIO_close_read.Po@am__quote@
@@ -546,34 +541,6 @@ DML_crc32.obj: dml/DML_crc32.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_crc32.c' object='DML_crc32.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_crc32.obj `if test -f 'dml/DML_crc32.c'; then $(CYGPATH_W) 'dml/DML_crc32.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_crc32.c'; fi`
-
-DML_stream_in.o: dml/DML_stream_in.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_stream_in.o -MD -MP -MF "$(DEPDIR)/DML_stream_in.Tpo" -c -o DML_stream_in.o `test -f 'dml/DML_stream_in.c' || echo '$(srcdir)/'`dml/DML_stream_in.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/DML_stream_in.Tpo" "$(DEPDIR)/DML_stream_in.Po"; else rm -f "$(DEPDIR)/DML_stream_in.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_stream_in.c' object='DML_stream_in.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_stream_in.o `test -f 'dml/DML_stream_in.c' || echo '$(srcdir)/'`dml/DML_stream_in.c
-
-DML_stream_in.obj: dml/DML_stream_in.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_stream_in.obj -MD -MP -MF "$(DEPDIR)/DML_stream_in.Tpo" -c -o DML_stream_in.obj `if test -f 'dml/DML_stream_in.c'; then $(CYGPATH_W) 'dml/DML_stream_in.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_stream_in.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/DML_stream_in.Tpo" "$(DEPDIR)/DML_stream_in.Po"; else rm -f "$(DEPDIR)/DML_stream_in.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_stream_in.c' object='DML_stream_in.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_stream_in.obj `if test -f 'dml/DML_stream_in.c'; then $(CYGPATH_W) 'dml/DML_stream_in.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_stream_in.c'; fi`
-
-DML_stream_out.o: dml/DML_stream_out.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_stream_out.o -MD -MP -MF "$(DEPDIR)/DML_stream_out.Tpo" -c -o DML_stream_out.o `test -f 'dml/DML_stream_out.c' || echo '$(srcdir)/'`dml/DML_stream_out.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/DML_stream_out.Tpo" "$(DEPDIR)/DML_stream_out.Po"; else rm -f "$(DEPDIR)/DML_stream_out.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_stream_out.c' object='DML_stream_out.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_stream_out.o `test -f 'dml/DML_stream_out.c' || echo '$(srcdir)/'`dml/DML_stream_out.c
-
-DML_stream_out.obj: dml/DML_stream_out.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_stream_out.obj -MD -MP -MF "$(DEPDIR)/DML_stream_out.Tpo" -c -o DML_stream_out.obj `if test -f 'dml/DML_stream_out.c'; then $(CYGPATH_W) 'dml/DML_stream_out.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_stream_out.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/DML_stream_out.Tpo" "$(DEPDIR)/DML_stream_out.Po"; else rm -f "$(DEPDIR)/DML_stream_out.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='dml/DML_stream_out.c' object='DML_stream_out.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o DML_stream_out.obj `if test -f 'dml/DML_stream_out.c'; then $(CYGPATH_W) 'dml/DML_stream_out.c'; else $(CYGPATH_W) '$(srcdir)/dml/DML_stream_out.c'; fi`
 
 DML_utils.o: dml/DML_utils.c
 @am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT DML_utils.o -MD -MP -MF "$(DEPDIR)/DML_utils.Tpo" -c -o DML_utils.o `test -f 'dml/DML_utils.c' || echo '$(srcdir)/'`dml/DML_utils.c; \

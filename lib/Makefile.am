@@ -22,8 +22,6 @@ QIO_SRCS = \
 
 DML_GENERIC = \
    dml/DML_crc32.c \
-   dml/DML_stream_in.c \
-   dml/DML_stream_out.c \
    dml/DML_utils.c
 
 DML_PARSCALAR = ${OBJECTS} dml/DML_parscalar.c dml/DML_route.c
