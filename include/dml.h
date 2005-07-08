@@ -110,7 +110,7 @@ uint64_t DML_stream_out(LRL_RecordWriter *lrl_record_out, int globaldata,
 	   void (*get)(char *buf, size_t index, int count, void *arg),
            int count, size_t size, int word_size, void *arg, 
 	   DML_Layout *layout, DML_SiteList *sites,
- 	   int volfmt, DML_Checksum *checksum);
+ 	   int volfmt, int serpar, DML_Checksum *checksum);
 
 size_t DML_stream_global_out(LRL_RecordWriter *lrl_record_out, 
 			     void *buf, 
@@ -121,7 +121,8 @@ uint64_t DML_stream_in(LRL_RecordReader *lrl_record_in, int globaldata,
 	     void (*put)(char *buf, size_t index, int count, void *arg),
 	     int count, size_t size, int word_size, void *arg, 
              DML_Layout *layout, DML_SiteList *sites, 
-	     int volfmt, int broadcast_global, DML_Checksum *checksum);
+	     int volfmt, int serpar, int broadcast_global, 
+             DML_Checksum *checksum);
 
 
 /* DML internal utilities */
@@ -136,9 +137,9 @@ char *DML_allocate_msg(size_t size, char *myname, int this_node);
 size_t DML_msg_sizeof(size_t size);
 char *DML_msg_datum(char *msg, size_t size);
 DML_SiteRank *DML_msg_rank(char *msg, size_t size);
-DML_SiteList *DML_init_sitelist(int volfmt, DML_Layout *layout);
+DML_SiteList *DML_init_sitelist(int volfmt, int serpar, DML_Layout *layout);
 void DML_free_sitelist(DML_SiteList *sites);
-int DML_fill_sitelist(DML_SiteList *sites, int volfmt, 
+int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
 		      DML_Layout *layout);
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
@@ -178,11 +179,11 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, size_t size,
 			 size_t max_send_sites, 
 			 uint64_t *nbytes, char *myname, int this_node,
 			 int *err);
-int DML_my_ionode(int volfmt, DML_Layout *layout);
+int DML_my_ionode(int volfmt, int serpar, DML_Layout *layout);
 DML_RecordWriter *DML_partition_open_out(
 	   LRL_RecordWriter *lrl_record_out, size_t size, 
 	   size_t set_buf_sites, DML_Layout *layout, DML_SiteList *sites,
-	   int volfmt, DML_Checksum *checksum);
+	   int volfmt, int serpar, DML_Checksum *checksum);
 int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
 	   void (*get)(char *buf, size_t index, int count, void *arg),
 	   DML_SiteRank seeksite, int count, size_t size, int word_size, 
@@ -196,7 +197,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	   void (*get)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t size, int word_size, void *arg, 
 	   DML_Layout *layout, DML_SiteList *sites, int volfmt,
-	   DML_Checksum *checksum);
+	   int serpar, DML_Checksum *checksum);
 size_t DML_global_out(LRL_RecordWriter *lrl_record_out, 
 	   void (*get)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t size, int word_size, void *arg, 
@@ -211,9 +212,11 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 	     void (*put)(char *buf, size_t index, int count, void *arg),
 	     int count, size_t size, int word_size, void *arg, 
 	     DML_Layout *layout, DML_Checksum *checksum);
+int DML_synchronize_out(LRL_RecordWriter *lrl_record_out, DML_Layout *layout);
+int DML_synchronize_in(LRL_RecordReader *lrl_record_in, DML_Layout *layout);
 DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in, 
 	  size_t size, size_t set_buf_sites, DML_Layout *layout, 
-	  DML_SiteList *sites, int volfmt, DML_Checksum *checksum);
+	  DML_SiteList *sites, int volfmt, int serpar, DML_Checksum *checksum);
 int DML_partition_sitedata_in(DML_RecordReader *dml_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  DML_SiteRank rcv_coords, int count, size_t size, int word_size, 
@@ -228,7 +231,7 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  int count, size_t size, int word_size, void *arg, 
 	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
-	  DML_Checksum *checksum);
+	  int serpar, DML_Checksum *checksum);
 size_t DML_global_in(LRL_RecordReader *lrl_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  int count, size_t size, int word_size, void *arg, 

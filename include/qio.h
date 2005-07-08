@@ -19,6 +19,14 @@
 #define QIO_SERIAL     DML_SERIAL
 #define QIO_PARALLEL   DML_PARALLEL
 
+/* ILDG style file */
+#define QIO_ILDGNO     0
+#define QIO_ILDGLAT    1
+
+/* SciDAC native or ILDG alien file (reading) */
+#define QIO_SCIDAC_NATIVE  1
+#define QIO_ILDG_ALIEN     2
+
 #define QIO_CREAT      LRL_CREAT
 #define QIO_TRUNC      LRL_TRUNC
 #define QIO_APPEND     LRL_APPEND
@@ -50,6 +58,20 @@
 #define QIO_ERR_BAD_IONODE        (-22)
 #define QIO_ERR_BAD_SEEK          (-23)
 
+/* LIME types for SciDAC records */
+
+#define QIO_LIMETYPE_PRIVATE_FILE_XML   "scidac-private-file-xml"
+#define QIO_LIMETYPE_SITELIST           "scidac-sitelist"
+#define QIO_LIMETYPE_FILE_XML           "scidac-file-xml"
+#define QIO_LIMETYPE_PRIVATE_RECORD_XML "scidac-private-record-xml"
+#define QIO_LIMETYPE_RECORD_XML         "scidac-record-xml"
+#define QIO_LIMETYPE_BINARY_DATA        "scidac-binary-data"
+
+/* LIME types for ILDG compatibility */
+#define QIO_LIMETYPE_ILDG_FORMAT        "ildg-format"
+#define QIO_LIMETYPE_ILDG_BINARY_DATA   "ildg-binary-data"
+#define QIO_LIMETYPE_ILDG_DATA_LFN      "ildg-data-lfn"
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -73,6 +95,8 @@ typedef struct {
   LRL_FileWriter *lrl_file_out;
   int volfmt;
   int serpar;
+  int ildgstyle;
+  QIO_String *ildgLFN;
   DML_Layout *layout;
   DML_SiteList *sites;
   DML_Checksum last_checksum;
@@ -81,17 +105,22 @@ typedef struct {
 
 #define QIO_RECORD_INFO_PRIVATE_NEXT 0
 #define QIO_RECORD_INFO_USER_NEXT 1
-#define QIO_RECORD_DATA_NEXT 2
-#define QIO_RECORD_CHECKSUM_NEXT 3
+#define QIO_RECORD_ILDG_INFO_NEXT 2
+#define QIO_RECORD_DATA_NEXT 3
+#define QIO_RECORD_CHECKSUM_NEXT 4
 
 typedef struct {
   LRL_FileReader *lrl_file_in;
   int volfmt;
   int serpar;
+  int format;
+  int ildgstyle;
+  int ildg_precision;
   DML_Layout *layout;
   DML_SiteList *sites;
   int read_state;
   QIO_String *xml_record;
+  QIO_String *ildgLFN;
   QIO_RecordInfo record_info;
   DML_Checksum last_checksum;
   DML_RecordReader *dml_record_in;
@@ -105,6 +134,8 @@ typedef struct {
 typedef struct {
   int serpar;
   int mode;
+  int ildgstyle;
+  QIO_String *ildgLFN;
 } QIO_Oflag;
 
 /* Support for host file conversion */
@@ -146,8 +177,8 @@ int QIO_verbosity();
 /* HostAPI */
 int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout);
-int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
-			QIO_Layout *layout);
+int QIO_part_to_single( const char filename[], int ildgstyle, 
+			QIO_Filesystem *fs, QIO_Layout *layout);
 char *QIO_set_filepath(QIO_Filesystem *fs, 
 		       const char * const filename, int node);
 
@@ -162,9 +193,14 @@ uint32_t QIO_get_reader_last_checksuma(QIO_Reader *in);
 uint32_t QIO_get_reader_last_checksumb(QIO_Reader *in);
 int QIO_set_reader_pointer(QIO_Reader *qio_in, off_t offset);
 off_t QIO_get_reader_pointer(QIO_Reader *qio_in);
+char *QIO_get_ILDG_LFN(QIO_Reader *qio_in);
+int QIO_get_ildgstyle(QIO_Reader *in);
+int QIO_get_read_volfmt(QIO_Reader *in);
+int QIO_get_read_format(QIO_Reader *in);
 
 uint32_t QIO_get_writer_last_checksuma(QIO_Writer *out);
 uint32_t QIO_get_writer_last_checksumb(QIO_Writer *out);
+void QIO_reset_writer_ILDG_flags(QIO_Writer *out, QIO_Oflag *oflag);
 
 int QIO_close_write(QIO_Writer *out);
 int QIO_close_read(QIO_Reader *in);
@@ -182,9 +218,14 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 int QIO_read_record_data(QIO_Reader *in, 
 		 void (*put)(char *buf, size_t index, int count, void *arg),
 		 size_t datum_size, int word_size, void *arg);
-int QIO_next_record(QIO_Reader *in);
+int QIO_next_field(QIO_Reader *in);
 
-int QIO_init_read_field(QIO_Reader *in, size_t datum_size, 
+LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out, 
+    int msg_begin, int msg_end, int globaldata,
+    size_t datum_size,
+    const LIME_type lime_type, int *do_output, int *status);
+int QIO_init_read_field(QIO_Reader *in, int globaldata, size_t datum_size, 
+			LIME_type *lime_type_list, int ntypes,
 			DML_Checksum *checksum, LIME_type *lime_type);
 int QIO_seek_read_field_datum(QIO_Reader *in, 
 	      DML_SiteRank seeksite,
@@ -221,6 +262,7 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
 int QIO_write_file_header(QIO_Writer* qio_out, QIO_String *xml_file);
 int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info);
 int QIO_read_user_record_info(QIO_Reader *in, QIO_String *xml_record);
+int QIO_read_ILDG_LFN(QIO_Reader *in);
 int QIO_generic_read_record_data(QIO_Reader *in, 
 	     void (*put)(char *buf, size_t index, int count, void *arg),
 	     size_t datum_size, int word_size, void *arg,
@@ -252,15 +294,38 @@ int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
 		     const LIME_type lime_type);
 int QIO_read_string(QIO_Reader *in,
 		    QIO_String *xml, LIME_type *lime_type);
-DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt);
+LRL_RecordReader *QIO_read_record_type(QIO_Reader *in, LIME_type *lime_type,
+				       off_t *expected_rec_size, int *status);
+LRL_RecordReader *QIO_open_read_target_record(QIO_Reader *in, 
+    LIME_type *lime_type_list, int ntypes, LIME_type *lime_type,
+    off_t *expected_rec_size, int *status);
+int QIO_read_string_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in, 
+			 QIO_String *xml,  off_t expected_rec_size);
+int QIO_skip_data(LRL_RecordReader *lrl_record_in);
+
+DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt, int serpar);
 int QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type);
 int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end, 
 		       const LIME_type lime_type);
+LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
+               size_t datum_size, 
+  	       LIME_type *lime_type_list, int ntypes,
+               LIME_type *lime_type, int *status);
 int QIO_read_field(QIO_Reader *in, int globaldata,
 	   void (*put)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t datum_size, int word_size, void *arg, 
 	   DML_Checksum *checksum, uint64_t* nbytes,
 	   LIME_type *lime_type);
+int QIO_read_field_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
+	   int globaldata,
+	   void (*put)(char *buf, size_t index, int count, void *arg),
+	   int count, size_t datum_size, int word_size, void *arg, 
+ 	   DML_Checksum *checksum, uint64_t* nbytes);
+int QIO_write_field_data(QIO_Writer *out, LRL_RecordWriter *lrl_record_out,
+	    int globaldata,
+	    void (*get)(char *buf, size_t index, int count, void *arg),
+	    int count, size_t datum_size, int word_size, void *arg, 
+	    DML_Checksum *checksum, uint64_t *nbytes);
 int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 	    int globaldata,
 	    void (*get)(char *buf, size_t index, int count, void *arg),

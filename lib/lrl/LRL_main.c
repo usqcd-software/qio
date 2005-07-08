@@ -131,7 +131,8 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
   if (lime_status != LIME_SUCCESS){
     if(lime_status == LIME_EOF)*status = LRL_EOF;
     else{
-      printf("%s lime error %d getting next record header\n",myname,*status);
+      printf("%s lime error %d getting next record header\n",myname,
+	     lime_status);
       *status = LRL_ERR_READ;
     }
     return NULL;
@@ -147,7 +148,113 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
 
 
 /** 
- * Open a record for writing 
+ * Search for the next record with one of the specified LIME types and
+ * open it for reading
+ *
+ * \param fr               LRL file reader  ( Read )
+ * \param lime_type_list   list of LIME types ( Read )
+ * \param ntypes           number in list ( Read )
+ *                         If 0 accept any LIME type.
+ * \param rec_size         record size ( Modify )
+ * \param lime_type_found  LIME type found ( Modify )
+ * \param status           LRL status ( Modify )
+ *
+ * \return null if failure and set status to error flag
+ */
+LRL_RecordReader *LRL_open_read_target_record(LRL_FileReader *fr,
+	      LIME_type *lime_type_list, int ntypes, off_t *rec_size, 
+	      LIME_type *lime_type_found, int *status)
+{
+  LRL_RecordReader *rr;
+  int lrl_status;
+  int i, found;
+  char myname[] = "LRL_open_read_target_record";
+
+  rr = LRL_open_read_record(fr, rec_size, lime_type_found, status);
+  if(rr == NULL)return rr;
+
+  found = 0;
+  while(1){
+    for(i = 0; i < ntypes; i++){
+      if(strcmp(lime_type_list[i],*lime_type_found) == 0){
+	found = 1;
+	break;
+      }
+    }
+    /* If the list of targets is empty, accept any record */
+    if(ntypes == 0 || found)break;
+
+    lrl_status = LRL_close_read_record(rr);
+    if(lrl_status != LRL_SUCCESS)return NULL;
+    rr = LRL_open_read_record(fr, rec_size, lime_type_found, status);
+    if(rr == NULL)return rr;
+  }
+
+  *status = LIME_SUCCESS;
+  return rr;
+}
+
+
+/** 
+ * Create a record writer.  Don't write anything.
+ *
+ * \param fw         LRL file writer  ( Read )
+ *
+ * \return null if failure
+ */
+LRL_RecordWriter *LRL_create_record_writer(LRL_FileWriter *fw)
+{
+  LRL_RecordWriter *rw;
+  char myname[] = "LRL_create_record_writer";
+  
+  if (fw == NULL)
+    return NULL;
+
+  rw = (LRL_RecordWriter *)malloc(sizeof(LRL_RecordWriter));
+  if (rw == NULL){
+    printf("%s: Can't malloc writer\n",myname);
+    return NULL;
+  }
+  rw->fw = fw;
+
+  return rw;
+}
+
+/** 
+ * Write the record header
+ *
+ * \param rw         LRL record writer  ( Read )
+ * \param rec_size   record size ( Modify )
+ * \param tag        tag for the record header ( Read )
+ *
+ * \return LRL_ERR_WRITE if failure, LRL_SUCCESS if successful.
+ */
+int LRL_write_record_header(LRL_RecordWriter *rw, 
+			    int msg_begin, int msg_end, 
+			    off_t rec_size, 
+			    LIME_type lime_type)
+{
+  LimeRecordHeader *h;
+  int status;
+  char myname[] = "LRL_write_record_header";
+  
+  /* Create and write record header */
+  h = limeCreateHeader(msg_begin, msg_end, lime_type, rec_size);
+  status = limeWriteRecordHeader(h, rw->fw->dg);
+
+  if (status < 0)
+  { 
+    printf( "%s: fatal error. LIME status is: %d\n", myname, status);
+    return LRL_ERR_WRITE;
+  }
+
+  limeDestroyHeader(h);
+
+  return LRL_SUCCESS;
+}
+
+/** 
+ * Open a record for writing and write the record header
  *
  * \param fw         LRL file writer  ( Read )
  * \param rec_size   record size ( Modify )
@@ -161,36 +268,134 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fw,
 					LIME_type lime_type)
 {
   LRL_RecordWriter *rw;
-  LimeRecordHeader *h;
   int status;
   char myname[] = "LRL_open_write_record";
   
   if (fw == NULL)
     return NULL;
 
-
-  rw = (LRL_RecordWriter *)malloc(sizeof(LRL_RecordWriter));
-  if (rw == NULL){
-    printf("%s: Can't malloc writer\n",myname);
+  rw = LRL_create_record_writer(fw);
+  if (rw == NULL)
     return NULL;
-  }
-  rw->fw = fw;
 
-  /* Write record */
-  h = limeCreateHeader(msg_begin, msg_end, lime_type, rec_size);
-  status = limeWriteRecordHeader(h, rw->fw->dg);
-
-  if (status < 0)
-  { 
-    printf( "%s: fatal error. LIME status is: %d\n", myname, status);
-    exit(EXIT_FAILURE);
-  }
-
-  limeDestroyHeader(h);
+  /* Create and write record header */
+  status = LRL_write_record_header(rw, msg_begin, msg_end, rec_size, 
+				   lime_type);
+  if (status != LRL_SUCCESS)
+    return NULL;
 
   return rw;
 }
 
+/** 
+ * Copy reader
+ *
+ * \param rr         LRL record reader
+ * \param state_ptr  Returned opaque state
+ * \param state_size Returned size
+ *
+ */
+
+void LRL_get_reader_state(LRL_RecordReader *rr,
+			  void **state_ptr, size_t *state_size)
+{
+  LimeReader *spt;
+  char myname[] = "LRL_get_reader_state";
+
+  /* For now the LIME reader structure defines the state.  It would be
+     cleaner to define a new state structure and copy just the reader
+     components we need */
+  spt = (LimeReader *)malloc(sizeof(LimeReader));
+  if (spt == NULL){
+    printf("%s: Can't malloc reader state\n",myname);
+    *state_ptr = NULL;
+    *state_size = 0;
+  }
+  else{
+    *spt = *(rr->fr->dr);
+    *state_ptr = (void *)spt;
+    *state_size = sizeof(LimeReader);
+  }
+}
+
+
+/** 
+ * Copy writer
+ *
+ * \param rw         LRL record writer
+ * \param state_ptr  Returned opaque state
+ * \param state_size Returned size
+ *
+ * \return copy of writer
+ */
+
+void LRL_get_writer_state(LRL_RecordWriter *rw,
+			  void **state_ptr, size_t *state_size)
+{
+  LimeWriter *spt;
+  size_t ss;
+  char myname[] = "LRL_get_writer_state";
+
+  /* For now the LIME writer structure defines the state.  It would be
+     cleaner to define a new state structure and copy just the reader
+     components we need */
+  spt = (LimeWriter *)malloc(sizeof(LimeWriter));
+  if (spt == NULL){
+    printf("%s: Can't malloc writer state\n",myname);
+    *state_ptr = NULL;
+    *state_size = 0;
+  }
+  else{
+    if(rw != NULL)
+      *spt = *(rw->fw->dg);
+    *state_ptr = (void *)spt;
+    *state_size = sizeof(LimeWriter);
+  }
+}
+
+/** 
+ * Set reader state from a given state
+ *
+ * \param rw         LRL record reader  ( Write )
+ * \param state_ptr  Reader state ( Read )
+ *
+ * \return LRL status
+ */
+int LRL_set_reader_state(LRL_RecordReader *rr, void *state_ptr){
+  LimeReader *rsrc = (LimeReader *)state_ptr;
+  int status;
+
+  /* Set the LIME reader state to the state specified by state_ptr */
+  status = limeReaderSetState(rr->fr->dr, rsrc);
+  if(status != LIME_SUCCESS)return LRL_ERR_SETSTATE;
+
+  status = limeReaderSeek(rr->fr->dr, 0, SEEK_SET);
+  if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+
+  return LRL_SUCCESS;
+}
+
+/** 
+ * Set writer state from a given state
+ *
+ * \param rw         LRL record writer  ( Write )
+ * \param state_ptr  Writer state ( Read )
+ *
+ * \return LRL status
+ */
+int LRL_set_writer_state(LRL_RecordWriter *rw, void *state_ptr){
+  LimeWriter *wsrc = (LimeWriter *)state_ptr;
+  int status;
+
+  /* Set the LIME writer state to the state specified by state_ptr */
+  status = limeWriterSetState(rw->fw->dg, wsrc);
+  if(status != LIME_SUCCESS)return LRL_ERR_SETSTATE;
+
+  status = limeWriterSeek(rw->fw->dg, 0, SEEK_SET);
+  if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+
+  return LRL_SUCCESS;
+}
 
 /** 
  * Read bytes
@@ -322,10 +527,13 @@ int LRL_next_message(LRL_FileReader *fr)
 
 /* For skipping to the beginning of the next record? */
 
-int LRL_next_record(LRL_FileReader *fr)
+int LRL_next_record(LRL_RecordReader *rr)
 {
   int status;
+  LRL_FileReader *fr;
 
+  if(rr == NULL)return LRL_ERR_SKIP;
+  fr = rr->fr;
   if(fr == NULL)return LRL_ERR_SKIP;
   status = limeReaderNextRecord(fr->dr);
 
@@ -335,6 +543,28 @@ int LRL_next_record(LRL_FileReader *fr)
     return LRL_ERR_SKIP;
   }
   return LRL_SUCCESS;
+}
+
+/** 
+ * Destroy the LRL reader state (copy)
+ *
+ * \param state_ptr         LRL reader state
+ *
+ */
+void LRL_destroy_reader_state_copy(void *state_ptr){
+  if(state_ptr == NULL)return;
+  free(state_ptr);
+}
+
+
+/** 
+ * Destroy the LRL writer state (copy)
+ *
+ * \param state_ptr         LRL writer state
+ *
+ */
+void LRL_destroy_writer_state_copy(void *state_ptr){
+  free(state_ptr);
 }
 
 

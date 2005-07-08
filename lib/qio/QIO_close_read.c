@@ -21,6 +21,7 @@ int QIO_close_read(QIO_Reader *in){
   free(in->layout);
   DML_free_sitelist(in->sites);
   QIO_string_destroy(in->xml_record);
+  QIO_string_destroy(in->ildgLFN);
   free(in);
   return QIO_SUCCESS;
 }

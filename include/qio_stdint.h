@@ -20,8 +20,23 @@
 #endif
 
 
-#else 
+#elif ( HAVE_INTTYPES_H )
+#include <inttypes.h>
   
+#ifndef HAVE_UINT16_T
+#error "inttypes.h found but uint16_t undefined"
+#endif
+
+#ifndef HAVE_UINT32_T
+#error "inttypes.h found but uint32_t undefined"
+#endif
+
+#ifndef HAVE_UINT64_T
+#error "inttypes.h found but uint64_t undefined"
+#endif
+
+#else
+
 /* stdint not found. Try other ways */
 
 /* n_uint_16_t */

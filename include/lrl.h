@@ -12,6 +12,8 @@
 #define LRL_ERR_SEEK     (-3)
 #define LRL_ERR_SKIP     (-4)
 #define LRL_ERR_CLOSE    (-5)
+#define LRL_ERR_WRITE    (-6)
+#define LRL_ERR_SETSTATE (-7)
 
 /* For writing, either append or truncate */
 #define LRL_CREAT      0
@@ -51,17 +53,33 @@ off_t LRL_get_reader_pointer(LRL_FileReader *fr);
 LRL_FileWriter *LRL_open_write_file(const char *filename, int mode);
 LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr, off_t *rec_size, 
 				       LIME_type *lime_type, int *status);
+LRL_RecordReader *LRL_open_read_target_record(LRL_FileReader *fr,
+	      LIME_type *lime_type_list, int ntypes, off_t *rec_size, 
+	      LIME_type *lime_type_found, int *status);
+LRL_RecordWriter *LRL_create_record_writer(LRL_FileWriter *fw);
+int LRL_write_record_header(LRL_RecordWriter *rw, 
+			    int msg_begin, int msg_end, 
+			    off_t rec_size, 
+			    LIME_type lime_type);
 LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fr, 
 					int msg_begin, int msg_end, 
 					off_t rec_size, 
 					LIME_type lime_type);
+void LRL_get_writer_state(LRL_RecordWriter *rw,
+			  void **state_ptr, size_t *state_size);
+void LRL_get_reader_state(LRL_RecordReader *rr,
+			  void **state_ptr, size_t *state_size);
+int LRL_set_reader_state(LRL_RecordReader *rr, void *state_ptr);
+int LRL_set_writer_state(LRL_RecordWriter *rw, void *state_ptr);
 off_t LRL_write_bytes(LRL_RecordWriter *rr, char *buf, 
 		       off_t nbytes);
 off_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, 
 		      off_t nbytes);
 int LRL_seek_write_record(LRL_RecordWriter *rr, off_t offset);
 int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset);
-int LRL_next_record(LRL_FileReader *fr);
+void LRL_destroy_reader_state_copy(void *state_ptr);
+void LRL_destroy_writer_state_copy(void *state_ptr);
+int LRL_next_record(LRL_RecordReader *rr);
 int LRL_next_message(LRL_FileReader *fr);
 int LRL_close_read_record(LRL_RecordReader *rr);
 int LRL_close_write_record(LRL_RecordWriter *rr);

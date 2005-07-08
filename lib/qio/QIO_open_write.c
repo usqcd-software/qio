@@ -21,6 +21,12 @@ uint32_t QIO_get_writer_last_checksumb(QIO_Writer *out){
   return out->last_checksum.sumb;
 }
 
+void QIO_reset_writer_ILDG_flags(QIO_Writer *out, QIO_Oflag *oflag){
+  if(oflag == NULL)return;
+  out->ildgstyle = oflag->ildgstyle;
+  out->ildgLFN = oflag->ildgLFN;
+}
+
 /* Opens a file for writing, whether in MPP mode or on host */
 /* Writes the private file XML record */
 /* Writes the site list if multifile format */
@@ -40,6 +46,7 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   int this_node = layout->this_node;
   int i;
   int mode;
+  int serpar;
   char *newfilename;
   char myname[] = "QIO_generic_open_write";
 
@@ -81,16 +88,30 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   qio_out->dml_record_out = NULL;
   DML_checksum_init(&(qio_out->last_checksum));
 
+  /* Unpack the QIO_Oflag parameter */
   if(oflag == NULL){
-    /* For compatibility.  Default values */
+    /* For backward compatibility.  Default values */
     mode = QIO_TRUNC;
     qio_out->serpar = QIO_SERIAL;
+    qio_out->ildgstyle = QIO_ILDGLAT;
+    qio_out->ildgLFN = NULL;
   }
   else {
     mode = oflag->mode;
-    /* For now we support only serial I/O */
-    /* qio_out->serpar = oflag->serpar; */
-    qio_out->serpar = QIO_SERIAL;
+    qio_out->serpar = oflag->serpar;
+    qio_out->ildgstyle = oflag->ildgstyle;
+    qio_out->ildgLFN = oflag->ildgLFN;
+  }
+  serpar = qio_out->serpar;
+
+  /* For now parallel I/O is supported only for SINGLEFILE */
+  if(qio_out->volfmt != QIO_SINGLEFILE && 
+     qio_out->serpar == QIO_PARALLEL){
+    serpar = qio_out->serpar = QIO_SERIAL;
+    if(QIO_verbosity() >= QIO_VERB_REG){
+      printf("%s(%d): changed mode from QIO_PARALLEL to QIO_SERIAL \n",
+	     myname,this_node);
+    }
   }
   
   /*****************************/
@@ -99,12 +120,13 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   /* Which node does this depends on the user request. */
   /* If parallel write, all nodes open.
      If multifile, all nodes open.
-     If writing to partitions, the partition I/O node does.
+     If writing by partitions, the partition I/O node does.
      In all cases, the master I/O node opens the file. */
   
   if( (qio_out->volfmt == QIO_MULTIFILE)
       || ((qio_out->volfmt == QIO_PARTFILE) 
 	  && (dml_layout->ionode(this_node) == this_node))
+      || (serpar == QIO_PARALLEL)
       || (this_node == dml_layout->master_io_node) ){
     /* Modifies filename for non master nodes */
     newfilename = QIO_filename_edit(filename, volfmt, dml_layout->this_node);
@@ -121,19 +143,20 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
      QIO_verbosity() >= QIO_VERB_MED)
     {
       if(qio_out->volfmt == QIO_SINGLEFILE)
-	printf("%s(%d): Opened %s for writing in singlefile mode\n",
+	printf("%s(%d): Opened %s for writing in singlefile format\n",
 	       myname,this_node,filename);
       else if(qio_out->volfmt == QIO_MULTIFILE)
-	printf("%s(%d): Opened %s for writing in multifile mode\n",
+	printf("%s(%d): Opened %s for writing in multifile format\n",
 	       myname,this_node,filename);
       else if(qio_out->volfmt == QIO_PARTFILE)
-	printf("%s(%d): Opened %s for writing in partfile mode\n",
+	printf("%s(%d): Opened %s for writing in partfile format\n",
 	       myname,this_node,filename);
     }
 
   /* Determine sites to be written and create site list if needed */
   
-  qio_out->sites = QIO_create_sitelist(qio_out->layout,qio_out->volfmt);
+  qio_out->sites = QIO_create_sitelist(qio_out->layout,qio_out->volfmt,
+				       qio_out->serpar);
   if(qio_out->sites == NULL){
     printf("%s(%d): error creating sitelist\n",
 	   myname,this_node);
@@ -155,6 +178,7 @@ int QIO_write_file_header(QIO_Writer* qio_out, QIO_String *xml_file)
   QIO_String *xml_file_private;
   DML_Layout *dml_layout = qio_out->layout;
   int volfmt             = qio_out->volfmt;
+  int serpar             = qio_out->serpar;
   int *latsize       = dml_layout->latsize;
   int latdim         = dml_layout->latdim;
   int this_node      = dml_layout->this_node;
@@ -200,11 +224,10 @@ int QIO_write_file_header(QIO_Writer* qio_out, QIO_String *xml_file)
   msg_begin = 1; msg_end = 0;
   
   /* Master node writes the private file XML record */
-  /* For parallel output the other nodes pretend to write */
   if(this_node == master_io_node){
     if(QIO_write_string(qio_out, msg_begin, msg_end, 
 			xml_file_private, 
-			(const LIME_type)"scidac-private-file-xml")){
+			(LIME_type)QIO_LIMETYPE_PRIVATE_FILE_XML)){
       printf("%s(%d): error writing private file XML\n",
 	     myname,this_node);
       return QIO_ERR_PRIVATE_FILE_INFO;
@@ -216,28 +239,37 @@ int QIO_write_file_header(QIO_Writer* qio_out, QIO_String *xml_file)
     msg_begin = 0;
   }
   QIO_string_destroy(xml_file_private);
+
+  /* For parallel I/O all nodes pretend to have written the XML */
+  if(serpar == QIO_PARALLEL)
+    msg_begin = 0;
   
   /******************************************/
   /* Write the sitelist if needed */
   /******************************************/
 
   /* Next record is last in message for all but master I/O node */
-  if (this_node != master_io_node)msg_end = 1;
+  /* For parallel I/O all nodes pretend to continue writing */
+  if (this_node != master_io_node && serpar == QIO_SERIAL)msg_end = 1;
   
   if(QIO_write_sitelist(qio_out, msg_begin, msg_end, 
-			(const LIME_type)"scidac-sitelist")){
+			(LIME_type)QIO_LIMETYPE_SITELIST)){
     printf("%s(%d): error writing the site list\n", myname,this_node);
     return QIO_ERR_BAD_SITELIST;
   }
   
   msg_begin = 0;
   
+  /* Not really necessary */
+  if(serpar == QIO_PARALLEL)
+    msg_end = 1;
+  
   /* Master node writes the user file XML record */
   /* For parallel output the other nodes pretend to write */
   if(this_node == master_io_node){
     msg_end = 1;
     if(QIO_write_string(qio_out, msg_begin, msg_end, xml_file, 
-			(const LIME_type)"scidac-file-xml")){
+			(LIME_type)QIO_LIMETYPE_FILE_XML)){
       printf("%s(%d): error writing the user file XML\n",
 	     myname,this_node);
       return QIO_ERR_FILE_INFO;
@@ -246,18 +278,21 @@ int QIO_write_file_header(QIO_Writer* qio_out, QIO_String *xml_file)
       printf("%s(%d): wrote user file XML  = \"%s\"\n",
 	     myname,this_node, QIO_string_ptr(xml_file));
   }
-  
+
   return QIO_SUCCESS;
 }
  
 QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename, 
-			    int volfmt, QIO_Layout *layout, QIO_Oflag *oflag)
+			   int volfmt, QIO_Layout *layout, QIO_Oflag *oflag)
 {
   QIO_Writer *qio_out;
   int status;
 
   qio_out = QIO_generic_open_write(filename, volfmt, layout, oflag,
 				   DML_io_node, DML_master_io_node);
+
+  /* Prevent premature file truncation in parallel writes */
+  DML_sync();
 
   status = QIO_write_file_header(qio_out, xml_file);
   if(status != QIO_SUCCESS)return NULL;

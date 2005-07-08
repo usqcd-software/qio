@@ -51,15 +51,33 @@ static int ndim;
 static int *size1[2], *size2;
 static int prime[] = {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53};
 static int sites_on_node;
+static int *mcoord;
+
 #define MAXPRIMES (sizeof(prime)/sizeof(int))
 
-void setup_layout(int len[], int nd, int numnodes)
+static void setup_qmp_grid(int len[], int nd, int numnodes){
+  int ndim2, i;
+  const int *nsquares2;
+
+  ndim2 = QMP_get_allocated_number_of_dimensions();
+  nsquares2 = QMP_get_allocated_dimensions();
+  for(i=0; i<ndim; i++) {
+    if(i<ndim2) nsquares[i] = nsquares2[i];
+    else nsquares[i] = 1;
+  }
+
+  for(i=0; i<ndim; i++) {
+    if(len[i]%nsquares[i] != 0) {
+      printf("LATTICE SIZE DOESN'T FIT GRID\n");
+      QMP_abort(0);
+    }
+    squaresize[i] = len[i]/nsquares[i];
+  }
+}
+
+void setup_hyper_prime(int len[], int nd, int numnodes)
 {
   int i, j, k, n;
-
-  ndim = nd;
-  squaresize = (int *) malloc(ndim*sizeof(int));
-  nsquares = (int *) malloc(ndim*sizeof(int));
 
   /* Figure out dimensions of rectangle */
   for(i=0; i<ndim; ++i) {
@@ -103,6 +121,20 @@ void setup_layout(int len[], int nd, int numnodes)
     squaresize[j] /= prime[k];
     nsquares[j] *= prime[k];
   }
+}
+
+void setup_layout(int len[], int nd, int numnodes){
+  int i;
+
+  ndim = nd;
+  squaresize = (int *) malloc(ndim*sizeof(int));
+  nsquares = (int *) malloc(ndim*sizeof(int));
+  mcoord = (int *) malloc(ndim*sizeof(int));
+
+  if(QMP_get_msg_passing_type()==QMP_GRID)
+    setup_qmp_grid(len, ndim, numnodes);
+  else
+    setup_hyper_prime(len, ndim, numnodes);
 
   /* setup QMP logical topology */
   if(!QMP_logical_topology_is_declared()) {
@@ -133,12 +165,12 @@ void setup_layout(int len[], int nd, int numnodes)
 
 int node_number(const int x[])
 {
-  int i, r=0;
+  int i, r;
 
-  for(i=ndim-1; i>=0; --i) {
-    r = r*nsquares[i] + (x[i]/squaresize[i]);
+  for(i=0; i<ndim; i++) {
+    mcoord[i] = x[i]/squaresize[i];
   }
-  return r;
+  return QMP_get_node_number_from(mcoord);
 }
 
 int node_index(const int x[])
@@ -160,15 +192,16 @@ int node_index(const int x[])
 
 void get_coords(int x[], int node, int index)
 {
-  int i, p, s, si;
+  int i, s, si;
+  int *m;
   si = index;
 
+  m = QMP_get_logical_coordinates_from(node);
+
   s = 0;
-  p = node;
   for(i=0; i<ndim; ++i) {
-    x[i] = (p%nsquares[i])*squaresize[i];
+    x[i] = m[i] * squaresize[i];
     s += x[i];
-    p /= nsquares[i];
   }
   s &= 1;
 
@@ -187,6 +220,8 @@ void get_coords(int x[], int node, int index)
     }
   }
   x[0] += 2*index + s;
+
+  free(m);
 
   /* Check the result */
   if(node_index(x)!=si) {

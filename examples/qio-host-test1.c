@@ -5,7 +5,7 @@
 
 /* Usage
 
-   qio-host-test1 numnodes <filename> nx ny nz nt ...
+   qio-host-test1 numnodes <0=single_to_part 1=part_to_single> <filename>
 
 */
 

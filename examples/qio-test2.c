@@ -7,5 +7,12 @@
 #include "qio-test.h"
 
 int main(int argc, char *argv[]){
-  return qio_test(QIO_PARTFILE, argc, argv);
+  int output_volfmt = QIO_PARTFILE;
+  int output_serpar = QIO_SERIAL;
+  int ildgstyle     = QIO_ILDGNO;
+  int input_volfmt  = QIO_PARTFILE;
+  int input_serpar  = QIO_SERIAL;
+
+  return qio_test(output_volfmt, output_serpar, ildgstyle,
+		  input_volfmt, input_serpar, argc, argv);
 }

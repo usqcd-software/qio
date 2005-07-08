@@ -10,7 +10,8 @@
     where
 
       <part_sing> = 0 to convert single to partition format
-                  = 1 to convert partition to single format
+                  = 1 to convert partition to singlefile ILDG format
+                  = 2 to convert partition to singlefile SciDAC native format
       <filename> is the base name of the file
 
     and
@@ -61,7 +62,7 @@ int main(int argc, char *argv[]){
   /* Check arguments and process layout parameters */
 
   if(argc < 3){
-    fprintf(stderr,"Usage %s <0 (sing to part)|1 (part to sing)> <filename> < layoutfile\n",argv[0]);
+    fprintf(stderr,"Usage %s <0 (sing to part) | 1 (part to sing ILDG) | 2 (part to sing SciDAC) > <filename> < layoutfile\n",argv[0]);
     return 1;
   }
 

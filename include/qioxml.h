@@ -2,10 +2,12 @@
 #define QIOXML_H
 
 #define QIO_MAXTAG 64
+#define QIO_MAXATTR 512
 #define QIO_MAXVALUESTRING 512
 #define QIO_MAXINTARRAY 8
 #define QIO_STRINGALLOC 1024
 /*#define QIO_FILEFORMATVERSION "1.0"*/
+#define QIO_ILDGFORMATVERSION "1.0"
 #define QIO_FILEFORMATVERSION "1.1"
 #define QIO_RECORDFORMATVERSION "1.0"
 #define QIO_CHECKSUMFORMATVERSION "1.0"
@@ -24,24 +26,28 @@ extern "C"
 
 typedef struct {
   char tag[QIO_MAXTAG];
+  char attr[QIO_MAXATTR];
   char value[QIO_MAXVALUESTRING];
   short occur;
 } QIO_TagCharValue;
 
 typedef struct {
   char tag[QIO_MAXTAG];
+  char attr[QIO_MAXATTR];
   uint32_t value;     /* Must be 32-bit type */
   short occur;
 } QIO_TagHex32Value;
 
 typedef struct {
   char tag[QIO_MAXTAG];
+  char attr[QIO_MAXATTR];
   int  value;
   short occur;
 } QIO_TagIntValue;
 
 typedef struct {
   char tag[QIO_MAXTAG];
+  char attr[QIO_MAXATTR];
   int  value[QIO_MAXINTARRAY];
   int  n;
   short occur;
@@ -62,7 +68,7 @@ typedef struct {
 } QIO_RecordInfoWrapper;
 
 #define QIO_RECORD_INFO_WRAPPER {\
-  {"scidacRecord", "" , 0}       \
+  {"scidacRecord", "", "" , 0}       \
 }
 
 
@@ -96,15 +102,15 @@ typedef struct {
 } QIO_RecordInfo;
 
 #define QIO_RECORD_INFO_TEMPLATE { \
-  {"version",   "", 0},         \
-  {"date",      "", 0},         \
-  {"globaldata",0 , 0},         \
-  {"datatype",  "", 0},         \
-  {"precision", "", 0},         \
-  {"colors",    0 , 0},         \
-  {"spins",     0 , 0},         \
-  {"typesize",  0 , 0},         \
-  {"datacount", 0 , 0}          \
+  {"version",   "", "", 0},         \
+  {"date",      "", "", 0},         \
+  {"globaldata","", 0 , 0},         \
+  {"datatype",  "", "", 0},         \
+  {"precision", "", "", 0},         \
+  {"colors",    "", 0 , 0},         \
+  {"spins",     "", 0 , 0},         \
+  {"typesize",  "", 0 , 0},         \
+  {"datacount", "", 0 , 0}          \
 }
 
 /*******************************************************************/
@@ -121,7 +127,7 @@ typedef struct {
 } QIO_FileInfoWrapper;
 
 #define QIO_FILE_INFO_WRAPPER {\
-  {"scidacFile", "" , 0}       \
+  {"scidacFile", "", "" , 0}       \
 }
 
 
@@ -145,10 +151,10 @@ typedef struct {
 } QIO_FileInfo;
 
 #define QIO_FILE_INFO_TEMPLATE  {\
-  {"version",   "", 0},       \
-  {"spacetime", 0,  0},       \
-  {"dims",      {0}, 1, 0},   \
-  {"volfmt",  0 , 0}       \
+  {"version",  "",  "", 0},       \
+  {"spacetime","",  0,  0},       \
+  {"dims",     "",  {0}, 1, 0},   \
+  {"volfmt",   "", 0 , 0}       \
 }
 
 /* Obsolete version 1.0 format */
@@ -162,10 +168,10 @@ typedef struct {
 
 
 #define QIO_FILE_INFO_TEMPLATE_v1p0  {\
-  {"version",   "", 0},       \
-  {"spacetime", 0,  0},       \
-  {"dims",      {0}, 1, 0},   \
-  {"multifile",  0 , 0}       \
+  {"version",   "", "", 0},       \
+  {"spacetime", "", 0,  0},       \
+  {"dims",      "", {0}, 1, 0},   \
+  {"multifile", "",  0 , 0}       \
 }
 
 
@@ -183,7 +189,7 @@ typedef struct {
 } QIO_ChecksumInfoWrapper;
 
 #define QIO_CHECKSUM_INFO_WRAPPER {\
-  {"scidacChecksum", "" , 0}       \
+  {"scidacChecksum", "", "" , 0}       \
 }
 
 
@@ -204,13 +210,67 @@ typedef struct {
 } QIO_ChecksumInfo;
 
 #define QIO_CHECKSUM_INFO_TEMPLATE  {\
-  {"version",   "", 0},       \
-  {"suma",      0,  0},       \
-  {"sumb",      0,  0}        \
+  {"version",   "", "", 0},       \
+  {"suma",      "", 0,  0},       \
+  {"sumb",      "", 0,  0}        \
 }
 
 /*******************************************************************/
 
+/* Top level wrapper for ILDG Lattice XML
+
+   tag           member           description          
+   ------------------------------------------------------------
+   ildgFormat  ildgformat_tags  string of ILDG format tags (see below)
+
+*/
+
+typedef struct {
+  QIO_TagCharValue     ildgformatinfo_tags;
+} QIO_ILDGFormatInfoWrapper;
+
+#define QIO_ILDGFORMATSCHEMA "xmlns=\"http://www.lqcd.org/ildg\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.lqcd.org/ildg filefmt.xsd"
+
+#define QIO_ILDG_FORMAT_INFO_WRAPPER {\
+  {"ildgFormat", QIO_ILDGFORMATSCHEMA, "" , 0}       \
+}
+
+
+/*******************************************************************/
+/* Contents of ILDG format XML
+
+   tag        member       description                  e.g. gauge config
+   ------------------------------------------------------------
+   version    version      ILDG format version number      1.0
+   precision  precision	   32 or 64
+   field      field        "su3_gauge"
+   lx         lx           x dimension
+   ly         ly           y dimension
+   lz         lz           z dimension
+   lt         lt           t dimension
+*/
+
+typedef struct {
+  QIO_TagCharValue version    ;
+  QIO_TagCharValue field      ;
+  QIO_TagIntValue  precision  ;
+  QIO_TagIntValue  lx         ;
+  QIO_TagIntValue  ly         ;
+  QIO_TagIntValue  lz         ;
+  QIO_TagIntValue  lt         ;
+} QIO_ILDGFormatInfo;
+
+#define QIO_ILDG_FORMAT_INFO_TEMPLATE { \
+  {"version",   "", "", 0},         \
+  {"field",     "", "", 0},         \
+  {"precision", "", 0 , 0},         \
+  {"lx",        "", 0 , 0},         \
+  {"ly",        "", 0 , 0},         \
+  {"lz",        "", 0 , 0},         \
+  {"lt",        "", 0 , 0}          \
+}
+
+/*********************************************************************/
 int QIO_decode_file_info(QIO_FileInfo *file_info, 
 			 QIO_String *file_string);
 void QIO_encode_file_info(QIO_String *file_string, 
@@ -223,6 +283,11 @@ int QIO_decode_checksum_info(QIO_ChecksumInfo *checksum,
 			     QIO_String *file_string);
 void QIO_encode_checksum_info(QIO_String *file_string, 
 			      QIO_ChecksumInfo *checksum);
+int QIO_decode_ILDG_format_info(QIO_ILDGFormatInfo *ildg_info, 
+				QIO_String *ildg_string);
+void QIO_encode_ILDG_format_info(QIO_String *ildg_string, 
+				 QIO_ILDGFormatInfo *ildg_info);
+
 
 int QIO_insert_file_tag_string(QIO_FileInfoWrapper *wrapper, 
 			       char *fileinfo_tags);
@@ -246,6 +311,19 @@ int QIO_insert_checksum_tag_string(QIO_ChecksumInfoWrapper *wrapper,
 int QIO_insert_suma_sumb(QIO_ChecksumInfo *checksum_info, 
 			 uint32_t suma, uint32_t sumb);
 
+int QIO_insert_ildgformat_tag_string(QIO_ILDGFormatInfoWrapper *wrapper, 
+				     char *ildgformatinfo_tags);
+int QIO_insert_ildgformat_version(QIO_ILDGFormatInfo *ildg_info, 
+				  char *version);
+int QIO_insert_ildgformat_field(QIO_ILDGFormatInfo *ildg_info, 
+				char *field_string);
+int QIO_insert_ildgformat_precision(QIO_ILDGFormatInfo *ildg_info, 
+				    int precision);
+int QIO_insert_ildgformat_lx(QIO_ILDGFormatInfo *ildg_info, int lx);
+int QIO_insert_ildgformat_ly(QIO_ILDGFormatInfo *ildg_info, int ly);
+int QIO_insert_ildgformat_lz(QIO_ILDGFormatInfo *ildg_info, int lz);
+int QIO_insert_ildgformat_lt(QIO_ILDGFormatInfo *ildg_info, int lt);
+
 char *QIO_get_file_info_tag_string(QIO_FileInfoWrapper *wrapper);
 char *QIO_get_file_version(QIO_FileInfo *file_info);
 int QIO_get_spacetime(QIO_FileInfo *file_info);
@@ -266,11 +344,28 @@ int QIO_get_spins(QIO_RecordInfo *record_info);
 int QIO_get_typesize(QIO_RecordInfo *record_info);
 int QIO_get_datacount(QIO_RecordInfo *record_info);
 
+void QIO_set_globaldata(QIO_RecordInfo *record_info, int globaldata);
+void QIO_set_datatype(QIO_RecordInfo *record_info, char *datatype);
+void QIO_set_precision(QIO_RecordInfo *record_info, char *precision);
+void *QIO_set_record_date(QIO_RecordInfo *record_info, char *date);
+void QIO_set_colors(QIO_RecordInfo *record_info, int colors);
+void QIO_set_spins(QIO_RecordInfo *record_info, int spins);
+void QIO_set_typesize(QIO_RecordInfo *record_info, int typesize);
+void QIO_set_datacount(QIO_RecordInfo *record_info, int datacount);
+
 char *QIO_get_checksum_info_tag_string(QIO_ChecksumInfoWrapper *wrapper);
 uint32_t QIO_get_suma(QIO_ChecksumInfo *checksum_info);
 uint32_t QIO_get_sumb(QIO_ChecksumInfo *checksum_info);
 int QIO_defined_suma(QIO_ChecksumInfo *checksum_info);
 int QIO_defined_sumb(QIO_ChecksumInfo *checksum_info);
+
+char *QIO_get_ildgformat_info_tag_string(QIO_ILDGFormatInfoWrapper *wrapper);
+char *QIO_get_ildgformat_field(QIO_ILDGFormatInfo *ildg_info);
+int QIO_get_ildgformat_precision(QIO_ILDGFormatInfo *ildg_info);
+int QIO_get_ildgformat_lx(QIO_ILDGFormatInfo *ildg_info);
+int QIO_get_ildgformat_ly(QIO_ILDGFormatInfo *ildg_info);
+int QIO_get_ildgformat_lz(QIO_ILDGFormatInfo *ildg_info);
+int QIO_get_ildgformat_lt(QIO_ILDGFormatInfo *ildg_info);
 
 int QIO_defined_record_date(QIO_RecordInfo *record_info);
 int QIO_defined_globaldata(QIO_RecordInfo *record_info);
@@ -297,6 +392,8 @@ void QIO_destroy_checksum_info(QIO_ChecksumInfo *checksum_info);
 int QIO_compare_checksum_info(QIO_ChecksumInfo *found, 
 			      QIO_ChecksumInfo *expect, 
 			      char *myname, int this_node);
+QIO_ILDGFormatInfo *QIO_create_ildg_format_info(int precision, int *dims);
+void QIO_destroy_ildg_format_info(QIO_ILDGFormatInfo *ildg_info);
 
 #ifdef __cplusplus
 }

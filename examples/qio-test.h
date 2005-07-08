@@ -51,7 +51,8 @@ float vcompare_R(float *fielda[], float *fieldb[], int count);
 float vcompare_M(suN_matrix *fielda[], suN_matrix *fieldb[], int count);
 float vcompare_r(float arraya[], float arrayb[], int count);
 
-int qio_test(int volfmt, int argc, char *argv[]);
+int qio_test(int output_volfmt, int output_serpar, int ildgstyle, 
+	     int input_volfmt, int input_serpar, int argc, char *argv[]);
 
 int qio_host_test(QIO_Filesystem *fs, int argc, char *argv[]);
 #endif /* QIO_TEST_H */

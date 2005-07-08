@@ -172,7 +172,7 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
 
 /*------------------------------------------------------------------*/
 /* Create sitelist structure (but not the sitelist, yet) */
-DML_SiteList *DML_init_sitelist(int volfmt, DML_Layout *layout){
+DML_SiteList *DML_init_sitelist(int volfmt, int serpar, DML_Layout *layout){
   DML_SiteList *sites;
   int this_node = layout->this_node;
   size_t number_of_io_sites;
@@ -190,7 +190,7 @@ DML_SiteList *DML_init_sitelist(int volfmt, DML_Layout *layout){
 
   /* Initialize number of I/O sites */
 
-  if(volfmt == DML_SINGLEFILE){
+  if(volfmt == DML_SINGLEFILE && serpar == DML_SERIAL){
     /* Single files are always written in lexicographic order so
        single file format doesn't need a sitelist and all nodes count
        through the entire file */
@@ -203,12 +203,15 @@ DML_SiteList *DML_init_sitelist(int volfmt, DML_Layout *layout){
     sites->use_list = 1;
 
     /* Each node reads/writes its own sites independently */
-    sites->number_of_io_sites = number_of_io_sites = layout->sites_on_node;
+    sites->number_of_io_sites = layout->sites_on_node;
   }
 
-  else if(volfmt == DML_PARTFILE){
+  else if(volfmt == DML_PARTFILE || 
+	  (volfmt == DML_SINGLEFILE && serpar == DML_PARALLEL)){
     /* Partitioned I/O requires a separate sitelist for each I/O
-       partition.  For now we just count the number of sites in the list. */
+       partition.  Parallel I/O uses a sitelist to determine which
+       sites to read or write. */
+    /* Here we just count the number of sites in the list. */
 
     sites->use_list = 1;
     if(DML_count_partition_sitelist(layout,sites)){
@@ -335,24 +338,6 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
     }
   }
   
-#if 0
-  /* Iterate over all sites, storing the lexicographic index
-     only for the sites on my partition */
-  index = 0;
-  /* Loop over all sites in lexicographic order */
-  for(rank = 0; rank < volume; rank++)
-    {
-      /* Convert rank index to coordinates */
-      DML_lex_coords(coords, latdim, latsize, rank);
-      /* The node containing these coordinates */
-      send_node = layout->node_number(coords);
-      /* Add coordinate to list if it is on my I/O node */
-      if(layout->ionode(send_node) == my_io_node){
-	sites->list[index] = DML_lex_rank(coords,latdim,latsize);
-	index++;
-      }
-    }
-#endif
   free(coords);
   return 0;
 }
@@ -360,8 +345,8 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
 /*------------------------------------------------------------------*/
 /* Create and populate the sitelist for output */
 /* Return code 0 = success; 1 = failure */
-int DML_fill_sitelist(DML_SiteList *sites, int volfmt, 
-		       DML_Layout *layout){
+int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
+		      DML_Layout *layout){
   int this_node = layout->this_node;
   char myname[] = "DML_fill_sitelist";
 
@@ -379,8 +364,11 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt,
   /* Multifile format requires a sitelist */
     return DML_fill_multifile_sitelist(layout,sites);
   }
-  else if(volfmt == DML_PARTFILE){
+  else if(volfmt == DML_PARTFILE || 
+	  (volfmt == DML_SINGLEFILE && serpar == DML_PARALLEL)){
     /* Partitioned I/O requires a sitelist on the I/O node */
+    /* Singlefile parallel I/O requires the same sitelist as partfile
+       to determine which sites to write/read */
     return DML_fill_partition_sitelist(layout,sites);
   }
   else {
@@ -772,10 +760,13 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, size_t size,
 
 /*------------------------------------------------------------------*/
 /* Determine the node that does my I/O */
-int DML_my_ionode(int volfmt, DML_Layout *layout){
+int DML_my_ionode(int volfmt, int serpar, DML_Layout *layout){
 
   if(volfmt == DML_SINGLEFILE){
-    return layout->master_io_node;
+    if(serpar == DML_SERIAL)
+      return layout->master_io_node;
+    else
+      return layout->this_node;
   }
   else if(volfmt == DML_MULTIFILE){
     return layout->this_node;
@@ -787,6 +778,37 @@ int DML_my_ionode(int volfmt, DML_Layout *layout){
     printf("DML_my_ionode: Bad volfmt code %d\n",volfmt);
     return 0;
   }
+}
+
+/*------------------------------------------------------------------*/
+/* Synchronize the writers */
+
+int DML_synchronize_out(LRL_RecordWriter *lrl_record_out, DML_Layout *layout){
+  void *state_ptr;
+  size_t state_size;
+  int status;
+  int master_io_node = layout->master_io_node;
+  char myname[] = "DML_synchronize_out";
+
+  /* DML isn't supposed to know the inner workings of LRL or LIME,
+     so the state is captured as a string of bytes that only LRL
+     understands.  All nodes create their state structures. */
+  LRL_get_writer_state(lrl_record_out, &state_ptr, &state_size);
+
+  /* The broadcast assumes all nodes are in the synchronization group 
+     which is what we want for singlefile parallel I/O.
+     If we decide later to do partfile parallel I/O we will need to
+     change it */
+  DML_broadcast_bytes((char *)state_ptr, state_size, layout->this_node, 
+		      master_io_node);
+
+  /* All nodes but the master node set their states */
+  if(layout->this_node != master_io_node)
+    LRL_set_writer_state(lrl_record_out, state_ptr);
+
+  LRL_destroy_writer_state_copy(state_ptr);
+
+  return 0;
 }
 
 /*------------------------------------------------------------------*/
@@ -802,7 +824,7 @@ int DML_my_ionode(int volfmt, DML_Layout *layout){
 DML_RecordWriter *DML_partition_open_out(
 	   LRL_RecordWriter *lrl_record_out, size_t size, 
 	   size_t set_buf_sites, DML_Layout *layout, DML_SiteList *sites,
-	   int volfmt, DML_Checksum *checksum)
+	   int volfmt, int serpar, DML_Checksum *checksum)
 {
   char *outbuf;
   int *coords;
@@ -820,7 +842,7 @@ DML_RecordWriter *DML_partition_open_out(
   }
 
   /* Get my I/O node */
-  my_io_node = DML_my_ionode(volfmt, layout);
+  my_io_node = DML_my_ionode(volfmt, serpar, layout);
 
   /* Allocate buffer for writing or sending data */
   /* I/O node needs a large buffer.  Others only enough for one site */
@@ -1035,8 +1057,8 @@ uint64_t DML_partition_close_out(DML_RecordWriter *dml_record_out)
 uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out, 
 	   void (*get)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t size, int word_size, void *arg, 
-	   DML_Layout *layout, DML_SiteList *sites, int volfmt,
-	   DML_Checksum *checksum)
+	   DML_Layout *layout, DML_SiteList *sites, int volfmt, 
+	   int serpar, DML_Checksum *checksum)
 {
   char *buf,*outbuf,*scratch_buf;
   int current_node, new_node;
@@ -1052,7 +1074,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   char myname[] = "DML_partition_out";
 
   /* Get my I/O node */
-  my_io_node = DML_my_ionode(volfmt, layout);
+  my_io_node = DML_my_ionode(volfmt, serpar, layout);
 
   /* Allocate buffer for writing or sending data */
   /* I/O node needs a large buffer.  Others only enough for one site */
@@ -1061,6 +1083,8 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   else
     max_buf_sites = 1;
 
+  if(serpar == DML_PARALLEL)
+    max_buf_sites = 1;
 
   outbuf = DML_allocate_buf(size,max_buf_sites);
   if(!outbuf){
@@ -1157,10 +1181,16 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
       
       /* Write the buffer when full */
 
-      buf_sites = DML_write_buf_next(lrl_record_out, size,
-				     outbuf, buf_sites, max_buf_sites, 
-				     isite, max_dest_sites, &nbytes,
-				     myname, this_node, &err);
+      if(serpar == DML_SERIAL)
+	buf_sites = DML_write_buf_next(lrl_record_out, size,
+				       outbuf, buf_sites, max_buf_sites, 
+				       isite, max_dest_sites, &nbytes,
+				       myname, this_node, &err);
+      else
+	buf_sites = DML_seek_write_buf(lrl_record_out, snd_coords, size,
+				       outbuf, buf_sites, max_buf_sites, 
+				       isite, max_dest_sites, &nbytes,
+				       myname, this_node, &err);
       if(err < 0) {free(outbuf); free(coords); return 0;}
     }
     isite++;
@@ -1381,6 +1411,38 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 }
 
 /*------------------------------------------------------------------*/
+/* Synchronize the readers */
+
+int DML_synchronize_in(LRL_RecordReader *lrl_record_in, DML_Layout *layout){
+  LRL_RecordReader *lrl_record_in_copy;
+  void *state_ptr;
+  size_t state_size;
+  int status;
+  int master_io_node = layout->master_io_node;
+  char myname[] = "DML_synchronize_in";
+
+  /* DML isn't supposed to know the inner workings of LRL or LIME,
+     so the state is captured as a string of bytes that only LRL
+     understands */
+  LRL_get_reader_state(lrl_record_in, &state_ptr, &state_size);
+
+  /* The broadcast assumes all nodes are in the synchronization group 
+     which is what we want for singlefile parallel I/O.
+     If we decide later to do partfile parallel I/O we will need to
+     change it */
+  DML_broadcast_bytes((char *)state_ptr, state_size, layout->this_node, 
+		      master_io_node);
+  
+  /* All nodes but the master node set their states */
+  if(layout->this_node != master_io_node)
+    LRL_set_reader_state(lrl_record_in, state_ptr);
+
+  LRL_destroy_reader_state_copy(state_ptr);
+
+  return 0;
+}
+
+/*------------------------------------------------------------------*/
 /* The following four procedures duplicate the functionality
    of DML_partition_in.  They were broken out to allow
    finer high-level control of record reading.  After they
@@ -1391,7 +1453,7 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 
 DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in, 
 	  size_t size, size_t set_buf_sites, DML_Layout *layout, 
- 	  DML_SiteList *sites, int volfmt, DML_Checksum *checksum)
+ 	  DML_SiteList *sites, int volfmt, int serpar, DML_Checksum *checksum)
 {
   char *inbuf;
   int my_io_node;
@@ -1409,7 +1471,7 @@ DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in,
   }
 
   /* Get my I/O node */
-  my_io_node = DML_my_ionode(volfmt, layout);
+  my_io_node = DML_my_ionode(volfmt, serpar, layout);
 
   /* Allocate buffer for reading or receiving data */
   /* I/O node needs a large buffer.  Others only enough for one site */
@@ -1612,7 +1674,7 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  int count, size_t size, int word_size, void *arg, 
 	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
-	  DML_Checksum *checksum)
+	  int serpar, DML_Checksum *checksum)
 {
   char *buf=NULL,*inbuf;
   int dest_node, my_io_node;
@@ -1627,7 +1689,7 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
   char myname[] = "DML_partition_in";
 
   /* Get my I/O node */
-  my_io_node = DML_my_ionode(volfmt, layout);
+  my_io_node = DML_my_ionode(volfmt, serpar, layout);
 
   /* Allocate buffer for reading or receiving data */
   /* I/O node needs a large buffer.  Others only enough for one site */
@@ -1635,10 +1697,12 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
     max_buf_sites = DML_max_buf_sites(size,1);
   else
     max_buf_sites = 1;
+  
+  if(serpar == DML_PARALLEL)
+    max_buf_sites = 1;
 
- 
-   inbuf = DML_allocate_buf(size,max_buf_sites);
-   if(!inbuf){
+  inbuf = DML_allocate_buf(size,max_buf_sites);
+  if(!inbuf){
     printf("%s(%d) can't malloc inbuf\n",myname,this_node);
     return 0;
   }
@@ -1675,11 +1739,19 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
     
     if(this_node == my_io_node){
       /* I/O node reads the next value */
-      buf_sites = DML_read_buf_next(lrl_record_in, size,
-				    inbuf, &buf_extract, buf_sites,
-				    max_buf_sites, isite, 
-				    max_send_sites, &nbytes,
-				    myname, this_node, &err);
+      if(serpar == DML_SERIAL)
+	buf_sites = DML_read_buf_next(lrl_record_in, size,
+				      inbuf, &buf_extract, buf_sites,
+				      max_buf_sites, isite, 
+				      max_send_sites, &nbytes,
+				      myname, this_node, &err);
+
+      else
+	buf_sites = DML_seek_read_buf(lrl_record_in, rcv_coords, size,
+				      inbuf, &buf_extract, buf_sites,
+				      max_buf_sites, isite, 
+				      max_send_sites, &nbytes,
+				      myname, this_node, &err);
       
       if(err < 0){free(inbuf);free(coords);return 0;}
       /* Location of new datum on I/O node */

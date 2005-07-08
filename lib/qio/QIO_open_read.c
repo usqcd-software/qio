@@ -65,6 +65,7 @@ QIO_Reader *QIO_create_reader(const char *filename,
   qio_in->sites       = NULL;
   qio_in->read_state  = QIO_RECORD_INFO_PRIVATE_NEXT;
   qio_in->xml_record  = NULL;
+  qio_in->ildgLFN     = QIO_string_create();
   DML_checksum_init(&(qio_in->last_checksum));
 
   if(iflag == NULL){
@@ -73,11 +74,18 @@ QIO_Reader *QIO_create_reader(const char *filename,
     qio_in->volfmt = QIO_UNKNOWN;
   }
   else{
-    /* Only serial reading is supported for now */
-    /* qio_in->serpar = iflag->serpar; */
-    qio_in->serpar = QIO_SERIAL;
+    qio_in->serpar = iflag->serpar;
     qio_in->volfmt = iflag->volfmt;
   }
+
+  /* Force single file format if there is only one node */
+  if(layout->number_of_nodes==1) qio_in->volfmt = QIO_SINGLEFILE;
+
+  /* We start by assuming this is neither a foreign ILDG file
+     nor a SciDAC ILDG file */
+  qio_in->format = QIO_SCIDAC_NATIVE;
+  qio_in->ildgstyle = QIO_ILDGNO;
+  qio_in->ildg_precision = 0;
 
   /* First, only the global master node opens the file, regardless of
      whether it will be read by all nodes */
@@ -88,12 +96,22 @@ QIO_Reader *QIO_create_reader(const char *filename,
        by adding a volume number extension to the "filename" string.
        If the volume format is unknown or single file, we try
        "filename" first. */
-    if(qio_in->volfmt == QIO_UNKNOWN || qio_in->volfmt == QIO_SINGLEFILE){
-      if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	printf("%s(%d): Calling LRL_open_read_file %s\n",
-	       myname,this_node,filename);
-      lrl_file_in = LRL_open_read_file(filename);
-    }
+    if(qio_in->volfmt == QIO_UNKNOWN || 
+       qio_in->volfmt == QIO_SINGLEFILE)
+      {
+	if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	  printf("%s(%d): Calling LRL_open_read_file %s\n",
+		 myname,this_node,filename);
+	lrl_file_in = LRL_open_read_file(filename);
+	/* If the open succeeded with just "filename" the format
+	   must be SINGLEFILE */
+	if(lrl_file_in != NULL)qio_in->volfmt = QIO_SINGLEFILE;
+	else if(qio_in->volfmt == QIO_UNKNOWN || 
+		qio_in->volfmt == QIO_SINGLEFILE){
+	  printf("%s(%d): Can't open %s in singlefile format.  Will try partfile or multifle.\n",
+		 myname,this_node,filename);
+	}
+      }
     if(lrl_file_in == NULL){
       /* If plain filename fails, try filename with volume number suffix */
       newfilename = QIO_filename_edit(filename,QIO_PARTFILE, this_node);
@@ -102,11 +120,18 @@ QIO_Reader *QIO_create_reader(const char *filename,
 	       myname,this_node,newfilename);
       lrl_file_in = LRL_open_read_file(newfilename);
       if(lrl_file_in == NULL){
-	printf("%s(%d): Can't open %s or %s\n",myname,this_node,filename,
-	       newfilename);
+	printf("%s(%d): Can't open %s\n",myname,this_node,newfilename);
 	free(newfilename);
 	return NULL;
       }
+      /* If we split an alien ILDG file, we currently put the
+	 resulting PARTFILE volume in SciDAC format.  But if we ever
+	 do split into an alien format, alien ILDG files with volume
+	 extensions could only be PARTFILE, not MULTIFILE.  For native
+	 SciDAC files, we will get the correct volume format later
+	 when we decode the private file XML */
+      if(qio_in->volfmt = QIO_UNKNOWN)
+	qio_in->volfmt = QIO_PARTFILE;
       free(newfilename);
     }
   }
@@ -129,45 +154,129 @@ QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in)
 {
   QIO_String *xml_file_private;
   QIO_FileInfo *file_info_found = NULL;
+  QIO_ILDGFormatInfo *ildg_info = NULL;
   DML_Layout *dml_layout = qio_in->layout;
   int this_node = dml_layout->this_node;
+  LRL_RecordReader *lrl_record_in;
   LIME_type lime_type = NULL;
+  off_t expected_rec_size;
   int status;
+  int ildg_dims[4];
+  int ntypes = 1;
+  LIME_type lime_type_list[1] = {
+    QIO_LIMETYPE_ILDG_FORMAT
+  };
   char myname[] = "QIO_read_private_file_info";
 
   /* Master node reads and decodes the private file XML record */
-  /* For parallel input the other nodes pretend to read */
   if(this_node == dml_layout->master_io_node){
     if(QIO_verbosity() >= QIO_VERB_DEBUG){
       printf("%s(%d): Reading xml_file_private\n",myname,this_node);fflush(stdout);
     }
 
-    /* Create structure to hold what the file says */
-    file_info_found = QIO_create_file_info(0,NULL,0);
-
     xml_file_private = QIO_string_create();
     QIO_string_realloc(xml_file_private,QIO_STRINGALLOC);
-    if((status = 
-	QIO_read_string(qio_in, xml_file_private, &lime_type))
-       !=QIO_SUCCESS){
-      printf("%s(%d): error %d reading private file XML\n",
+
+    /* Get the first record type */
+    lrl_record_in = 
+      QIO_read_record_type(qio_in, &lime_type, &expected_rec_size, &status);
+    if(lrl_record_in == NULL){
+      printf("%s(%d): error %d finding private file XML\n",
 	     myname,this_node,status);
       return NULL;
     }
-    if(QIO_verbosity() >= QIO_VERB_DEBUG){
-      printf("%s(%d): private file XML = %s\n",myname,this_node,
-	     QIO_string_ptr(xml_file_private));
-    }
-    /* Decode the file info */
-    QIO_decode_file_info(file_info_found, xml_file_private);
-    QIO_string_destroy(xml_file_private);
-  }
 
+    /* If SciDAC format, we expect the private file info type */
+    if(strcmp(lime_type,QIO_LIMETYPE_PRIVATE_FILE_XML) == 0){
+      /* Read the file info string */
+      qio_in->format = QIO_SCIDAC_NATIVE;
+
+      status = QIO_read_string_data(qio_in, lrl_record_in, xml_file_private, 
+				    expected_rec_size);
+      if(status != QIO_SUCCESS){
+	printf("%s(%d): error %d reading private file XML\n",
+	       myname,this_node,status);
+	return NULL;
+      }
+      
+      if(QIO_verbosity() >= QIO_VERB_DEBUG){
+	printf("%s(%d): private file XML = %s\n",myname,this_node,
+	       QIO_string_ptr(xml_file_private));
+      }
+      /* Decode the file info */
+      file_info_found = QIO_create_file_info(0,NULL,0);
+      QIO_decode_file_info(file_info_found, xml_file_private);
+      QIO_string_destroy(xml_file_private);
+    }
+    
+    else{
+      qio_in->format = QIO_ILDG_ALIEN;
+      if(QIO_verbosity() >= QIO_VERB_REG)
+	printf("%s(%d): Non-SciDAC file.  Attempting to read as an alien ILDG lattice file\n",
+	       myname,this_node);
+      
+      if(strcmp(lime_type,(LIME_type)QIO_LIMETYPE_ILDG_FORMAT)!=0){
+	/* If the first record is not the ILDG format record,
+	   keep reading until we find it */
+	/* Close the LIME record we just read and don't want */
+	status = QIO_close_read_record(lrl_record_in);
+	if(status != QIO_SUCCESS){
+	  printf("%s(%d): error %d closing alien record\n",
+		 myname,this_node,status);
+	  return NULL;
+	}
+	/* Scan for the ILDG format record */
+	lrl_record_in = QIO_open_read_target_record(qio_in, 
+	    lime_type_list, ntypes, &lime_type, &expected_rec_size, &status);
+	
+	/* One cause of failure is hitting an EOF */
+	if(lrl_record_in == NULL){
+	  printf("%s(%d): error %d finding ILDG format record\n",
+		 myname,this_node,status);
+	  return NULL;
+	}
+      }
+
+      /* Found the ILDG format record.  Now read the XML string. */
+      qio_in->ildgstyle = QIO_ILDGLAT;
+
+      status = QIO_read_string_data(qio_in, lrl_record_in, xml_file_private, 
+				    expected_rec_size);
+      if(status != QIO_SUCCESS){
+	printf("%s(%d): error %d reading ILDG format record\n",
+	       myname,this_node,status);
+	return NULL;
+      }
+      
+      if(QIO_verbosity() >= QIO_VERB_DEBUG){
+	printf("%s(%d): ILDG format XML = %s\n",myname,this_node,
+	       QIO_string_ptr(xml_file_private));
+      }
+      /* Decode the ILDG format XML record */
+      ildg_info = QIO_create_ildg_format_info(0, NULL);
+      QIO_decode_ILDG_format_info(ildg_info, xml_file_private);
+      QIO_string_destroy(xml_file_private);
+      
+      /* Extract the ILDG format information */
+      /* We don't look at the field type for now, since only lattice
+	 data is currently supported in the ILDG */
+      qio_in->ildg_precision = QIO_get_ildgformat_precision(ildg_info);
+      ildg_dims[0] = QIO_get_ildgformat_lx(ildg_info);
+      ildg_dims[1] = QIO_get_ildgformat_ly(ildg_info);
+      ildg_dims[2] = QIO_get_ildgformat_lz(ildg_info);
+      ildg_dims[3] = QIO_get_ildgformat_lt(ildg_info);
+      
+      /* Create a SciDAC file info structure 
+	 and populate it with the ILDG format data */
+      
+      file_info_found = QIO_create_file_info(4, ildg_dims, qio_in->volfmt);
+    }
+  }    
   return file_info_found;
 }
 
 /***********************************/
-/* Accessor for header information */
+/* Accessors for header information */
 /***********************************/
 int QIO_get_reader_latdim(QIO_Reader *in){
   return in->layout->latdim;
@@ -183,6 +292,26 @@ uint32_t QIO_get_reader_last_checksuma(QIO_Reader *in){
 
 uint32_t QIO_get_reader_last_checksumb(QIO_Reader *in){
   return in->last_checksum.sumb;
+}
+
+char *QIO_get_ILDG_LFN(QIO_Reader *in){
+  return QIO_string_ptr(in->ildgLFN);
+}
+
+int QIO_get_ildgstyle(QIO_Reader *in){
+  return in->ildgstyle;
+}
+
+int QIO_get_read_volfmt(QIO_Reader *in){
+  return in->volfmt;
+}
+
+int QIO_get_read_format(QIO_Reader *in){
+  return in->format;
+}
+
+void QIO_set_record_info(QIO_Reader *in, QIO_RecordInfo *rec_info){
+  memcpy((char *)&(in->record_info),(char *)rec_info,sizeof(QIO_RecordInfo));
 }
 
 /*****************************************/
@@ -402,26 +531,36 @@ int QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
   DML_Layout *dml_layout = qio_in->layout;
   int this_node = dml_layout->this_node;
   LRL_FileReader *lrl_file_in = NULL;
-  int serpar;
   char *newfilename;
   char myname[] = "QIO_open_read_nonmaster";
 
   /* Open any additional file handles as needed */
   /* Read the sitelist if needed */
 
-  if(iflag == NULL){
-    /* Default values */
-    serpar = QIO_SERIAL;
+  /* Parallel I/O is supported only for SINGLEFILE. */
+  if(qio_in->volfmt != QIO_SINGLEFILE && 
+     qio_in->serpar == QIO_PARALLEL){
+    qio_in->serpar = QIO_SERIAL;
+    if(QIO_verbosity() >= QIO_VERB_REG){
+      printf("%s(%d): changed mode from QIO_PARALLEL to QIO_SERIAL \n",
+	     myname,this_node);
+    }
   }
-  else{
-    /* We don't support parallel reading, yet */
-    serpar = QIO_SERIAL;
-    /* serpar = iflag->serpar; */
-  }
-
+  
   if(qio_in->volfmt == QIO_SINGLEFILE)
     {
       /* One file for all nodes */
+      /* If parallel read, the nonmaster nodes open the file */
+      if(qio_in->serpar == QIO_PARALLEL &&
+	 this_node != dml_layout->master_io_node){
+	lrl_file_in = LRL_open_read_file(filename);
+	if(lrl_file_in == NULL){
+	  printf("%s(%d): Can't open %s\n",myname,this_node,filename);
+	  return QIO_ERR_OPEN_READ;
+	}
+	qio_in->lrl_file_in = lrl_file_in; 
+      }
+
       if(this_node == dml_layout->master_io_node){
 	if(QIO_verbosity() >= QIO_VERB_MED)
 	  printf("%s(%d): Opened %s for reading in singlefile mode\n",
@@ -509,13 +648,17 @@ int QIO_read_check_sitelist(QIO_Reader *qio_in){
 
   /* Create the expected sitelist.  Input must agree exactly. */
 
-  qio_in->sites = QIO_create_sitelist(qio_in->layout, qio_in->volfmt);
+  qio_in->sites = QIO_create_sitelist(qio_in->layout, qio_in->volfmt, 
+				      qio_in->serpar);
   if(qio_in->sites == NULL){
     printf("%s(%d): error creating sitelist\n",
 	   myname,this_node);
     return QIO_ERR_BAD_SITELIST;
   }
   
+  /* We don't expect to find a sitelist in an alien ILDG file */
+  if(qio_in->format == QIO_ILDG_ALIEN)return QIO_SUCCESS;
+
   if((status = QIO_read_sitelist(qio_in, &lime_type))!= QIO_SUCCESS){
     printf("%s(%d): Error %d reading site list\n",myname,this_node,status);
     return QIO_ERR_BAD_SITELIST;
@@ -546,11 +689,16 @@ int QIO_read_user_file_xml(QIO_String *xml_file, QIO_Reader *qio_in){
   
   /* Assumes the xml_file structure was created by caller */
   if(this_node == qio_in->layout->master_io_node){
-    if((status = 
-	QIO_read_string(qio_in, xml_file, &lime_type))!= QIO_SUCCESS){
-      printf("%s(%d): error %d reading user file XML\n",
-	     myname,this_node,status);
-      return QIO_ERR_PRIVATE_FILE_INFO;
+    if(qio_in->format == QIO_SCIDAC_NATIVE){
+      if((status = 
+	  QIO_read_string(qio_in, xml_file, &lime_type))!= QIO_SUCCESS){
+	printf("%s(%d): error %d reading user file XML\n",
+	       myname,this_node,status);
+	return QIO_ERR_PRIVATE_FILE_INFO;
+      }
+    }
+    else{
+      QIO_string_set(xml_file,"Non SciDAC file");
     }
     
     if(QIO_verbosity() >= QIO_VERB_DEBUG){

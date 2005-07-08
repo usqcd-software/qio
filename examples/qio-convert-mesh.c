@@ -114,15 +114,22 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   if(!mpp_layout)return 1;
 
   /* Do the conversion */
-  if(part_to_single)
-    {
-      printf("Converting %s from PARTFILE to SINGLEFILE\n",filename);
-      status = QIO_part_to_single(filename, fs, mpp_layout);
-    }
-  else
+  if(part_to_single == 0)
     {
       printf("Converting %s from SINGLEFILE to PARTFILE\n",filename);
       status = QIO_single_to_part(filename, fs, mpp_layout);
+    }
+  else if(part_to_single == 1)
+    {
+      /* ILDG compatible format */
+      printf("Converting %s from PARTFILE to SINGLEFILE ILDG\n",filename);
+      status = QIO_part_to_single(filename, QIO_ILDGLAT, fs, mpp_layout);
+    }
+  else
+    {
+      /* SciDAC native format */
+      printf("Converting %s from PARTFILE to SINGLEFILE SciDAC\n",filename);
+      status = QIO_part_to_single(filename, QIO_ILDGNO, fs, mpp_layout);
     }
 
   /* Clean up */

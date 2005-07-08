@@ -23,6 +23,7 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
   QIO_String *xml_record_private;
   int this_node = in->layout->this_node;
   int status;
+  QIO_RecordInfo *alien_info;
   char myname[] = "QIO_read_private_record_info";
   LIME_type lime_type=NULL;
   
@@ -34,30 +35,41 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
     
     /* Master node reads and interprets the private record XML record */
     if(this_node == in->layout->master_io_node){
-      /* Initialize private record XML - will be allocated by read_string */
-      xml_record_private = QIO_string_create();
-      
-      /* Read private record XML */
-      if((status=QIO_read_string(in, xml_record_private, &lime_type ))
-	 != QIO_SUCCESS)return status;
-
-      if(QIO_verbosity() >= QIO_VERB_DEBUG){
-	printf("%s(%d): private XML = \"%s\"\n",myname,this_node,
-	       QIO_string_ptr(xml_record_private));
+      if(in->format == QIO_SCIDAC_NATIVE){
+	/* Initialize private record XML - will be allocated by read_string */
+	xml_record_private = QIO_string_create();
+	
+	/* Read private record XML */
+	if((status=QIO_read_string(in, xml_record_private, &lime_type ))
+	   != QIO_SUCCESS)return status;
+	
+	if(QIO_verbosity() >= QIO_VERB_DEBUG){
+	  printf("%s(%d): private XML = \"%s\"\n",myname,this_node,
+		 QIO_string_ptr(xml_record_private));
+	}
+	
+	/* Decode the private record XML */
+	status = QIO_decode_record_info(&(in->record_info), xml_record_private);
+	if(status != 0)return QIO_ERR_PRIVATE_REC_INFO;
+	
+	/* Free storage */
+	QIO_string_destroy(xml_record_private);
       }
-
-      /* Decode the private record XML */
-      status = QIO_decode_record_info(&(in->record_info), xml_record_private);
-      if(status != 0)return QIO_ERR_PRIVATE_REC_INFO;
-      
-      /* Free storage */
-      QIO_string_destroy(xml_record_private);
-      
-      /* Check for private values that QIO needs */
-      if(!in->record_info.typesize.occur ||
-	 !in->record_info.datacount.occur){
-	printf("%s(%d): Error reading private XML record\n",myname,this_node);
-	return QIO_ERR_PRIVATE_REC_INFO;
+      /* For alien ILDG formats we create the members of the record
+	 info structure, using the ildg_precision value we have read from
+	 the ILDG format record */
+      else{
+	if(in->ildg_precision == 32)
+	  /* Single precision SU(3) matrix */
+	  alien_info = 
+	    QIO_create_record_info(QIO_FIELD, "QDP_F3_ColorMatrix",
+				   "F", 3, 0, 72, 4);
+	else
+	  alien_info = 
+	    QIO_create_record_info(QIO_FIELD, "QDP_D3_ColorMatrix",
+				   "D", 3, 0, 144, 4);
+	memcpy(&(in->record_info), alien_info, sizeof(QIO_RecordInfo));
+	QIO_destroy_record_info(alien_info);
       }
     }
     /* Set state in case record is reread */
@@ -75,35 +87,129 @@ int QIO_read_user_record_info(QIO_Reader *in, QIO_String *xml_record){
   /* Caller must allocate *xml_record */
 
   int this_node = in->layout->this_node;
-  int length;
   int status;
   char myname[] = "QIO_read_user_record_info";
   LIME_type lime_type=NULL;
   
   /* Read user record XML if not already done */
   if(in->read_state == QIO_RECORD_INFO_USER_NEXT){
-    
-    /* Master node reads the user XML record */
-    if(this_node == in->layout->master_io_node){
-      if((status=QIO_read_string(in, in->xml_record, &lime_type))
-	 != QIO_SUCCESS){
-	printf("%s(%d): Error reading user record XML\n",myname,this_node);
-	return status;
+    /* We don't expect alien ILDG files to have this record */
+    if(in->format == QIO_SCIDAC_NATIVE){
+      /* Master node reads the user XML record */
+      if(this_node == in->layout->master_io_node){
+	if((status=QIO_read_string(in, in->xml_record, &lime_type))
+	   != QIO_SUCCESS){
+	  printf("%s(%d): Error reading user record XML\n",myname,this_node);
+	  return status;
+	}
       }
-
-      if(QIO_verbosity() >= QIO_VERB_DEBUG){
-	printf("%s(%d): user XML = \"%s\"\n",myname,this_node,
-	       QIO_string_ptr(in->xml_record));
-      }
-      length = QIO_string_length(in->xml_record);
     }
-
+    else{
+      QIO_string_set(in->xml_record,"Non SciDAC record");
+    }
+    
+    if(QIO_verbosity() >= QIO_VERB_DEBUG && 
+       QIO_string_ptr(in->xml_record) != NULL){
+      printf("%s(%d): user XML = \"%s\"\n",myname,this_node,
+	     QIO_string_ptr(in->xml_record));
+    }
+    
     /* Set state in case record is being reread */
-    in->read_state = QIO_RECORD_DATA_NEXT;
+    in->read_state = QIO_RECORD_ILDG_INFO_NEXT;
   }
 
   /* Copy user record info (for this node) */
-  QIO_string_copy(xml_record,in->xml_record);
+  if(xml_record != NULL)
+    QIO_string_copy(xml_record,in->xml_record);
+
+  return QIO_SUCCESS;
+}
+
+    
+/* Look for and reads the ILDG format record and the ILDG
+   logical file name record, if present.  The result is placed in
+   the string member of the reader. */
+
+int QIO_read_ILDG_LFN(QIO_Reader *in){
+
+  int this_node = in->layout->this_node;
+  int status;
+  off_t offset;
+  off_t rec_size;
+  LRL_RecordReader *lrl_record_in = NULL;
+  char myname[] = "QIO_read_ILDG_LFN";
+  LIME_type lime_type=NULL;
+  
+  if(in->read_state == QIO_RECORD_ILDG_INFO_NEXT){
+    /* Only the master I/O node reads in any event */
+    /* At present we don't try to extract the LFN from a nonnative file */
+    if(this_node == in->layout->master_io_node &&
+       in->format == QIO_SCIDAC_NATIVE){
+
+      if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	printf("%s(%d): looking for ILDG LFN \n",myname,this_node);
+      
+      /* Mark the current reader pointer and read the next record
+	 header */
+      offset = QIO_get_reader_pointer(in);
+      lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, 
+					   &lime_type, &status);
+      if(status != QIO_SUCCESS)return status;
+      /* We don't actually read the ILDG format record */
+      LRL_close_read_record(lrl_record_in);
+      
+      if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	printf("%s(%d): found LIME type %s\n",myname,this_node,lime_type);
+      
+      /* If this is the ILDG format record, indicate we are reading an
+	 ILDG format file and read on */
+      if(strcmp(lime_type,QIO_LIMETYPE_ILDG_FORMAT) == 0){
+	in->ildgstyle = QIO_ILDGLAT;
+	
+	/* Update the current reader pointer */
+	offset = QIO_get_reader_pointer(in);
+	
+	/* Look at next record */
+	lrl_record_in = LRL_open_read_record(in->lrl_file_in, &rec_size, 
+					     &lime_type, &status);
+	if(status != QIO_SUCCESS)return status;
+	/* We will reread the record later */
+	LRL_close_read_record(lrl_record_in);
+	
+	if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	  printf("%s(%d): found LIME type %s\n",myname,this_node,lime_type);
+	
+	/* If this is the ILDG LFN, grab it if requested. */
+	if(strcmp(lime_type,QIO_LIMETYPE_ILDG_DATA_LFN) == 0 &&
+	   in->ildgLFN != NULL) {
+	  /* Back up to reread */
+	  status = QIO_set_reader_pointer(in,offset);
+	  if(status != QIO_SUCCESS)return status;
+	  
+	  status=QIO_read_string(in, in->ildgLFN, &lime_type);
+	  if(status != QIO_SUCCESS){
+	    printf("%s(%d): Error reading ILDG LFN\n",myname,this_node);
+	    return status;
+	  }
+	  
+	  /* Update the current reader pointer */
+	  offset = QIO_get_reader_pointer(in);
+	  
+	  if(QIO_verbosity() >= QIO_VERB_DEBUG && 
+	     QIO_string_ptr(in->ildgLFN) != NULL){
+	    printf("%s(%d): ILDG LFN = \"%s\"\n",myname,this_node,
+		   QIO_string_ptr(in->ildgLFN));
+	  }
+	}
+      }
+      
+      /* Restore reader position */
+      status = QIO_set_reader_pointer(in,offset);
+    }
+    
+    /* Set state in case record is being reread */
+    in->read_state = QIO_RECORD_DATA_NEXT;
+  }
 
   return QIO_SUCCESS;
 }
@@ -148,7 +254,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
   /* First broadcast length */
 
   length = QIO_string_length(in->xml_record);
-  DML_broadcast_bytes((char *)&length,sizeof(int), this_node, 
+  DML_broadcast_bytes((char *)&length, sizeof(int), this_node, 
 		      in->layout->master_io_node);
   
   /* Receiving nodes resize their strings */
@@ -157,7 +263,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
   /* QIO_string_realloc is supposedly non-destructive. Can do it on
      all nodes */
   QIO_string_realloc(in->xml_record,length);
-    /* } */
+
   DML_broadcast_bytes(QIO_string_ptr(in->xml_record),length,
 		      this_node, in->layout->master_io_node);
   
@@ -166,12 +272,45 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 	   myname,this_node,QIO_string_ptr(in->xml_record));
   }
 
+  /* Read the ILDG LFN if present and not already done */
+
+  status = QIO_read_ILDG_LFN(in);
+  if(status != QIO_SUCCESS)
+    return status;
+
+  /* Broadcast the ILDG LFN to all nodes */
+  if(in->ildgLFN != NULL){
+    /* First broadcast length */
+    
+    length = QIO_string_length(in->ildgLFN);
+    if(length > 0){
+      DML_broadcast_bytes((char *)&length, sizeof(int), this_node, 
+			  in->layout->master_io_node);
+      
+      /* Receiving nodes resize their strings */
+      /* if(this_node != in->layout->master_io_node){ */
+      
+      /* QIO_string_realloc is supposedly non-destructive. Can do it on
+	 all nodes */
+      QIO_string_realloc(in->ildgLFN,length);
+      
+      DML_broadcast_bytes(QIO_string_ptr(in->ildgLFN),length,
+			  this_node, in->layout->master_io_node);
+      
+      if(QIO_verbosity() >= QIO_VERB_DEBUG){
+	 printf("%s(%d): Done broadcasting ILDG LFN \"%s\"\n",
+		myname,this_node,QIO_string_ptr(in->ildgLFN));
+	 }
+    }
+  }
+
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d): Finished\n",myname,this_node);
   }
 
-  /* Copy user record info */
-  QIO_string_copy(xml_record,in->xml_record);
+  /* Copy user record info and ILDG LFN (for all nodes)*/
+  if(xml_record != NULL)
+    QIO_string_copy(xml_record,in->xml_record);
 
   return QIO_SUCCESS;
 }

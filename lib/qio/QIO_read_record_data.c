@@ -22,11 +22,18 @@ int QIO_generic_read_record_data(QIO_Reader *in,
 {
   char myname[] = "QIO_generic_read_record_data";
   int count = QIO_get_datacount(&(in->record_info));
+  LRL_RecordReader *lrl_record_in;
   size_t datum_size_info;
   int this_node = in->layout->this_node;
   int status;
   int globaldata = QIO_get_globaldata(&(in->record_info));
-  LIME_type lime_type=NULL;
+  /* List of acceptable binary data LIME types */
+  int ntypes = 2;
+  LIME_type lime_type_list[2] = {
+    QIO_LIMETYPE_BINARY_DATA,
+    QIO_LIMETYPE_ILDG_BINARY_DATA
+  };
+  LIME_type lime_type;
 
   /* It is an error to call for the data before the reading the info
      in a given record */
@@ -71,7 +78,7 @@ int QIO_generic_read_record_data(QIO_Reader *in,
     }
   }
 #endif
-  
+
   /* Verify byte count per site (for field) or total (for global) */
   datum_size_info = QIO_get_typesize(&(in->record_info)) * count;
   if(datum_size != datum_size_info){
@@ -83,8 +90,16 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   }
 
   /* Nodes read the field */
-  status=QIO_read_field(in, globaldata, put, count, datum_size, word_size, 
-			arg, checksum, nbytes, &lime_type);
+
+  /* Scan ahead and open the record with one of the listed LIME types */
+  lrl_record_in = QIO_open_read_field(in, globaldata, datum_size, 
+         lime_type_list, ntypes, &lime_type, &status);
+  if(status != QIO_SUCCESS)return status;
+
+  /* Then read the data and close the record */
+  status = QIO_read_field_data(in, lrl_record_in, globaldata, 
+			       put, count, datum_size, word_size, 
+			       arg, checksum, nbytes);
   if(status != QIO_SUCCESS){
     printf("%s(%d): Error reading field data\n",myname,this_node);
     return status;
@@ -131,25 +146,28 @@ QIO_ChecksumInfo *QIO_read_checksum(QIO_Reader *in)
   /* Master node reads the checksum record */
   status = QIO_SUCCESS;  /* Changed if checksum does not match */
   if(this_node == in->layout->master_io_node){
-    xml_checksum = QIO_string_create();
-    QIO_string_realloc(xml_checksum,QIO_STRINGALLOC);
-    if((status=QIO_read_string(in, xml_checksum, &lime_type))
-       !=QIO_SUCCESS){
-      printf("%s(%d): Error reading checksum\n",myname,this_node);
-      return NULL;
-    }
-    if(QIO_verbosity() >= QIO_VERB_DEBUG){
-      printf("%s(%d): checksum = %s\n",myname,this_node,
-	     QIO_string_ptr(xml_checksum));
-    }
-    /* Extract checksum */
     checksum_info_expect = QIO_create_checksum_info(0,0);
-    if((status=QIO_decode_checksum_info(checksum_info_expect, xml_checksum))
-       !=QIO_SUCCESS){
-      printf("%s(%d): bad checksum record\n",myname,this_node);
-      return NULL;
+    /* No checksum record for non-native files */
+    if(in->format == QIO_SCIDAC_NATIVE){
+      xml_checksum = QIO_string_create();
+      QIO_string_realloc(xml_checksum,QIO_STRINGALLOC);
+      if((status=QIO_read_string(in, xml_checksum, &lime_type))
+	 !=QIO_SUCCESS){
+	printf("%s(%d): Error reading checksum\n",myname,this_node);
+	return NULL;
+      }
+      if(QIO_verbosity() >= QIO_VERB_DEBUG){
+	printf("%s(%d): checksum = %s\n",myname,this_node,
+	       QIO_string_ptr(xml_checksum));
+      }
+      /* Extract checksum */
+      if((status=QIO_decode_checksum_info(checksum_info_expect, xml_checksum))
+	 !=0){
+	printf("%s(%d): bad checksum record\n",myname,this_node);
+	return NULL;
+      }
+      QIO_string_destroy(xml_checksum);
     }
-    QIO_string_destroy(xml_checksum);
   }
   
   in->read_state = QIO_RECORD_INFO_PRIVATE_NEXT;
@@ -223,10 +241,12 @@ int QIO_read_record_data(QIO_Reader *in,
   checksum_info_expect = QIO_read_checksum(in);
   if(this_node == in->layout->master_io_node)
     {
-      if(checksum_info_expect == NULL)return QIO_ERR_CHECKSUM_INFO;
-      status = QIO_compare_checksum(this_node, 
-				    checksum_info_expect, &checksum);
-      if(status != QIO_SUCCESS)return status;
+      if(in->format == QIO_SCIDAC_NATIVE){
+	if(checksum_info_expect == NULL)return QIO_ERR_CHECKSUM_INFO;
+	status = QIO_compare_checksum(this_node, 
+				      checksum_info_expect, &checksum);
+	if(status != QIO_SUCCESS)return status;
+      }
     }
 
   /* Checksum info expect may be NULL on non master node.

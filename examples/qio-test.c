@@ -6,6 +6,7 @@
 
 /* C. DeTar */
 /* October 18, 2004 */
+/* June 12, 2005 modified */
 
 #include <stdio.h>
 #include <qio.h>
@@ -18,10 +19,18 @@
 
 /* Open a QIO file for writing */
 
-QIO_Writer *open_test_output(char *filename, int volfmt, char *myname){
+QIO_Writer *open_test_output(char *filename, int volfmt, 
+			     int serpar, int ildgstyle, char *myname){
   QIO_String *xml_file_out;
   char xml_write_file[] = "Dummy user file XML";
   QIO_Writer *outfile;
+  QIO_Oflag oflag;
+
+  oflag.serpar = serpar;
+  oflag.ildgstyle = ildgstyle;
+  oflag.ildgLFN = QIO_string_create();
+  QIO_string_set(oflag.ildgLFN,"TestLFN");
+  oflag.mode = QIO_TRUNC;
 
   QIO_verbose(QIO_VERB_DEBUG);
 
@@ -30,8 +39,8 @@ QIO_Writer *open_test_output(char *filename, int volfmt, char *myname){
   QIO_string_set(xml_file_out,xml_write_file);
 
   /* Open the file for writing */
-  outfile = QIO_open_write(xml_file_out, filename, volfmt, &layout, NULL);
-  printf("%s(%d): QIO_write returns address %x\n",myname,this_node,(unsigned int)outfile);
+  outfile = QIO_open_write(xml_file_out, filename, volfmt, &layout, &oflag);
+  printf("%s(%d): QIO_open_write returns address %x\n",myname,this_node,(unsigned int)outfile);
   if(outfile == NULL){
     printf("%s(%d): QIO_open_write returned NULL\n",myname,this_node);
     fflush(stdout);
@@ -75,7 +84,7 @@ int write_su3_field(QIO_Writer *outfile, int count,
   QIO_RecordInfo *rec_info;
 
   /* Create the record info for the field */
-  rec_info = QIO_create_record_info(QIO_FIELD, "QDP_F_ColorMatrix", "F", 3,
+  rec_info = QIO_create_record_info(QIO_FIELD, "QDP_F3_ColorMatrix", "F", 3,
 				    0, sizeof(suN_matrix), count);
   /* Create the record XML for the field */
   xml_record_out = QIO_string_create();
@@ -117,15 +126,20 @@ int write_real_global(QIO_Writer *outfile, int count, float array_out[],
   return 0;
 }
 
-QIO_Reader *open_test_input(char *filename, char *myname){
+QIO_Reader *open_test_input(char *filename, int volfmt, int serpar,
+			    char *myname){
   QIO_String *xml_file_in;
   QIO_Reader *infile;
+  QIO_Iflag iflag;
+
+  iflag.serpar = serpar;
+  iflag.volfmt = volfmt;
 
   /* Create the file XML */
   xml_file_in = QIO_string_create();
 
   /* Open the file for reading */
-  infile = QIO_open_read(xml_file_in, filename, &layout, NULL);
+  infile = QIO_open_read(xml_file_in, filename, &layout, &iflag);
   if(infile == NULL){
     printf("%s(%d): QIO_open_read returns NULL.\n",myname,this_node);
     return NULL;
@@ -144,6 +158,7 @@ int peek_record_info(QIO_Reader *infile, char *myname){
   QIO_RecordInfo rec_info;
   int status;
 
+  printf("%s(%d) peeking\n",myname,this_node);
   /* Create the record XML */
   xml_record_in = QIO_string_create();
   /* Create placeholder for record_info */
@@ -216,14 +231,15 @@ int read_real_global(QIO_Reader *infile, int count,
 }
 
 
-int qio_test(int volfmt, int argc, char *argv[]){
+int qio_test(int output_volfmt, int output_serpar, int ildgstyle, 
+	     int input_volfmt, int input_serpar, int argc, char *argv[]){
 
   float array_in[NARRAY], array_out[NARRAY];
   float *field_in[NREAL], *field_out[NREAL];
   suN_matrix *field_su3_out[NMATRIX], *field_su3_in[NMATRIX];
   QIO_Writer *outfile;
   QIO_Reader *infile;
-  float diff_field, diff_array;
+  float diff_field = 0, diff_array = 0;
   QMP_thread_level_t provided;
   int status;
   int i,volume;
@@ -267,27 +283,30 @@ int qio_test(int volfmt, int argc, char *argv[]){
   layout.number_of_nodes = QMP_get_number_of_nodes();
 
   /* Open the test output file */
-  outfile = open_test_output(filename, volfmt, myname);
+  outfile = open_test_output(filename, output_volfmt, output_serpar, 
+			     ildgstyle, myname);
   if(outfile == NULL)return 1;
 
-  /* Create the test output field */
-  status = vcreate_R(field_out, NREAL);
-  if(status)return status;
-
-  /* Set some values for the field */
-  vset_R(field_out, NREAL);
-
-  /* Write the real test field */
-  status = write_real_field(outfile, NREAL, field_out, myname);
-  if(status)return status;
-
-  /* Set some values for the global array */
-  for(i = 0; i < NARRAY; i++)
-    array_out[i] = i;
-
-  /* Write the real global array */
-  status = write_real_global(outfile, NARRAY, array_out, myname);
-  if(status)return status;
+  if(ildgstyle == QIO_ILDGNO){
+    /* Create the test output field */
+    status = vcreate_R(field_out, NREAL);
+    if(status)return status;
+    
+    /* Set some values for the field */
+    vset_R(field_out, NREAL);
+    
+    /* Write the real test field */
+    status = write_real_field(outfile, NREAL, field_out, myname);
+    if(status)return status;
+    
+    /* Set some values for the global array */
+    for(i = 0; i < NARRAY; i++)
+      array_out[i] = i;
+    
+    /* Write the real global array */
+    status = write_real_global(outfile, NARRAY, array_out, myname);
+    if(status)return status;
+  }
 
   /* Create the test output su3 field */
   status = vcreate_M(field_su3_out, NMATRIX);
@@ -307,37 +326,45 @@ int qio_test(int volfmt, int argc, char *argv[]){
   /* Set up a dummy input field */
   status = vcreate_R(field_in, NREAL);
   if(status)return status;
-
+    
   /* Set up a dummy input SU(N) field */
   status = vcreate_M(field_su3_in, NMATRIX);
   if(status)return status;
 
   /* Open the test file for reading */
-  infile = open_test_input(filename, myname);
+  infile = open_test_input(filename, input_volfmt, input_serpar, myname);
+  if(infile == NULL)return 1;
 
-  /* Peek at the field record */
-  peek_record_info(infile, myname);
-  /* Skip the record */
+  if(ildgstyle == QIO_ILDGNO){
+    /* Peek at the field record */
+    status = peek_record_info(infile, myname);
+    if(status != QIO_SUCCESS)return status;
+    /* Skip the record */
 
 #if(0)
-
-  /* Skip the field */
-  status = QIO_next_record(infile);
-  if(status != QIO_SUCCESS)return status;
-
+    
+    /* Skip the field */
+    status = QIO_next_record(infile);
+    if(status != QIO_SUCCESS)return status;
+    
 #else
-
-  /* Read the field record */
-  status = read_real_field(infile, NREAL, field_in, myname);
-  if(status)return status;
-
+    
+    /* Read the field record */
+    printf("%s(%d) reading real field\n",myname,this_node); fflush(stdout);
+    status = read_real_field(infile, NREAL, field_in, myname);
+    if(status)return status;
+    
 #endif
 
-  /* Read the global array record */
-  status = read_real_global(infile, NARRAY, array_in, myname);
-  if(status)return status;
+    /* Read the global array record */
+    printf("%s(%d) reading global field\n",myname,this_node); fflush(stdout);
+    status = read_real_global(infile, NARRAY, array_in, myname);
+    if(status)return status;
+
+  }    
 
   /* Read the su3 field record */
+  printf("%s(%d) reading su3 field\n",myname,this_node); fflush(stdout);
   status = read_su3_field(infile, NMATRIX, field_su3_in, myname);
   if(status)return status;
 
@@ -345,18 +372,21 @@ int qio_test(int volfmt, int argc, char *argv[]){
   QIO_close_read(infile);
   printf("%s(%d): Closed file for reading\n",myname,this_node);
 
-  /* Compare the input and output fields */
-  diff_field = vcompare_R(field_out, field_in, NREAL);
-  if(this_node == 0){
-    printf("%s(%d): Comparison of in and out real fields |in - out|^2 = %e\n",
-	   myname,this_node,diff_field);
-  }
+  if(ildgstyle == QIO_ILDGNO){
 
-  /* Compare the input and output global arrays */
-  diff_array = vcompare_r(array_out, array_in, NREAL);
-  if(this_node == 0){
-    printf("%s(%d): Comparison of in and out real global arrays |in - out|^2 = %e\n",
-	   myname, this_node, diff_array);
+    /* Compare the input and output fields */
+    diff_field = vcompare_R(field_out, field_in, NREAL);
+    if(this_node == 0){
+      printf("%s(%d): Comparison of in and out real fields |in - out|^2 = %e\n",
+	     myname,this_node,diff_field);
+    }
+    
+    /* Compare the input and output global arrays */
+    diff_array = vcompare_r(array_out, array_in, NREAL);
+    if(this_node == 0){
+      printf("%s(%d): Comparison of in and out real global arrays |in - out|^2 = %e\n",
+	     myname, this_node, diff_array);
+    }
   }
 
   /* Compare the input and output suN fields */
@@ -367,8 +397,10 @@ int qio_test(int volfmt, int argc, char *argv[]){
   }
 
   /* Clean up */
-  vdestroy_R(field_out, NREAL);
-  vdestroy_R(field_in, NREAL);
+  if(ildgstyle == QIO_ILDGNO){
+    vdestroy_R(field_out, NREAL);
+    vdestroy_R(field_in, NREAL);
+  }
   vdestroy_M(field_su3_in, NMATRIX);
   vdestroy_M(field_su3_out, NMATRIX);
 

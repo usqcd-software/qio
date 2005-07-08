@@ -186,6 +186,7 @@ void QIO_decode_as_string(char *tag, char *value_string,
     }
     strncpy(tag_value->value,value_string,QIO_MAXVALUESTRING-1);
     tag_value->value[QIO_MAXVALUESTRING-1] = '\0';
+    tag_value->attr[0] = '\0';   /* Ignore attributes for now */
     tag_value->occur++;
   }
 }
@@ -196,6 +197,7 @@ void QIO_decode_as_int(char *tag, char *value_string,
 			 QIO_TagIntValue *tag_value){
   if(strcmp(tag,tag_value->tag)==0){
     tag_value->value = atoi(value_string);
+    tag_value->attr[0] = '\0';   /* Ignore attributes for now */
     tag_value->occur++;
   }
 }
@@ -205,7 +207,10 @@ void QIO_decode_as_int(char *tag, char *value_string,
 void QIO_decode_as_hex32(char *tag, char *value_string, 
 			    QIO_TagHex32Value *tag_value){
   if(strcmp(tag,tag_value->tag)==0){
-    if(sscanf(value_string,"%x",&tag_value->value)==1)tag_value->occur++;
+    if(sscanf(value_string,"%x",&tag_value->value)==1){
+      tag_value->occur++;
+      tag_value->attr[0] = '\0';   /* Ignore attributes for now */
+    }
   }
 }
 
@@ -223,6 +228,7 @@ void QIO_decode_as_intlist(char *tag, char *value_string,
       tag_value->value[i] = atoi(s);
     
     tag_value->n = i;
+    tag_value->attr[0] = '\0';   /* Ignore attributes for now */
 
     /* Trouble if we didn't hit the end of the string and the array is full */
     if(s && i == QIO_MAXINTARRAY){
@@ -232,9 +238,14 @@ void QIO_decode_as_intlist(char *tag, char *value_string,
   }
 }
 
-char *QIO_write_tag(char *buf,char *tag,int *remainder){
+/* Write a tag with attributes, if specified */
+char *QIO_write_tag(char *buf, char *tag, char *attr, int *remainder){
   QIO_strncat(buf,"<",remainder);
   QIO_strncat(buf,tag,remainder);
+  if(strlen(attr) != 0){
+    QIO_strncat(buf," ",remainder);
+    QIO_strncat(buf,attr,remainder);
+  }
   QIO_strncat(buf,">",remainder);
   return strchr(buf,'\0');
 }
@@ -251,7 +262,7 @@ char *QIO_encode_as_string(char *buf, QIO_TagCharValue *tag_value,
 
   /* Don't write value unless occurs */
   if(!tag_value->occur)return buf;
-  buf = QIO_write_tag(buf, tag_value->tag, remainder);
+  buf = QIO_write_tag(buf, tag_value->tag, tag_value->attr, remainder);
   snprintf(buf,*remainder,"%s",tag_value->value);
   *remainder -= strlen(tag_value->value);
   if(*remainder <= 0){
@@ -269,7 +280,7 @@ char *QIO_encode_as_int(char *buf, QIO_TagIntValue *tag_value,
 
   /* Don't write value unless occurs */
   if(!tag_value->occur)return buf;
-  buf = QIO_write_tag(buf, tag_value->tag,remainder);
+  buf = QIO_write_tag(buf, tag_value->tag, tag_value->attr, remainder);
   snprintf(int_string,QIO_MAXINTSTRING,"%d",tag_value->value);
   *remainder -= strlen(int_string);
   if(*remainder <= 0){
@@ -287,7 +298,7 @@ char *QIO_encode_as_hex32(char *buf, QIO_TagHex32Value *tag_value,
 
   /* Don't write value unless occurs */
   if(!tag_value->occur)return buf;
-  buf = QIO_write_tag(buf, tag_value->tag,remainder);
+  buf = QIO_write_tag(buf, tag_value->tag, tag_value->attr, remainder);
   snprintf(int_string,QIO_MAXINTSTRING,"%x",tag_value->value);
   *remainder -= strlen(int_string);
   if(*remainder <= 0){
@@ -307,7 +318,7 @@ char *QIO_encode_as_intlist(char *buf,
   
   /* Don't write value unless occurs */
   if(!tag_value->occur)return buf;
-  buf = QIO_write_tag(buf, tag_value->tag, remainder);
+  buf = QIO_write_tag(buf, tag_value->tag, tag_value->attr, remainder);
   if(*remainder <= 0){
     printf("QIO_encode_as_intlist: Buffer overflow\n");
     return buf;
@@ -688,6 +699,109 @@ void QIO_encode_checksum_info(QIO_String *checksum_string,
   }
 }
 
+int QIO_decode_ILDG_format_info(QIO_ILDGFormatInfo *ildg_info, 
+				QIO_String *ildg_string){
+  char *parse_pt = QIO_string_ptr(ildg_string);
+  char *tmp_pt;
+  char tag[QIO_MAXTAG];
+  char tags_string[QIO_MAXVALUESTRING];
+  char value_string[QIO_MAXVALUESTRING];
+  int errors = 0;
+  QIO_ILDGFormatInfoWrapper wrapper = QIO_ILDG_FORMAT_INFO_WRAPPER;
+  QIO_ILDGFormatInfo templ = QIO_ILDG_FORMAT_INFO_TEMPLATE;
+  char *left_angle;
+
+  /* Initialize ILDG format info structure from a template */
+  *ildg_info = templ;
+
+  /* Start parsing ILDG format_string */
+  /* Check leading tag, which is probably the info phrase "<?xml ...?>" */
+  /* We ignore it if it is there */
+  tmp_pt = QIO_next_tag(parse_pt, tag, &left_angle);
+  if(strcmp(tag,QIO_QUESTXML)==0){
+    /* Found ?xml, so resume parsing after the closing ">", ignoring
+       the field. Otherwise, leave the parse_pt at its initial value */
+    parse_pt = tmp_pt;
+  }
+
+  /* Open top-level tag (wrapper) and extract string containing tags */
+  parse_pt = QIO_get_tag_value(parse_pt, tag, tags_string);
+  QIO_decode_as_string (tag, tags_string, &wrapper.ildgformatinfo_tags);
+
+  /* If outer wrapper has bad tag, exit with error status */
+  if(QIO_check_string_occur(&wrapper.ildgformatinfo_tags))
+    return QIO_BAD_XML;
+  /* Otherwise start parsing the string of tags */
+  parse_pt = QIO_get_ildgformat_info_tag_string(&wrapper);
+
+  /* Scan string until null character is reached */
+  while(*parse_pt){
+    parse_pt = QIO_get_tag_value(parse_pt, tag, value_string);
+    
+    QIO_decode_as_string(tag,value_string,&ildg_info->version);
+    QIO_decode_as_int   (tag,value_string,&ildg_info->precision);
+    QIO_decode_as_int   (tag,value_string,&ildg_info->lx);
+    QIO_decode_as_int   (tag,value_string,&ildg_info->ly);
+    QIO_decode_as_int   (tag,value_string,&ildg_info->lz);
+    QIO_decode_as_int   (tag,value_string,&ildg_info->lt);
+  }
+
+  /* Check for completeness */
+  
+  errors += QIO_check_string_occur(&ildg_info->version);
+  errors += QIO_check_int_occur   (&ildg_info->precision);
+  errors += QIO_check_int_occur   (&ildg_info->lx);
+  errors += QIO_check_int_occur   (&ildg_info->ly);
+  errors += QIO_check_int_occur   (&ildg_info->lz);
+  errors += QIO_check_int_occur   (&ildg_info->lt);
+
+  return errors;
+}
+
+void QIO_encode_ILDG_format_info(QIO_String *ildg_string, 
+				 QIO_ILDGFormatInfo *ildg_info){
+  char *buf;
+  int remainder,n;
+  char ildgformatinfo_tags[QIO_MAXVALUESTRING];
+  QIO_ILDGFormatInfoWrapper wrapper = QIO_ILDG_FORMAT_INFO_WRAPPER;
+
+  /* Start by creating string of inner tags */
+  buf = ildgformatinfo_tags;
+  remainder = QIO_MAXVALUESTRING;
+
+  /* Build inner tag string by appending tags */
+  *buf = '\0';
+  buf = QIO_encode_as_string(buf,&ildg_info->version, &remainder);
+  buf = QIO_encode_as_int   (buf,&ildg_info->precision, &remainder);
+  buf = QIO_encode_as_int   (buf,&ildg_info->lx, &remainder);
+  buf = QIO_encode_as_int   (buf,&ildg_info->ly, &remainder);
+  buf = QIO_encode_as_int   (buf,&ildg_info->lz, &remainder);
+  buf = QIO_encode_as_int   (buf,&ildg_info->lt, &remainder);
+
+  /* Insert inner tag string into file wrapper structure */
+  QIO_insert_ildgformat_tag_string(&wrapper, ildgformatinfo_tags);
+
+  /* Now build final XML string */
+  QIO_string_realloc(ildg_string, QIO_STRINGALLOC);
+  buf  = QIO_string_ptr(ildg_string);
+  remainder = QIO_string_length(ildg_string);
+  
+  /* Begin with xml info stuff */
+  strncpy(buf,QIO_XMLINFO,remainder);
+  buf[remainder-1] = '\0';
+  n = strlen(buf);
+  remainder -= n;
+  buf += n;
+  if(remainder < 0){
+    printf("QIO_encode_ildg_format_info: ildg_string overflow\n");
+  }
+  else{
+    /* Conclude by appending the wrapped tag string */
+    buf = QIO_encode_as_string (buf,&wrapper.ildgformatinfo_tags, &remainder);
+  }
+}
+
+
 /* Utilities for loading file_info values */
 
 int QIO_insert_file_tag_string(QIO_FileInfoWrapper *wrapper, 
@@ -882,6 +996,82 @@ int QIO_insert_suma_sumb(QIO_ChecksumInfo *checksum_info,
   return QIO_SUCCESS;
 }
 
+/* Utilities for ILDG format info values */
+
+int QIO_insert_ildgformat_tag_string(QIO_ILDGFormatInfoWrapper *wrapper, 
+				      char *ildgformatinfo_tags){
+  wrapper->ildgformatinfo_tags.occur = 0;
+  if(!ildgformatinfo_tags)return QIO_BAD_ARG;
+  strncpy(wrapper->ildgformatinfo_tags.value, ildgformatinfo_tags, 
+	  QIO_MAXVALUESTRING-1);
+  wrapper->ildgformatinfo_tags.value[QIO_MAXVALUESTRING-1] = '\0';
+  wrapper->ildgformatinfo_tags.occur = 1;
+  if(strlen(ildgformatinfo_tags) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
+}
+
+int QIO_insert_ildgformat_version(QIO_ILDGFormatInfo *ildg_info, 
+				   char *version){
+  ildg_info->version.occur = 0;
+  if(!version)return QIO_BAD_ARG;
+  strncpy(ildg_info->version.value, version, QIO_MAXVALUESTRING-1);
+  ildg_info->version.value[QIO_MAXVALUESTRING-1] = '\0';
+  ildg_info->version.occur = 1;
+  if(strlen(version) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
+}
+
+int QIO_insert_ildgformat_field(QIO_ILDGFormatInfo *ildg_info, 
+				char *field_string){
+  ildg_info->field.occur = 0;
+  if(field_string == NULL)return QIO_BAD_ARG;
+  strncpy(ildg_info->field.value, field_string, QIO_MAXVALUESTRING-1);
+  ildg_info->field.value[QIO_MAXVALUESTRING-1] = '\0';
+  ildg_info->field.occur = 1;
+  if(strlen(field_string) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
+}
+
+int QIO_insert_ildgformat_precision(QIO_ILDGFormatInfo *ildg_info, int precision){
+  ildg_info->precision.occur = 0;
+  if(!ildg_info)return QIO_BAD_ARG;
+  ildg_info->precision.value = precision;
+  ildg_info->precision.occur = 1;
+  return QIO_SUCCESS;
+}
+
+int QIO_insert_ildgformat_lx(QIO_ILDGFormatInfo *ildg_info, int lx){
+  ildg_info->lx.occur = 0;
+  if(!ildg_info)return QIO_BAD_ARG;
+  ildg_info->lx.value = lx;
+  ildg_info->lx.occur = 1;
+  return QIO_SUCCESS;
+}
+
+int QIO_insert_ildgformat_ly(QIO_ILDGFormatInfo *ildg_info, int ly){
+  ildg_info->ly.occur = 0;
+  if(!ildg_info)return QIO_BAD_ARG;
+  ildg_info->ly.value = ly;
+  ildg_info->ly.occur = 1;
+  return QIO_SUCCESS;
+}
+
+int QIO_insert_ildgformat_lz(QIO_ILDGFormatInfo *ildg_info, int lz){
+  ildg_info->lz.occur = 0;
+  if(!ildg_info)return QIO_BAD_ARG;
+  ildg_info->lz.value = lz;
+  ildg_info->lz.occur = 1;
+  return QIO_SUCCESS;
+}
+
+int QIO_insert_ildgformat_lt(QIO_ILDGFormatInfo *ildg_info, int lt){
+  ildg_info->lt.occur = 0;
+  if(!ildg_info)return QIO_BAD_ARG;
+  ildg_info->lt.value = lt;
+  ildg_info->lt.occur = 1;
+  return QIO_SUCCESS;
+}
+
 
 
 /* Accessors for file info */
@@ -965,6 +1155,49 @@ int QIO_defined_globaldata(QIO_RecordInfo *record_info){
   return record_info->globaldata.occur;
 }
 
+void QIO_set_globaldata(QIO_RecordInfo *record_info, int globaldata){
+  record_info->globaldata.value = globaldata;
+  record_info->globaldata.occur = 1;
+}
+
+void QIO_set_datatype(QIO_RecordInfo *record_info, char *datatype){
+  strncpy(record_info->datatype.value,datatype,QIO_MAXVALUESTRING-1);
+  record_info->datatype.value[QIO_MAXVALUESTRING-1] = '\0';
+  record_info->datatype.occur = 1;
+}
+
+void QIO_set_precision(QIO_RecordInfo *record_info, char *precision){
+  strncpy(record_info->precision.value,precision,QIO_MAXVALUESTRING-1);
+  record_info->precision.value[QIO_MAXVALUESTRING-1] = '\0';
+  record_info->precision.occur = 1;
+}
+
+void *QIO_set_record_date(QIO_RecordInfo *record_info, char *date){
+  strncpy(record_info->date.value,date,QIO_MAXVALUESTRING-1);
+  record_info->date.value[QIO_MAXVALUESTRING-1] = '\0';
+  record_info->date.occur = 1;
+}
+
+void QIO_set_colors(QIO_RecordInfo *record_info, int colors){
+  record_info->colors.value = colors;
+  record_info->colors.occur = 1;
+}
+
+void QIO_set_spins(QIO_RecordInfo *record_info, int spins){
+  record_info->spins.value = spins;
+  record_info->spins.occur = 1;
+}
+
+void QIO_set_typesize(QIO_RecordInfo *record_info, int typesize){
+  record_info->typesize.value = typesize;
+  record_info->typesize.occur = 1;
+}
+
+void QIO_set_datacount(QIO_RecordInfo *record_info, int datacount){
+  record_info->datacount.value = datacount;
+  record_info->datacount.occur = 1;
+}
+
 int QIO_defined_datatype(QIO_RecordInfo *record_info){
   return record_info->datatype.occur;
 }
@@ -1009,6 +1242,36 @@ int QIO_defined_suma(QIO_ChecksumInfo *checksum_info){
 
 int QIO_defined_sumb(QIO_ChecksumInfo *checksum_info){
   return checksum_info->sumb.occur;
+}
+
+/* Accessors for ILDG record format info */
+
+char *QIO_get_ildgformat_info_tag_string(QIO_ILDGFormatInfoWrapper *wrapper){
+  return wrapper->ildgformatinfo_tags.value;
+}
+
+char *QIO_get_ildgformat_field(QIO_ILDGFormatInfo *ildg_info){
+  return ildg_info->field.value;
+}
+
+int QIO_get_ildgformat_precision(QIO_ILDGFormatInfo *ildg_info){
+  return ildg_info->precision.value;
+}
+
+int QIO_get_ildgformat_lx(QIO_ILDGFormatInfo *ildg_info){
+  return ildg_info->lx.value;
+}
+
+int QIO_get_ildgformat_ly(QIO_ILDGFormatInfo *ildg_info){
+  return ildg_info->ly.value;
+}
+
+int QIO_get_ildgformat_lz(QIO_ILDGFormatInfo *ildg_info){
+  return ildg_info->lz.value;
+}
+
+int QIO_get_ildgformat_lt(QIO_ILDGFormatInfo *ildg_info){
+  return ildg_info->lt.value;
 }
 
 
@@ -1114,6 +1377,31 @@ QIO_RecordInfo *QIO_create_record_info(int globaldata,
 
 void QIO_destroy_record_info(QIO_RecordInfo *record_info){
   free(record_info);
+}
+
+QIO_ILDGFormatInfo *QIO_create_ildg_format_info(int precision, int *dims){
+  QIO_ILDGFormatInfo templ = QIO_ILDG_FORMAT_INFO_TEMPLATE;
+  QIO_ILDGFormatInfo *ildg_info;
+  
+  ildg_info = (QIO_ILDGFormatInfo *)malloc(sizeof(QIO_ILDGFormatInfo));
+  if(!ildg_info)return NULL;
+
+  *ildg_info = templ;
+  QIO_insert_ildgformat_version(ildg_info,QIO_ILDGFORMATVERSION);
+  QIO_insert_ildgformat_field(ildg_info,"su3_gauge");
+  if(precision != 0)
+    QIO_insert_ildgformat_precision(ildg_info,precision);
+  if(dims != NULL){
+    QIO_insert_ildgformat_lx(ildg_info,dims[0]);
+    QIO_insert_ildgformat_ly(ildg_info,dims[1]);
+    QIO_insert_ildgformat_lz(ildg_info,dims[2]);
+    QIO_insert_ildgformat_lt(ildg_info,dims[3]);
+  }
+  return ildg_info;
+}
+
+void QIO_destroy_ildg_format_info(QIO_ILDGFormatInfo *ildg_info){
+  free(ildg_info);
 }
 
 /* Compare only fields that occur in the expected record info */

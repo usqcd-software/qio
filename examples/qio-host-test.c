@@ -108,8 +108,8 @@ int qio_host_test(QIO_Filesystem *fs, int argc, char *argv[])
   /* Do the conversion */
   if(part_to_single)
     {
-      printf("Converting %s from PARTFILE to SINGLEFILE\n",filename);
-      status = QIO_part_to_single(filename, fs, mpp_layout);
+      printf("Converting %s from PARTFILE to SINGLEFILE SciDAC\n",filename);
+      status = QIO_part_to_single(filename, QIO_ILDGNO, fs, mpp_layout);
     }
   else
     {

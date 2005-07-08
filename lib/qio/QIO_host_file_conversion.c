@@ -348,11 +348,11 @@ static QIO_Reader *QIO_open_read_partfile(int io_node_rank, QIO_Iflag *iflag,
   if(infile == NULL)return NULL;
 
   /* Check the volume format */
-  volfmt = infile->volfmt;
+  volfmt = QIO_get_read_volfmt(infile);
 
   if (volfmt != QIO_PARTFILE){
     printf("%s(%d) File %s volume format must be PARTFILE.  Found %d\n",
-	   myname, io_node_rank, newfilename,infile->volfmt);
+	   myname, io_node_rank, newfilename, QIO_get_read_volfmt(infile));
     return NULL;
   }
 
@@ -370,7 +370,7 @@ static QIO_Reader *QIO_open_read_partfile(int io_node_rank, QIO_Iflag *iflag,
 
 /* Open a partition file for writing */
 
-static QIO_Writer *QIO_open_write_partfile(int io_node_rank, int mode,
+static QIO_Writer *QIO_open_write_partfile(int io_node_rank, QIO_Oflag *oflag,
 					   int volfmt, const char *filename,
 					   QIO_Layout *ionode_layout,
 					   const QIO_Layout *layout,
@@ -378,10 +378,6 @@ static QIO_Writer *QIO_open_write_partfile(int io_node_rank, int mode,
 {
   char *newfilename;
   QIO_Writer *outfile;
-  QIO_Oflag oflag;
-
-  oflag.serpar = QIO_SERIAL;
-  oflag.mode   = mode;
 
   /* Pretend we are the ionode */
   ionode_layout->this_node = QIO_set_this_node(fs,layout,io_node_rank);
@@ -391,7 +387,7 @@ static QIO_Writer *QIO_open_write_partfile(int io_node_rank, int mode,
   
   /* Open to write with truncation if the file exists */
   outfile = QIO_generic_open_write(newfilename,volfmt,
-				   ionode_layout,&oflag,
+				   ionode_layout,oflag,
 				   fs->my_io_node,fs->master_io_node);
   return outfile;
 }
@@ -420,6 +416,11 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   uint64_t total_bytes;
   size_t datum_size;
   int typesize,datacount,globaldata,word_size,volfmt;
+  int ntypes = 2;
+  LIME_type lime_type_list[2] = {
+    QIO_LIMETYPE_BINARY_DATA,
+    QIO_LIMETYPE_ILDG_BINARY_DATA
+  };
   LIME_type lime_type = NULL;
   s_field field_in;
   get_put_arg arg;
@@ -430,6 +431,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   /* Default values */
   oflag.mode = QIO_TRUNC;
   oflag.serpar = QIO_SERIAL;
+  oflag.ildgstyle = QIO_ILDGNO;
+  oflag.ildgLFN = NULL;
   
   if(number_io_nodes <= 1){
    printf("%s: No conversion since number_io_nodes %d <= 1\n",
@@ -460,10 +463,10 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 				QIO_host_master_io_node);
   if(infile == NULL)return QIO_ERR_OPEN_READ;
   
-  if (infile->volfmt != QIO_SINGLEFILE)
+  if (QIO_get_read_volfmt(infile) != QIO_SINGLEFILE)
     {
       printf("%s: File %s format %d is not SINGLEFILE\n",
-	     myname, filename, infile->volfmt);
+	     myname, filename, QIO_get_read_volfmt(infile));
       return QIO_ERR_BAD_VOLFMT;
     }
   
@@ -495,7 +498,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   for (i=0; i < number_io_nodes; i++)
     {
       /* Open the partition file for writing */
-      outfile = QIO_open_write_partfile(i, QIO_TRUNC, volfmt, filename,
+      oflag.mode = QIO_TRUNC;
+      outfile = QIO_open_write_partfile(i, &oflag, volfmt, filename,
 					ionode_layout, layout, fs);
       if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
 	
@@ -538,8 +542,25 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       status = QIO_read_user_record_info(infile, xml_record_in);
       if (status!=QIO_SUCCESS) return status;
       
+      /* Read the ILDG LFN if present */
+      status = QIO_read_ILDG_LFN(infile);
+      if (status!=QIO_SUCCESS) return status;
+
+      /* If ILDG style, switch output to ILDG style */
+      oflag.ildgstyle = QIO_get_ildgstyle(infile);
+
+      /* Copy the ILDG LFN if we have it */
+      if(QIO_get_ILDG_LFN(infile) != NULL)
+	if(strlen(QIO_get_ILDG_LFN(infile)) > 0)
+	  {
+	    oflag.ildgLFN = QIO_string_create();
+	    QIO_string_set(oflag.ildgLFN, QIO_get_ILDG_LFN(infile));
+	    QIO_reset_writer_ILDG_flags(outfile, &oflag);
+	  }
+
       /* Reopen the master ionode file */
-      outfile = QIO_open_write_partfile(master_io_node, QIO_APPEND, volfmt, 
+      oflag.mode = QIO_APPEND;
+      outfile = QIO_open_write_partfile(master_io_node, &oflag, volfmt, 
 					filename, ionode_layout, layout, fs);
       if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
       
@@ -605,7 +626,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 	/* Prepare the input file for reading the site data via random
 	   access */
 	
-	status = QIO_init_read_field(infile, datum_size, &checksum_in, 
+	status = QIO_init_read_field(infile, QIO_FIELD, datum_size, 
+				     lime_type_list, ntypes, &checksum_in, 
 				     &lime_type);
 	if(status != QIO_SUCCESS)return status;
 	
@@ -629,7 +651,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 	for(i = 0; i < number_io_nodes; i++){
 	  
 	  /* Reopen the partition file for appending */
-	  outfile = QIO_open_write_partfile(i, QIO_APPEND, 
+	  oflag.mode = QIO_APPEND;
+	  outfile = QIO_open_write_partfile(i, &oflag, 
 					    volfmt, filename, 
 					    ionode_layout, layout, fs);
 	  if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
@@ -662,7 +685,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 	if(status != QIO_SUCCESS)return status;
 
 	/* Reopen the master_io_node file for writing the checksum */
-	outfile = QIO_open_write_partfile(master_io_node, QIO_APPEND, volfmt, 
+	oflag.mode = QIO_APPEND;
+	outfile = QIO_open_write_partfile(master_io_node, &oflag, volfmt, 
 					  filename, ionode_layout, layout, fs);
 	if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
 
@@ -699,11 +723,14 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       checksum_info_expect = QIO_read_checksum(infile);
       if(checksum_info_expect == NULL)return QIO_ERR_CHECKSUM_INFO;
       
-      status = QIO_compare_checksum(0, checksum_info_expect, &checksum_in);
-      if(status != QIO_SUCCESS){
-	printf("%s Input data checksum does not match input file checksum\n",
-	       myname);
-	return status;
+      if(QIO_get_read_format(infile) == QIO_SCIDAC_NATIVE){
+	/* Only native SciDAC files have a checksum to compare */
+	status = QIO_compare_checksum(0, checksum_info_expect, &checksum_in);
+	if(status != QIO_SUCCESS){
+	  printf("%s Input data checksum does not match input file checksum\n",
+		 myname);
+	  return status;
+	}
       }
       QIO_destroy_checksum_info(checksum_info_expect);
       
@@ -732,6 +759,10 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       
       QIO_string_destroy(xml_record_in);
       QIO_string_destroy(xml_record_out);
+
+      /* If this is a non-native ILDG file, only one data field (the
+	 lattice) is permitted, so we bail out here */
+      if(QIO_get_read_format(infile) == QIO_ILDG_ALIEN)break;
     }
   /************* end iteration on records *********/
   
@@ -747,8 +778,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 /*  Convert PARTFILE to SINGLEFILE                                  */
 /********************************************************************/
 
-int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
-			QIO_Layout *layout)
+int QIO_part_to_single( const char filename[], int ildgstyle, 
+			QIO_Filesystem *fs, QIO_Layout *layout)
 {
   QIO_Layout *scalar_layout, *ionode_layout;
   QIO_String *xml_file_in, *xml_record_in;
@@ -757,8 +788,10 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
   QIO_Writer *outfile;
   QIO_RecordInfo rec_info, rec_info_in;
   QIO_Iflag iflag;
+  QIO_Oflag oflag;
   DML_Checksum checksum_out, checksum_in, checksum;
   QIO_ChecksumInfo *checksum_info_expect=NULL, *checksum_info_tmp;
+  int read_format = QIO_SCIDAC_NATIVE;
   uint64_t nbytes_in,nbytes_out,totnbytes_out,totnbytes_in;
   int msg_begin, msg_end;
   int i,status,master_io_node_rank;
@@ -766,6 +799,11 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
   int master_io_node = fs->master_io_node();
   size_t total_bytes,datum_size;
   int typesize,datacount,globaldata,word_size;
+  int ntypes = 2;
+  LIME_type lime_type_list[2] = {
+    QIO_LIMETYPE_BINARY_DATA,
+    QIO_LIMETYPE_ILDG_BINARY_DATA
+  };
   LIME_type lime_type_out = NULL, lime_type_in;
   off_t *offset;
   s_field field_in;
@@ -777,6 +815,11 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
   /* Default values */
   iflag.serpar = QIO_SERIAL;
   iflag.volfmt = QIO_PARTFILE;
+
+  oflag.serpar = QIO_SERIAL;
+  oflag.mode = QIO_TRUNC;
+  oflag.ildgstyle = ildgstyle;
+  oflag.ildgLFN = NULL;
 
   /* Sanity checks */
 
@@ -855,7 +898,7 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
      XML */
 
   outfile =  QIO_generic_open_write(filename,QIO_SINGLEFILE,
-				    scalar_layout, NULL,
+				    scalar_layout, &oflag,
 				    QIO_host_my_io_node,
 				    QIO_host_master_io_node);
   
@@ -896,11 +939,26 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
       status = QIO_read_user_record_info(infile, xml_record_in);
       if(status != QIO_SUCCESS)return status;
 
-      /* Set the output record XML and write the private and user
-	 record XML to the host single file */
+      /* Set the output record XML */
       xml_record_out = QIO_string_create();
       QIO_string_copy(xml_record_out, xml_record_in);
       
+      /* Read the ILDG LFN from the master ionode file. */
+      status = QIO_read_ILDG_LFN(infile);
+      if(status != QIO_SUCCESS)return status;
+      
+      /* If we found an LFN and we want ILDG format output,
+         then copy it to the output LFN */
+      if(ildgstyle == QIO_ILDGLAT && 
+	 QIO_get_ILDG_LFN(infile) != NULL)
+	if(strlen(QIO_get_ILDG_LFN(infile)) > 0){
+	  oflag.ildgLFN = QIO_string_create();
+	  QIO_string_set(oflag.ildgLFN, QIO_get_ILDG_LFN(infile));
+	  QIO_reset_writer_ILDG_flags(outfile, &oflag);
+	}
+      
+      /* Set the output record XML and write the private and user
+	 record XML to the host single file */
       status = QIO_write_record_info(outfile, &rec_info_in, 
 				     datum_size, word_size,
 				     xml_record_out,
@@ -959,9 +1017,12 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
 
 	  /* We need the LIME type for the record data. So we peek at
 	     the header for LIME record for the binary data in the
-	     master ionode file.  Also initialize checksum_in */
+	     master ionode file.  Also initialize checksum_in.
+	     We may need to search ahead for this record, since
+	     there may be an intervening ILDG format and LFN record. */
 	  
-	  status = QIO_init_read_field(infile, datum_size, 
+	  status = QIO_init_read_field(infile, QIO_FIELD, datum_size, 
+				       lime_type_list, ntypes,
 				       &checksum_in, &lime_type_in);
 	  if(status != QIO_SUCCESS)return status;
 
@@ -1019,12 +1080,16 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
 	    /* The nonmaster node files don't have any record info, so
                we copy the master ionode record info into the reader.
 	    */
-	    infile->record_info = rec_info_in;
+	    QIO_set_record_info(infile, &rec_info_in);
 	    
 	    /* Reread the user record info or set state */
 	    status = QIO_read_user_record_info(infile, xml_record_in);
 	    if(status != QIO_SUCCESS)return status;
-	    
+
+	    /* Reread the ILDG LFN from the master ionode file. */
+	    status = QIO_read_ILDG_LFN(infile);
+	    if(status != QIO_SUCCESS)return status;
+      
 	    /* Prepare host single file output */
 	    QIO_init_write_seek_arg(&arg_seek, &arg, outfile,
 				    ionode_layout->this_node,
@@ -1047,6 +1112,8 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
 	    if(i == master_io_node_rank){
 	      if(checksum_info_tmp == NULL)return QIO_ERR_CHECKSUM_INFO;
 	      checksum_info_expect = checksum_info_tmp;
+	      /* Save read format for later */
+	      read_format = QIO_get_read_format(infile);
 	    }
 	    
 	    /* Add partial byte count to total output bytes */
@@ -1092,10 +1159,12 @@ int QIO_part_to_single( const char filename[], QIO_Filesystem *fs,
       }
       
       /* Compare the computed input checksums with checksum on the
-	 input file */
-      status = QIO_compare_checksum(master_io_node, 
-				    checksum_info_expect, &checksum_in);
-      if (status != QIO_SUCCESS) return status;
+	 input file.  Only for SciDAC native files! */
+      if(read_format == QIO_SCIDAC_NATIVE){
+	status = QIO_compare_checksum(master_io_node, 
+				      checksum_info_expect, &checksum_in);
+	if (status != QIO_SUCCESS) return status;
+      }
       
       /* Write checksum record to host single file */
       status = QIO_write_checksum(outfile, &checksum_out);

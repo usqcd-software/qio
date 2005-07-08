@@ -17,8 +17,11 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
 	      int *msg_begin, int *msg_end){
 
   QIO_String *xml_record_private;
+  QIO_String *xml_ildg_format;
+  QIO_ILDGFormatInfo *ildg_info;
   int this_node = out->layout->this_node;
   int master_io_node = out->layout->master_io_node;
+  int ildg_precision;
   int status;
   int count = QIO_get_datacount(record_info);
   char myname[] = "QIO_write_record_info";
@@ -35,6 +38,7 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
     }
 
   /* A message consists of the XML, binary payload, and checksums */
+  /* An ILDG lattice message includes an ILDG metadata record */
   /* First and last records in a message are flagged */
   *msg_begin = 1; *msg_end = 0;
 
@@ -47,7 +51,7 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
     if ((status = 
 	 QIO_write_string(out, *msg_begin, *msg_end, 
 			  xml_record_private, 
-			  (const LIME_type)"scidac-private-record-xml"))
+			  (LIME_type)QIO_LIMETYPE_PRIVATE_RECORD_XML))
 	!= QIO_SUCCESS){
       printf("%s(%d): Error writing private record XML\n",
 	     myname,this_node);
@@ -60,13 +64,18 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
     }
     *msg_begin = 0;
   }
+  /* In singlefile parallel mode all nodes pretend they also wrote the
+     private record XML */
+  if(out->serpar == QIO_PARALLEL && out->volfmt == QIO_SINGLEFILE)
+    *msg_begin = 0;
+
   QIO_string_destroy(xml_record_private);
 
-  /* Master node writes the user record XML record */
+  /* Master node writes the user's record metadata */
   if(this_node == master_io_node){
     if ((status = 
 	 QIO_write_string(out, *msg_begin, *msg_end, xml_record, 
-			  (const LIME_type)"scidac-record-xml"))
+			  (LIME_type)QIO_LIMETYPE_RECORD_XML))
 	!= QIO_SUCCESS){
       printf("%s(%d): Error writing user record XML\n",myname,this_node);
       return status;
@@ -76,6 +85,80 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
 	     myname,this_node,QIO_string_ptr(xml_record));
     }
     *msg_begin = 0;
+  }
+  /* In singlefile parallel mode all nodes pretend they also wrote the
+     user record XML */
+  if(out->serpar == QIO_PARALLEL && out->volfmt == QIO_SINGLEFILE)
+    *msg_begin = 0;
+
+  /* In case of an ILDG lattice record, create the ILDG lattice metadata */
+  if(this_node == master_io_node && out->ildgstyle == QIO_ILDGLAT){
+
+    /* Check for a valid ILDG datatype, count, dimension and get precision */
+    ildg_precision = 0;
+    
+    /* The ILDG lattice must have the correct data type */
+    if(strcmp(QIO_get_datatype(record_info),"QDP_F3_ColorMatrix") == 0)
+      ildg_precision = 32;
+
+    else if(strcmp(QIO_get_datatype(record_info),"QDP_D3_ColorMatrix") == 0)
+      ildg_precision = 64;
+
+    /* There must be four color matrices per site */
+    if(QIO_get_datacount(record_info) != 4)
+      ildg_precision = 0;
+
+    /* Only four-dimensional lattices are supported */
+    if(out->layout->latdim != 4)
+      ildg_precision = 0;
+
+    /* A zero value cancels ILDG */
+    if(ildg_precision == 0){
+      /* Other datatypes not supported. */
+      out->ildgstyle = QIO_ILDGNO;
+      if(QIO_verbosity() >= QIO_VERB_LOW){
+	printf("%s(%d): ILDG format not supported for datatype %s and datacount %d and dimension %d.  ILDG format cancelled.\n",
+	       myname,this_node,QIO_get_datatype(record_info),
+	       QIO_get_datacount(record_info),out->layout->latdim);
+      }
+    }
+    
+    else{
+      /* Create data structure with ILDG information */
+      ildg_info = QIO_create_ildg_format_info(ildg_precision, 
+					      out->layout->latsize);
+      /* Convert data structure to XML */
+      xml_ildg_format = QIO_string_create();
+      QIO_encode_ILDG_format_info(xml_ildg_format, ildg_info);
+      QIO_destroy_ildg_format_info(ildg_info);
+      
+      /* Write the ildg-format record */
+      if ((status = 
+	   QIO_write_string(out, *msg_begin, *msg_end, xml_ildg_format, 
+			    (LIME_type)QIO_LIMETYPE_ILDG_FORMAT))
+	  != QIO_SUCCESS){
+	printf("%s(%d): Error writing user record XML\n",myname,this_node);
+	return status;
+      }
+      QIO_string_destroy(xml_ildg_format);
+
+      /* Write the ildg-data-lfn record if the LFN is known */
+      if(out->ildgLFN != NULL){
+	if ((status = 
+	     QIO_write_string(out, *msg_begin, *msg_end, 
+			      out->ildgLFN, 
+			      (LIME_type)QIO_LIMETYPE_ILDG_DATA_LFN))
+	    != QIO_SUCCESS){
+	  printf("%s(%d): Error writing ILDG LFN record\n",
+		 myname,this_node);
+	  return status;
+	}
+	if(QIO_verbosity() >= QIO_VERB_REG){
+	  printf("%s(%d): LFN = \"%s\"\n",
+		 myname,this_node,QIO_string_ptr(out->ildgLFN));
+	}
+      }
+    }
   }
 
 #ifdef DO_BINX
@@ -93,12 +176,16 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
     }
     *msg_begin = 0;
   }
+  /* In singlefile parallel mode all nodes pretend they also wrote the
+     BinX record */
+  if(out->serpar == QIO_PARALLEL && out->volfmt == QIO_SINGLEFILE)
+    *msg_begin = 0;
 #endif
   
   return QIO_SUCCESS;
 }
 
-/* Write the binary payload for a lattice field. */
+/* Write the binary payload for a lattice field, but not the checksum */
 
 /* Handles the write operation on the compute nodes as well as the host */
 int QIO_write_record_data(QIO_Writer *out, QIO_RecordInfo *record_info, 
@@ -112,16 +199,27 @@ int QIO_write_record_data(QIO_Writer *out, QIO_RecordInfo *record_info,
   int status;
   int globaldata = QIO_get_globaldata(record_info);
   int count = QIO_get_datacount(record_info);
+  char scidac_type[] = QIO_LIMETYPE_BINARY_DATA;
+  char ildg_type[] = QIO_LIMETYPE_ILDG_BINARY_DATA;
+  LIME_type lime_type;
   char myname[] = "QIO_write_record_data";
 
   /* Next one is last record in message for all but master node */
-  if (this_node != master_io_node)*msg_end = 1;
-  if((status = 
-      QIO_write_field(out, *msg_begin, *msg_end, globaldata,
-		      get, count, datum_size, word_size, arg, 
-		      checksum, nbytes,
-		      (const LIME_type)"scidac-binary-data"))
-     != QIO_SUCCESS){
+  /* But if we are writing in parallel mode all nodes think they
+     are the master */
+  if (this_node != master_io_node && out->serpar == QIO_SERIAL)
+    *msg_end = 1;
+  
+  /* Set LIME type for the data record.  Depends whether we are creating
+     an ILDG compatible file */
+  if(out->ildgstyle == QIO_ILDGLAT)lime_type = ildg_type;
+  else lime_type = scidac_type;
+
+  status = 
+    QIO_write_field(out, *msg_begin, *msg_end, globaldata,
+		    get, count, datum_size, word_size, arg, 
+		    checksum, nbytes, lime_type);
+  if(status != QIO_SUCCESS){
     printf("%s(%d): Error writing field data\n",myname,this_node);
     return status;
   }
@@ -130,10 +228,12 @@ int QIO_write_record_data(QIO_Writer *out, QIO_RecordInfo *record_info,
   }
 
   /* Copy most recent node checksum into writer */
-  out->last_checksum = *checksum;
+  memcpy(&(out->last_checksum),checksum,sizeof(DML_Checksum));
 
   return QIO_SUCCESS;
 }
+
+
 
 /* Write records for a lattice field.  Writes metadata, binary payload,
    but NOT checksum */
@@ -168,8 +268,8 @@ int QIO_write_checksum(QIO_Writer *out, DML_Checksum *checksum)
   int this_node = out->layout->this_node;
   int master_io_node = out->layout->master_io_node;
   int status;
-  int msg_end = 1;
-  int msg_begin = 0;
+  int msg_end = 1;   /* The last record */
+  int msg_begin = 0; /* Always a preceding record */
   QIO_String *xml_checksum;
   char myname[] = "QIO_write_checksum";
 
@@ -221,7 +321,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   DML_checksum_combine(&checksum);
 
   /* Copy most recent combined checksum into writer */
-  out->last_checksum = checksum;
+  memcpy(&(out->last_checksum),&checksum,sizeof(DML_Checksum));
 
   /* Sum the bytes written by all nodes */
   DML_sum_uint64_t(&nbytes);
