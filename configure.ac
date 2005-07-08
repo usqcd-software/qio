@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 2.0.3, detar@physics.utah.edu)
+AC_INIT(qio, 2.1.0, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
@@ -188,7 +188,7 @@ AC_SUBST(QLA_LDFLAGS)
 AC_CHECK_HEADERS([malloc.h])
 
 # Checks for type configuration
-AC_CHECK_HEADERS([stdint.h],
+AC_CHECK_HEADERS([stdint.h inttypes.h],
 [ dnl for inttypes.h and stdint.h for uint_xxx types
   dnl if successful check for the actual types too
   AC_CHECK_TYPES([uint16_t, uint32_t, uint64_t],
