@@ -1,3 +1,65 @@
+Changes going from qio-2.0.1 to qio-2.1.0
+
+	------------------------------
+	The new version supports ILDG formats and parallel I/O.
+	Parallel output means all nodes writing to the same file.
+	Parallel input means all nodes reading from the same file.
+	Only singlefile format can be written or read in parallel.
+
+	Changed structure
+
+        typedef struct {
+          int serpar;
+          int mode;
+          int ildgstyle;
+          QIO_String *ildgLFN;
+        } QIO_Oflag;
+
+	serpar = QIO_SERIAL or QIO_PARALLEL
+
+	(The former requests serial I/O.  The latter, parallel.  If the
+	volume format is not QIO_SINGLEFILE, serpar is reset to QIO_SERIAL.)
+
+	ildgstyle = QIO_ILDGLAT or QIO_ILDGNO
+
+	(The former requests ILDG format.  The latter requests pure SciDAC
+	format.  If the field being written is not a 4D SU(3) gauge field
+	ILDG format is cancelled.)
+
+	ildgLFN specifies the ILDG logical file name record.  If the
+	pointer is NULL, the record is not written.
+
+	mode is as in qio-2.0.1
+
+	If the QIO_open_write call passes a null QIO_Oflag pointer, the
+	default values are serpar = QIO_SERIAL, mode = QIO_TRUNC,
+	ildgstyle = QIO_ILDGNO, and ildgLFN = NULL.
+ 
+        typedef struct {
+          int serpar;
+          int volfmt;
+        } QIO_Iflag;
+
+	(The structure is as before, but serpar = QIO_PARALLEL now invokes
+	parallel reading.)
+
+	If the QIO_open_read call passes a null QIO_Iflag pointer, the
+	default values are serpar = QIO_SERIAL and volfmt = autodetect
+	with QIO_SINGLEFILE preferred when there is a choice.
+ 
+	For ILDG-compatible SciDAC files, after the gauge file has been
+	read the ILDG LFN can be obtained as a simple character string
+	through the accessor
+	
+	char *QIO_get_ILDG_LFN(QIO_Reader *qio_in);
+
+	This capbility is not available with non-SciDAC ILDG files, since
+	the LFN is not in a standard location.
+
+	Non-SciDAC ILDG files are automatically detected and read without
+	special calls.
+	
+
 Changes going from qio-1.1.6 to qio-2.0.1
 	
 	------------------------------
