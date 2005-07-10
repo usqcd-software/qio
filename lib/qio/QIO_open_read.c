@@ -130,7 +130,7 @@ QIO_Reader *QIO_create_reader(const char *filename,
 	 extensions could only be PARTFILE, not MULTIFILE.  For native
 	 SciDAC files, we will get the correct volume format later
 	 when we decode the private file XML */
-      if(qio_in->volfmt = QIO_UNKNOWN)
+      if(qio_in->volfmt == QIO_UNKNOWN)
 	qio_in->volfmt = QIO_PARTFILE;
       free(newfilename);
     }

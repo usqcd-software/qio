@@ -166,7 +166,7 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
   if(this_node == master_io_node){
     if ((status = 
 	 QIO_write_string(out, *msg_begin, *msg_end, BinX, 
-			  (const LIME_type)"scidac-binx-xml"))
+			  (LIME_type)"scidac-binx-xml"))
 	!= QIO_SUCCESS){
       printf("%s(%d): Error writing BinX\n",myname,this_node);
       return status;
@@ -281,7 +281,7 @@ int QIO_write_checksum(QIO_Writer *out, DML_Checksum *checksum)
     
     if ((status = 
 	 QIO_write_string(out, msg_begin, msg_end, xml_checksum,
-			  (const LIME_type)"scidac-checksum"))
+			  (LIME_type)"scidac-checksum"))
 	!= QIO_SUCCESS){
       printf("%s(%d): Error writing checksum\n",myname,this_node);
       return status;

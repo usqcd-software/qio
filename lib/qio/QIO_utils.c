@@ -721,7 +721,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
   if(open_status[0] > 0){
     if(open_status[1] > 0)*status = QIO_ERR_OPEN_READ;
     else *status = QIO_EOF;
-    return;
+    return NULL;
   }
 
   /* If we are doing parallel I/O, we have to

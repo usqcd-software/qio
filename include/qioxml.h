@@ -347,7 +347,7 @@ int QIO_get_datacount(QIO_RecordInfo *record_info);
 void QIO_set_globaldata(QIO_RecordInfo *record_info, int globaldata);
 void QIO_set_datatype(QIO_RecordInfo *record_info, char *datatype);
 void QIO_set_precision(QIO_RecordInfo *record_info, char *precision);
-void *QIO_set_record_date(QIO_RecordInfo *record_info, char *date);
+void QIO_set_record_date(QIO_RecordInfo *record_info, char *date);
 void QIO_set_colors(QIO_RecordInfo *record_info, int colors);
 void QIO_set_spins(QIO_RecordInfo *record_info, int spins);
 void QIO_set_typesize(QIO_RecordInfo *record_info, int typesize);

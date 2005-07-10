@@ -197,6 +197,7 @@ char *QIO_get_ILDG_LFN(QIO_Reader *qio_in);
 int QIO_get_ildgstyle(QIO_Reader *in);
 int QIO_get_read_volfmt(QIO_Reader *in);
 int QIO_get_read_format(QIO_Reader *in);
+void QIO_set_record_info(QIO_Reader *in, QIO_RecordInfo *rec_info);
 
 uint32_t QIO_get_writer_last_checksuma(QIO_Writer *out);
 uint32_t QIO_get_writer_last_checksumb(QIO_Writer *out);
@@ -304,6 +305,7 @@ int QIO_read_string_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
 int QIO_skip_data(LRL_RecordReader *lrl_record_in);
 
 DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt, int serpar);
+int QIO_close_read_record(LRL_RecordReader *lrl_record_in);
 int QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type);
 int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end, 
 		       const LIME_type lime_type);

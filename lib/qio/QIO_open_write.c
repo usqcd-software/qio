@@ -166,7 +166,7 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d): sitelist structure created \n",
 	   myname,this_node);
-    printf("%s(%d): I/O for %d sites \n",
+    printf("%s(%d): I/O for %lu sites \n",
 	   myname,this_node,qio_out->sites->number_of_io_sites);
   }
   

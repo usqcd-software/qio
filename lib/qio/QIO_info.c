@@ -1172,7 +1172,7 @@ void QIO_set_precision(QIO_RecordInfo *record_info, char *precision){
   record_info->precision.occur = 1;
 }
 
-void *QIO_set_record_date(QIO_RecordInfo *record_info, char *date){
+void QIO_set_record_date(QIO_RecordInfo *record_info, char *date){
   strncpy(record_info->date.value,date,QIO_MAXVALUESTRING-1);
   record_info->date.value[QIO_MAXVALUESTRING-1] = '\0';
   record_info->date.occur = 1;
