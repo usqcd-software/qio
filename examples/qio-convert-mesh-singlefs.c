@@ -5,7 +5,7 @@
 
 /* Usage
 
-   qio-convert-mesh-singlefs <part_sing> <filename> < layoutfile
+   qio-convert-mesh-singlefs <part_sing> <filename> [<ildgLFN>]< layoutfile
  
     where
 
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]){
   /* Check arguments and process layout parameters */
 
   if(argc < 3){
-    fprintf(stderr,"Usage %s <0 (sing to part) | 1 (part to sing ILDG) | 2 (part to sing SciDAC) > <filename> < layoutfile\n",argv[0]);
+    fprintf(stderr,"Usage %s <0 (sing to part) | 1 (part to sing ILDG) | 2 (part to sing SciDAC) > <filename> [<ildgLFN>] < layoutfile\n",argv[0]);
     return 1;
   }
 

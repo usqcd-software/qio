@@ -779,6 +779,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 /********************************************************************/
 
 int QIO_part_to_single( const char filename[], int ildgstyle, 
+			QIO_String *ildgLFN_override,
 			QIO_Filesystem *fs, QIO_Layout *layout)
 {
   QIO_Layout *scalar_layout, *ionode_layout;
@@ -947,16 +948,32 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
       status = QIO_read_ILDG_LFN(infile);
       if(status != QIO_SUCCESS)return status;
       
-      /* If we found an LFN and we want ILDG format output,
-         then copy it to the output LFN */
-      if(ildgstyle == QIO_ILDGLAT && 
-	 QIO_get_ILDG_LFN(infile) != NULL)
-	if(strlen(QIO_get_ILDG_LFN(infile)) > 0){
+      /* If we want ILDG format output and we have specified an output
+	 LFN, then use the specified output LFN regardless of the
+	 input LFN. */
+      if( ildgstyle == QIO_ILDGLAT && 
+	  ildgLFN_override != NULL)
+	if(QIO_string_length(ildgLFN_override) > 0){
 	  oflag.ildgLFN = QIO_string_create();
-	  QIO_string_set(oflag.ildgLFN, QIO_get_ILDG_LFN(infile));
+	  QIO_string_copy(oflag.ildgLFN, ildgLFN_override);
 	  QIO_reset_writer_ILDG_flags(outfile, &oflag);
 	}
       
+      /* If we want ILDG format output and we have an input LFN and 
+	 we don't have an output LFN, yet,
+         then copy the input LFN to the output LFN */
+      if(ildgstyle == QIO_ILDGLAT && 
+	 QIO_get_ILDG_LFN(infile) != NULL &&
+	 oflag.ildgLFN == NULL)
+	if(strlen(QIO_get_ILDG_LFN(infile)) > 0){
+	  oflag.ildgLFN = QIO_string_create();
+	  QIO_string_set(oflag.ildgLFN, QIO_get_ILDG_LFN(infile));
+	}
+
+      /* If we now have an output LFN, give it to the writer */
+      if(oflag.ildgLFN != NULL)
+	QIO_reset_writer_ILDG_flags(outfile, &oflag);
+
       /* Set the output record XML and write the private and user
 	 record XML to the host single file */
       status = QIO_write_record_info(outfile, &rec_info_in, 

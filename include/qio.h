@@ -178,6 +178,7 @@ int QIO_verbosity();
 int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout);
 int QIO_part_to_single( const char filename[], int ildgstyle, 
+			QIO_String *ildgLFN, 
 			QIO_Filesystem *fs, QIO_Layout *layout);
 char *QIO_set_filepath(QIO_Filesystem *fs, 
 		       const char * const filename, int node);

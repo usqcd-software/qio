@@ -79,6 +79,8 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   int *latsize;
   QIO_Reader *qio_in;
   char *filename;
+  char *stringLFN;
+  QIO_String *ildgLFN;
 
   QIO_verbose(QIO_VERB_LOW);
 
@@ -91,6 +93,15 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
 
   /* File name */
   filename = argv[n++];
+
+  /* ildgLFN, if specified. Used only when recombining a file. */
+  if(argc > n)
+    stringLFN = argv[n++];
+  else
+    stringLFN = NULL;
+
+  ildgLFN = QIO_string_create();
+  QIO_string_set(ildgLFN, stringLFN);
 
   /* Start from a dummy layout */
   mpp_layout = create_mpp_layout(numnodes, NULL, 0);
@@ -123,13 +134,14 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
     {
       /* ILDG compatible format */
       printf("Converting %s from PARTFILE to SINGLEFILE ILDG\n",filename);
-      status = QIO_part_to_single(filename, QIO_ILDGLAT, fs, mpp_layout);
+      status = QIO_part_to_single(filename, QIO_ILDGLAT, ildgLFN, 
+				  fs, mpp_layout);
     }
   else
     {
       /* SciDAC native format */
       printf("Converting %s from PARTFILE to SINGLEFILE SciDAC\n",filename);
-      status = QIO_part_to_single(filename, QIO_ILDGNO, fs, mpp_layout);
+      status = QIO_part_to_single(filename, QIO_ILDGNO, NULL, fs, mpp_layout);
     }
 
   /* Clean up */
