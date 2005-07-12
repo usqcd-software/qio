@@ -442,6 +442,7 @@ QIO_Reader *QIO_open_read_master(const char *filename,
 
     /* Read the private file info from the master file */
     file_info_found = QIO_read_private_file_info(qio_in);
+    if(file_info_found == NULL)return NULL;
 
     /* Compare what we found with what we expected */
     /* If latdim <= 0 we read in discovery mode and accept
