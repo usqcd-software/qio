@@ -1566,7 +1566,12 @@ int DML_partition_sitedata_in(DML_RecordReader *dml_record_in,
 				  max_send_sites, &nbytes,
 				  myname, this_node, &err);
     
-    if(err < 0){return 1;}
+    if(err < 0){
+      printf("%s(%d) DML_seek_read_buf returns error\n",
+	     myname,this_node);
+      return 1;
+    }
+
     /* Location of new datum on I/O node */
     buf = inbuf + size*buf_extract;
   }
@@ -1753,7 +1758,13 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 				      max_send_sites, &nbytes,
 				      myname, this_node, &err);
       
-      if(err < 0){free(inbuf);free(coords);return 0;}
+      if(err < 0){
+        printf("%s(%d) DML_seek_read_buf returns error\n",
+               myname,this_node);
+        free(inbuf);free(coords);
+        return 0;
+      }
+
       /* Location of new datum on I/O node */
       buf = inbuf + size*buf_extract;
     }

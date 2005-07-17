@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 2.1.0, detar@physics.utah.edu)
+AC_INIT(qio, 2.1.1, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
@@ -98,44 +98,58 @@ dnl Now check appropriate cases
 case ${LOCAL_PARALLEL_ARCH} in
   scalar)
     AC_SUBST(ARCHDEF_SUBSTITUTION, ARCH_SCALAR)
-    AC_MSG_NOTICE([Scalar Build! Not checking for QMP ])
-    AC_SUBST(QMP_CFLAGS)
-    AC_SUBST(QMP_LDFLAGS)
-    AC_SUBST(QMP_LIBS)
     ;;
   parscalar)
     AC_SUBST(ARCHDEF_SUBSTITUTION, ARCH_PARSCALAR)
-    AC_MSG_NOTICE([Parscalar build! Checking for QMP ])
-
-    if test "X${QMP_HOME}X" = "XX" ; then
-      AC_PATH_PROG([QMP_CONFIG], [qmp-config], [])
-    else
-      AC_PATH_PROG([QMP_CONFIG], [qmp-config], [], [${QMP_HOME}/bin ${PATH}])
-    fi
-
-    if test "X${QMP_CONFIG}X" != "XX" ; then
-      AC_MSG_NOTICE([Found QMP configuration program ${QMP_CONFIG}])
-      # use the QMP CC unless it is explicitly set by the user
-      if ! set | grep -q '^CC=' ; then
-        AC_SUBST(CC,  "`${QMP_CONFIG} --cc`")
-        AC_MSG_NOTICE([QMP compiler: ${CC}])
-      fi
-      AC_SUBST(QMP_CFLAGS,  "`${QMP_CONFIG} --cflags`")
-      AC_MSG_NOTICE([QMP compile flags: ${QMP_CFLAGS}])
-      AC_SUBST(QMP_LDFLAGS, "`${QMP_CONFIG} --ldflags`")
-      AC_MSG_NOTICE([QMP linking flags: ${QMP_LDFLAGS}])
-      AC_SUBST(QMP_LIBS,    "`${QMP_CONFIG} --libs`")
-      AC_MSG_NOTICE([QMP libraries flags: ${QMP_LIBS}])
-    else 
-      AC_MSG_WARN([QMP configuration program qmp-config not found.])
-      AC_MSG_WARN([Set environment variables QMP_CFLAGS QMP_LDFAGS QMP_LIBS
-        before configure])
-    fi
     ;;
   *)
     AC_MSG_ERROR([ Unknown value for --enable-parallel-arch ])
     ;;
 esac
+
+dnl The test code that can be run in scalar mode expects a scalar
+dnl version of QMP.  So we always check for QMP.
+
+AC_MSG_NOTICE([Checking for QMP ])
+
+if test "X${QMP_HOME}X" = "XX" ; then
+  AC_PATH_PROG([QMP_CONFIG], [qmp-config], [])
+else
+  AC_PATH_PROG([QMP_CONFIG], [qmp-config], [], [${QMP_HOME}/bin ${PATH}])
+fi
+
+if test "X${QMP_CONFIG}X" != "XX" ; then
+  AC_MSG_NOTICE([Found QMP configuration program ${QMP_CONFIG}])
+  # use the QMP CC unless it is explicitly set by the user
+  if ! set | grep -q '^CC=' ; then
+    AC_SUBST(CC,  "`${QMP_CONFIG} --cc`")
+    AC_MSG_NOTICE([QMP compiler: ${CC}])
+  fi
+  AC_SUBST(QMP_CFLAGS,  "`${QMP_CONFIG} --cflags`")
+  AC_MSG_NOTICE([QMP compile flags: ${QMP_CFLAGS}])
+  AC_SUBST(QMP_LDFLAGS, "`${QMP_CONFIG} --ldflags`")
+  AC_MSG_NOTICE([QMP linking flags: ${QMP_LDFLAGS}])
+  AC_SUBST(QMP_LIBS,    "`${QMP_CONFIG} --libs`")
+  AC_MSG_NOTICE([QMP libraries flags: ${QMP_LIBS}])
+else 
+  AC_MSG_WARN([QMP configuration program qmp-config not found.])
+  AC_MSG_WARN([Set environment variables QMP_CFLAGS QMP_LDFAGS QMP_LIBS
+    before configure])
+fi
+
+# Set up large file support
+dnl
+dnl --enable-largefile
+dnl
+AC_ARG_ENABLE(largefile,
+  AC_HELP_STRING(
+  [--enable-largefile],
+  [ For files larger than 2 GB ]
+  ),
+  [ AC_MSG_NOTICE([Enabling large file support.])
+    AC_SYS_LARGEFILE
+  ]
+)
 
 # Checks for programs.
 AC_PROG_CC
@@ -181,7 +195,10 @@ AC_SUBST(QLA_LDFLAGS)
 # stuff. I found the AC_FUNC_MALLOC substituted the name 
 # malloc with rpl_malloc - no idea what that is and failed to
 # link on IBM's.
-#
+
+# Check for the fseeko functions
+AC_FUNC_FSEEKO
+
 # Checks for header files.
 ## AC_HEADER_STDC
 ## AC_CHECK_HEADERS([stdlib.h string.h strings.h])

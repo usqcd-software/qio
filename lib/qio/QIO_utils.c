@@ -746,17 +746,17 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
       /* Field data */
       if(in->serpar == QIO_SERIAL)
 	/* Serial input. Record size equals the size we actually write */
-	expected_rec_size = sites->number_of_io_sites * datum_size; 
+	expected_rec_size = ((off_t)sites->number_of_io_sites) * datum_size; 
       else
 	/* Parallel input.  Record size equals the total volume
 	   NOTE: If we later decide to read partitions in parallel,
 	   this has to be changed to the size for the partition. */
-	expected_rec_size = in->layout->volume * datum_size;
+	expected_rec_size = ((off_t)in->layout->volume) * datum_size;
     }    
     if (announced_rec_size != expected_rec_size){
-      printf("%s(%d): rec_size mismatch: found %lu expected %lu\n",
-	     myname, this_node, (unsigned long)announced_rec_size, 
-	     (unsigned long)expected_rec_size);
+      printf("%s(%d): rec_size mismatch: found %llu expected %llu\n",
+	     myname, this_node, (unsigned long long)announced_rec_size, 
+	     (unsigned long long)expected_rec_size);
       open_status[0] = 1;
     }
   }
@@ -812,6 +812,11 @@ int QIO_init_read_field(QIO_Reader *in, int globaldata, size_t datum_size,
   lrl_record_in = QIO_open_read_field(in, globaldata, datum_size, 
               lime_type_list, ntypes, lime_type, &status);
 
+  if(lrl_record_in == NULL){
+    printf("%s(%d): QIO_open_read_field failed\n",myname,this_node);
+    return QIO_ERR_OPEN_READ;
+  }
+
   dml_record_in = DML_partition_open_in(lrl_record_in,
 	  datum_size, 1, in->layout, in->sites, in->volfmt, in->serpar,
 	  checksum);
@@ -849,13 +854,14 @@ int QIO_seek_read_field_datum(QIO_Reader *in,
   DML_RecordReader *dml_record_in = in->dml_record_in;
   int this_node                   = in->layout->this_node;
   int status;
-  char myname[] = "QIO_seek_read_site_data";
+  char myname[] = "QIO_seek_read_field_datum";
 
   status = DML_partition_sitedata_in(dml_record_in, put, seeksite, 
 		     count, datum_size, word_size, arg, in->layout);
 
   if(status != 0){
-    printf("%s(%d): Error reading site datum\n",myname,this_node);
+    printf("%s(%d): DML error %d reading site datum\n",myname,this_node,
+	   status);
     return QIO_ERR_BAD_READ_BYTES;
   }
 

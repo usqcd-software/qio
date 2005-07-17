@@ -6,16 +6,7 @@ AM_LDFLAGS = -L../lib -L../other_libs/c-lime/lib @QMP_LDFLAGS@
 LDADD      = -lqio -llime @QMP_LIBS@ @LIBS@ -lm
 
 # programs for all architectures
-check_PROGRAMS = 
-
-# Only scalar arch
-if ARCH_SCALAR
-check_PROGRAMS += 
-endif
-
-# Only parallel arch
-if ARCH_PARSCALAR
-check_PROGRAMS += qio-test1         \
+check_PROGRAMS  = qio-test1         \
                   qio-test2         \
                   qio-test3         \
                   qio-test4         \
@@ -24,8 +15,18 @@ check_PROGRAMS += qio-test1         \
                   qio-test7         \
                   qio-test8         \
 		  qio-host-test1    \
-		  qio-host-test2    \
-		  qio-convert-mesh-singlefs
+		  qio-host-test2
+bin_PROGRAMS =
+
+# Only scalar arch
+if ARCH_SCALAR
+bin_PROGRAMS += qio-convert-mesh-singlefs
+check_PROGRAMS += 
+endif
+
+# Only parallel arch
+if ARCH_PARSCALAR
+check_PROGRAMS +=
 endif
 
 ADD_MPP_SOURCE = qio-test.c qio-test-util.c layout_hyper.c qio-test.h

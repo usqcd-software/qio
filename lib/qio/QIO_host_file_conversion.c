@@ -194,7 +194,7 @@ void QIO_scalar_get( char *s1, size_t ionode_index, int count, void *s2 )
 			      count, datum_size, word_size, 
 			      (void *)arg);
   if(status != QIO_SUCCESS){
-    printf("QIO_scalar_get seek-read field returned %d\n", status);
+    printf("QIO_scalar_get: QIO_seek_read_field_datum returned %d\n", status);
   }
   else{
     memcpy(s1,src,datum_size);
@@ -641,7 +641,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 			     QIO_host_master_io_node());
 	
 	/* Expected total for the entire field */
-	total_bytes = layout->volume * datum_size;
+	total_bytes = ((uint64_t)layout->volume) * datum_size;
 	totnbytes_out = 0;
 	DML_checksum_init(&checksum_out);
 	
@@ -695,7 +695,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       /* Check that input byte count matches total expected */
       if(total_bytes != totnbytes_in){
 	printf("Input byte count %llu does not match expected %llu\n",
-	       (unsigned long long)nbytes_in, 
+	       (unsigned long long)totnbytes_in, 
 	       (unsigned long long)total_bytes);
 	return QIO_ERR_BAD_READ_BYTES;
       }
@@ -1061,7 +1061,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 	  lime_type_out = NULL;
 
 	  /* Input byte counting and checksums */
-	  total_bytes = layout->volume * datum_size;
+	  total_bytes = ((uint64_t)layout->volume) * datum_size;
 	  totnbytes_in = 0;
 	  DML_checksum_init(&checksum_in);
 
