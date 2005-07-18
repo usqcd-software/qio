@@ -23,8 +23,8 @@
 
 */
 
-#include <stdio.h>
 #include <qio.h>
+#include <stdio.h>
 #include "qio-convert-mesh.h"
 
 int self_io_node(int node){return node;}

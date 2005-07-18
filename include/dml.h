@@ -1,10 +1,10 @@
 #ifndef DML_H
 #define DML_H
 
+#include <qio_config.h>
 #include <lrl.h>
 #include <qio_stdint.h>
 #include <stdlib.h>
-#include "qio_config.h"
 
 /* File fragmentation */
 #define DML_UNKNOWN   -1

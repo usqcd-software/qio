@@ -793,12 +793,13 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
   DML_Checksum checksum_out, checksum_in, checksum;
   QIO_ChecksumInfo *checksum_info_expect=NULL, *checksum_info_tmp;
   int read_format = QIO_SCIDAC_NATIVE;
-  uint64_t nbytes_in,nbytes_out,totnbytes_out,totnbytes_in;
+  uint64_t nbytes_in, nbytes_out, totnbytes_out, totnbytes_in,
+    total_bytes;
   int msg_begin, msg_end;
   int i,status,master_io_node_rank;
   int number_io_nodes = fs->number_io_nodes;
   int master_io_node = fs->master_io_node();
-  size_t total_bytes,datum_size;
+  size_t datum_size;
   int typesize,datacount,globaldata,word_size;
   int ntypes = 2;
   LIME_type lime_type_list[2] = {
@@ -1151,17 +1152,17 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
       /* Compare output byte count with expected total record size */
       if(totnbytes_out != total_bytes)
 	{
-	  printf("%s: bytes written %lu != expected rec_size %lu\n",
-		 myname, (unsigned long)totnbytes_out, 
-		 (unsigned long)total_bytes);
+	  printf("%s: bytes written %llu != expected rec_size %llu\n",
+		 myname, (unsigned long long)totnbytes_out, 
+		 (unsigned long long)total_bytes);
 	  return QIO_ERR_BAD_WRITE_BYTES;
 	}
 
       /* Compare input and output byte counts */
       if(totnbytes_in != totnbytes_out){
-	  printf("%s: bytes written %lu != bytes read %lu\n",
-		 myname, (unsigned long)totnbytes_in, 
-		 (unsigned long)totnbytes_out);
+	  printf("%s: bytes written %llu != bytes read %llu\n",
+		 myname, (unsigned long long)totnbytes_in, 
+		 (unsigned long long)totnbytes_out);
 	  return QIO_ERR_BAD_WRITE_BYTES;
       }
       

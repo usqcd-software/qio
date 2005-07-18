@@ -218,12 +218,12 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
     /* Field data */
     if(out->serpar == QIO_SERIAL)
       /* Serial output.  Record size equals the size we write. */
-      planned_rec_size = number_of_io_sites * datum_size;
+      planned_rec_size = ((off_t)number_of_io_sites) * datum_size;
     else
       /* Parallel output.  Record size equals the total volume
 	 NOTE: If we later decide to write partitions in parallel,
 	 this has to be changed to the size for the partition. */
-      planned_rec_size = out->layout->volume * datum_size;
+      planned_rec_size = ((off_t)out->layout->volume) * datum_size;
     
     if(QIO_verbosity() >= QIO_VERB_DEBUG){
       printf("%s(%d): field data: sites %lu datum %lu\n",
@@ -663,7 +663,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
   int this_node = in->layout->this_node;
   int do_open, do_read;
   int lrl_status;
-  int open_status[2];
+  int open_fail, open_eof;
   char myname[] = "QIO_open_read_field";
 
   *status = QIO_SUCCESS;
@@ -688,7 +688,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
        record-level synchronization. */
     do_open = (in->lrl_file_in != NULL);
   
-  open_status[0] = open_status[1] = 0;
+  open_fail = open_eof = 0;
 
   if(!do_open) {
     if(QIO_verbosity() >= QIO_VERB_DEBUG)
@@ -702,24 +702,24 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
     
     /* An EOF condition is acceptable here */
     if(lrl_record_in == NULL){
-      open_status[0] = 1;
+      open_fail = 1;
       if(lrl_status == LRL_EOF){
-	open_status[1] = 0;
+	open_eof = 0;
       }
       else{
-	open_status[1] = 1;
+	open_eof = 1;
       }
     }
   }
 
   /* Poll all nodes for status of open */
 
-  DML_sum_int(&open_status[0]); DML_sum_int(&open_status[1]);
+  DML_sum_int(&open_fail); DML_sum_int(&open_eof);
 
   /* Bail out if open on any node returned an error */
 
-  if(open_status[0] > 0){
-    if(open_status[1] > 0)*status = QIO_ERR_OPEN_READ;
+  if(open_fail > 0){
+    if(open_eof > 0)*status = QIO_ERR_OPEN_READ;
     else *status = QIO_EOF;
     return NULL;
   }
@@ -757,15 +757,15 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
       printf("%s(%d): rec_size mismatch: found %llu expected %llu\n",
 	     myname, this_node, (unsigned long long)announced_rec_size, 
 	     (unsigned long long)expected_rec_size);
-      open_status[0] = 1;
+      open_fail = 1;
     }
   }
 
   /* Poll all nodes for result of size test */
 
-  DML_sum_int(&open_status[0]);
+  DML_sum_int(&open_fail);
 
-  if(open_status[0] > 0){
+  if(open_fail > 0){
     *status = QIO_ERR_BAD_READ_BYTES;
     return NULL;
   }

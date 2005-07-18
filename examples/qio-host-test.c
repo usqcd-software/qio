@@ -1,8 +1,8 @@
 /* Host file conversion.  FOR SERIAL PROCESSING ONLY! */
 /* Test conversion between SINGLEFILE and PARTFILE format. */
 
-#include <stdio.h>
 #include <qio.h>
+#include <stdio.h>
 #define MAIN
 #include "qio-test.h"
 

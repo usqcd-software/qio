@@ -1,6 +1,6 @@
 /* Utilities for testing QIO */
-#include <stdio.h>
 #include "qio-test.h"
+#include <stdio.h>
 
 void print_m(suN_matrix *a)
 {

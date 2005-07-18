@@ -283,13 +283,10 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
     /* First broadcast length */
     
     length = QIO_string_length(in->ildgLFN);
+    DML_broadcast_bytes((char *)&length, sizeof(int), this_node, 
+			in->layout->master_io_node);
     if(length > 0){
-      DML_broadcast_bytes((char *)&length, sizeof(int), this_node, 
-			  in->layout->master_io_node);
-      
       /* Receiving nodes resize their strings */
-      /* if(this_node != in->layout->master_io_node){ */
-      
       /* QIO_string_realloc is supposedly non-destructive. Can do it on
 	 all nodes */
       QIO_string_realloc(in->ildgLFN,length);

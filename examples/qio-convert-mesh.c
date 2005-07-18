@@ -1,8 +1,8 @@
 /* Convert between SINGLEFILE and PARTFILE format.
    on single processor. */
 
-#include <stdio.h>
 #include <qio.h>
+#include <stdio.h>
 #define MAIN
 #include "qio-convert-mesh.h"
 

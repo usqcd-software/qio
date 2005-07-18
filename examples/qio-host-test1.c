@@ -9,8 +9,8 @@
 
 */
 
-#include <stdio.h>
 #include <qio.h>
+#include <stdio.h>
 #include "qio-test.h"
 
 int self_io_node(int node){return node;}

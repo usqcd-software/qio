@@ -142,7 +142,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
   *rec_size = limeReaderBytes(rr->fr->dr);
   *lime_type = limeReaderType(rr->fr->dr);
 
-  *status = LIME_SUCCESS;
+  *status = LRL_SUCCESS;
   return rr;
 }
 
@@ -166,7 +166,6 @@ LRL_RecordReader *LRL_open_read_target_record(LRL_FileReader *fr,
 	      LIME_type *lime_type_found, int *status)
 {
   LRL_RecordReader *rr;
-  int lrl_status;
   int i, found;
   char myname[] = "LRL_open_read_target_record";
 
@@ -184,8 +183,8 @@ LRL_RecordReader *LRL_open_read_target_record(LRL_FileReader *fr,
     /* If the list of targets is empty, accept any record */
     if(ntypes == 0 || found)break;
 
-    lrl_status = LRL_close_read_record(rr);
-    if(lrl_status != LRL_SUCCESS)return NULL;
+    *status = LRL_close_read_record(rr);
+    if(*status != LRL_SUCCESS)return NULL;
     rr = LRL_open_read_record(fr, rec_size, lime_type_found, status);
     if(rr == NULL)return rr;
   }

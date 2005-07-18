@@ -1,6 +1,7 @@
 #ifndef LRL_H
 #define LRL_H
 
+#include <qio_config.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <lime.h>

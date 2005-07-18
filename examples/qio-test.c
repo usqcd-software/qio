@@ -8,8 +8,8 @@
 /* October 18, 2004 */
 /* June 12, 2005 modified */
 
-#include <stdio.h>
 #include <qio.h>
+#include <stdio.h>
 #define MAIN
 #include "qio-test.h"
 

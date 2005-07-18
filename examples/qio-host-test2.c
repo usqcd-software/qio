@@ -9,9 +9,9 @@
 
 */
 
+#include <qio.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <qio.h>
 #include <string.h>
 #include <math.h>
 #include "qio-test.h"
