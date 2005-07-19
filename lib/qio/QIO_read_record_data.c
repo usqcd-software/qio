@@ -221,7 +221,7 @@ int QIO_read_record_data(QIO_Reader *in,
     expect_bytes = buf_size;
   }
   else { /* Field data */
-    expect_bytes = volume * datum_size;
+    expect_bytes = ((uint64_t)volume) * datum_size;
   }
   
   if(nbytes != expect_bytes){
