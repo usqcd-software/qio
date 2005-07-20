@@ -261,6 +261,7 @@ fi
 # Now have all the options... Do some configuration 
 AM_CONDITIONAL(ARCH_SCALAR,    [test "X${LOCAL_PARALLEL_ARCH}X" = "XscalarX"])
 AM_CONDITIONAL(ARCH_PARSCALAR, [test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX"])
+AM_CONDITIONAL(USING_QMP, [test "X${QMP_CONFIG}X" != "XX"])
 
 # pass configuration to distcheck target
 DISTCHECK_CONFIGURE_FLAGS="--enable-parallel-arch=$PARALLEL_ARCH"

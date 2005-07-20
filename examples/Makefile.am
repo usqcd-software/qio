@@ -6,7 +6,10 @@ AM_LDFLAGS = -L../lib -L../other_libs/c-lime/lib @QMP_LDFLAGS@
 LDADD      = -lqio -llime @QMP_LIBS@ @LIBS@ -lm
 
 # programs for all architectures
-check_PROGRAMS  = qio-test1         \
+check_PROGRAMS  = 
+
+if USING_QMP
+check_PROGRAMS  += qio-test1         \
                   qio-test2         \
                   qio-test3         \
                   qio-test4         \
@@ -16,6 +19,8 @@ check_PROGRAMS  = qio-test1         \
                   qio-test8         \
 		  qio-host-test1    \
 		  qio-host-test2
+endif
+
 bin_PROGRAMS =
 
 # Only scalar arch

@@ -36,19 +36,26 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-check_PROGRAMS = qio-test1$(EXEEXT) qio-test2$(EXEEXT) \
-	qio-test3$(EXEEXT) qio-test4$(EXEEXT) qio-test5$(EXEEXT) \
-	qio-test6$(EXEEXT) qio-test7$(EXEEXT) qio-test8$(EXEEXT) \
-	qio-host-test1$(EXEEXT) qio-host-test2$(EXEEXT) \
-	$(am__EXEEXT_2) $(am__EXEEXT_2)
+check_PROGRAMS = $(am__EXEEXT_2) $(am__EXEEXT_3) $(am__EXEEXT_3)
+@USING_QMP_TRUE@am__append_1 = qio-test1         \
+@USING_QMP_TRUE@                  qio-test2         \
+@USING_QMP_TRUE@                  qio-test3         \
+@USING_QMP_TRUE@                  qio-test4         \
+@USING_QMP_TRUE@                  qio-test5         \
+@USING_QMP_TRUE@                  qio-test6         \
+@USING_QMP_TRUE@                  qio-test7         \
+@USING_QMP_TRUE@                  qio-test8         \
+@USING_QMP_TRUE@		  qio-host-test1    \
+@USING_QMP_TRUE@		  qio-host-test2
+
 bin_PROGRAMS = $(am__EXEEXT_1)
 
 # Only scalar arch
-@ARCH_SCALAR_TRUE@am__append_1 = qio-convert-mesh-singlefs
-@ARCH_SCALAR_TRUE@am__append_2 = 
+@ARCH_SCALAR_TRUE@am__append_2 = qio-convert-mesh-singlefs
+@ARCH_SCALAR_TRUE@am__append_3 = 
 
 # Only parallel arch
-@ARCH_PARSCALAR_TRUE@am__append_3 = 
+@ARCH_PARSCALAR_TRUE@am__append_4 = 
 subdir = examples
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -62,7 +69,13 @@ CONFIG_CLEAN_FILES =
 @ARCH_SCALAR_TRUE@am__EXEEXT_1 = qio-convert-mesh-singlefs$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
-am__EXEEXT_2 =
+@USING_QMP_TRUE@am__EXEEXT_2 = qio-test1$(EXEEXT) qio-test2$(EXEEXT) \
+@USING_QMP_TRUE@	qio-test3$(EXEEXT) qio-test4$(EXEEXT) \
+@USING_QMP_TRUE@	qio-test5$(EXEEXT) qio-test6$(EXEEXT) \
+@USING_QMP_TRUE@	qio-test7$(EXEEXT) qio-test8$(EXEEXT) \
+@USING_QMP_TRUE@	qio-host-test1$(EXEEXT) \
+@USING_QMP_TRUE@	qio-host-test2$(EXEEXT)
+am__EXEEXT_3 =
 PROGRAMS = $(bin_PROGRAMS)
 am__objects_1 = qio-convert-mesh.$(OBJEXT) layout_hyper_mesh.$(OBJEXT)
 am_qio_convert_mesh_singlefs_OBJECTS =  \
@@ -193,6 +206,8 @@ RANLIB = @RANLIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
+USING_QMP_FALSE = @USING_QMP_FALSE@
+USING_QMP_TRUE = @USING_QMP_TRUE@
 VERSION = @VERSION@
 ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
