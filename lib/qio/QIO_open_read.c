@@ -159,7 +159,7 @@ QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in)
   int this_node = dml_layout->this_node;
   LRL_RecordReader *lrl_record_in;
   LIME_type lime_type = NULL;
-  off_t expected_rec_size;
+  uint64_t expected_rec_size;
   int status;
   int ildg_dims[4];
   int ntypes = 1;

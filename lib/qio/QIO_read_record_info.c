@@ -135,7 +135,7 @@ int QIO_read_ILDG_LFN(QIO_Reader *in){
   int this_node = in->layout->this_node;
   int status;
   off_t offset;
-  off_t rec_size;
+  uint64_t rec_size;
   LRL_RecordReader *lrl_record_in = NULL;
   char myname[] = "QIO_read_ILDG_LFN";
   LIME_type lime_type=NULL;

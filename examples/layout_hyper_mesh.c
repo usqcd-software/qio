@@ -60,9 +60,9 @@ setup_layout(
     sites_on_node *= squaresize[i];
   }
 
-  size1[0] = malloc(2*(ndim+1)*sizeof(int));
+  size1[0] = (int *)malloc(2*(ndim+1)*sizeof(int));
   size1[1] = size1[0] + ndim + 1;
-  size2 = malloc((ndim+1)*sizeof(int));
+  size2 = (int *)malloc((ndim+1)*sizeof(int));
 
   size1[0][0] = 1;
   size1[1][0] = 0;

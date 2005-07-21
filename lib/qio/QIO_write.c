@@ -305,7 +305,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   int this_node = out->layout->this_node;
   int msg_begin, msg_end;
   int status;
-  size_t total_bytes;
+  uint64_t total_bytes;
   size_t volume = out->layout->volume;
   int globaldata = QIO_get_globaldata(record_info);
   char myname[] = "QIO_write";
@@ -328,7 +328,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 
   /* Compute and compare byte count with expected record size */
   if(globaldata == QIO_GLOBAL)total_bytes = datum_size;
-  else total_bytes = ((off_t)volume) * datum_size;
+  else total_bytes = ((uint64_t)volume) * datum_size;
 
   if(nbytes != total_bytes){
     printf("%s(%d): bytes written %llu != expected rec_size %llu\n",

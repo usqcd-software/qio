@@ -385,7 +385,7 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
 		      LIME_type *lime_type){
-  off_t check, announced_rec_size;
+  uint64_t check, announced_rec_size;
   int this_node = layout->this_node;
   LRL_RecordReader *lrl_record_in;
   DML_SiteRank *inputlist;
@@ -917,8 +917,10 @@ int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
 
   int new_node;
   int err;
-  char scratch_buf[4] = "\0\0\0\0";
+  char scratch_buf[4];
   char myname[] = "DML_partition_sitedata_out";
+
+  scratch_buf[0] = scratch_buf[1] = scratch_buf[2] = scratch_buf[3] = '\0';
 
   /* Convert lexicographic rank to coordinates */
   DML_lex_coords(coords, latdim, latsize, snd_coords);

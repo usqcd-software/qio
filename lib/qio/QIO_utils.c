@@ -68,7 +68,7 @@ int QIO_write_string(QIO_Writer *out,
 {
   LRL_RecordWriter *lrl_record_out;
   char *buf;
-  off_t actual_rec_size, planned_rec_size;
+  uint64_t actual_rec_size, planned_rec_size;
   char myname[] = "QIO_write_string";
 
   buf = QIO_string_ptr(xml);
@@ -132,8 +132,8 @@ DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt, int serpar){
 int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end, 
 		       const LIME_type lime_type){
   LRL_RecordWriter *lrl_record_out;
-  off_t nbytes;
-  off_t rec_size;
+  uint64_t nbytes;
+  size_t rec_size;
   DML_SiteRank *outputlist;
   DML_SiteList *sites = out->sites;
   int volfmt = out->volfmt;
@@ -174,9 +174,9 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
   nbytes = LRL_write_bytes(lrl_record_out, (char *)outputlist, rec_size);
 
   if(nbytes != rec_size){
-    printf("%s(%d): Error writing site list. Wrote %lu bytes expected %lu\n", 
-	   myname,out->layout->this_node,(unsigned long)rec_size,
-	   (unsigned long)nbytes);
+    printf("%s(%d): Error writing site list. Wrote %llu bytes expected %lu\n", 
+	   myname,out->layout->this_node,
+	   (unsigned long long)nbytes,(unsigned long)rec_size);
     free(outputlist);
     return QIO_ERR_BAD_WRITE_BYTES;
   }
@@ -199,7 +199,7 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
 	    const LIME_type lime_type, int *do_output, int *status){
   
   LRL_RecordWriter *lrl_record_out = NULL;
-  off_t planned_rec_size;
+  uint64_t planned_rec_size;
   int this_node = out->layout->this_node;
   size_t number_of_io_sites = out->sites->number_of_io_sites;
   int dml_status;
@@ -218,12 +218,12 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
     /* Field data */
     if(out->serpar == QIO_SERIAL)
       /* Serial output.  Record size equals the size we write. */
-      planned_rec_size = ((off_t)number_of_io_sites) * datum_size;
+      planned_rec_size = ((uint64_t)number_of_io_sites) * datum_size;
     else
       /* Parallel output.  Record size equals the total volume
 	 NOTE: If we later decide to write partitions in parallel,
 	 this has to be changed to the size for the partition. */
-      planned_rec_size = ((off_t)out->layout->volume) * datum_size;
+      planned_rec_size = ((uint64_t)out->layout->volume) * datum_size;
     
     if(QIO_verbosity() >= QIO_VERB_DEBUG){
       printf("%s(%d): field data: sites %lu datum %lu\n",
@@ -257,8 +257,8 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
 	  ( out->serpar == DML_PARALLEL &&
 	    this_node == out->layout->master_io_node ) ) {
 	if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	  printf("%s(%d): calling LRL_open_write_record size %lu\n",
-		 myname,this_node,planned_rec_size);
+	  printf("%s(%d): calling LRL_open_write_record size %llu\n",
+		 myname,this_node,(unsigned long long)planned_rec_size);
 	lrl_record_out = 
 	  LRL_open_write_record(out->lrl_file_out, msg_begin, msg_end, 
 				planned_rec_size, lime_type);
@@ -499,7 +499,7 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 /* Open a record and get the LIME type and expected record size */
 
 LRL_RecordReader *QIO_read_record_type(QIO_Reader *in, LIME_type *lime_type,
-				       off_t *expected_rec_size, int *status){
+			       uint64_t *expected_rec_size, int *status){
   LRL_RecordReader *lrl_record_in;
   int lrl_status;
   char myname[] = "QIO_read_record_type";
@@ -528,7 +528,7 @@ LRL_RecordReader *QIO_read_record_type(QIO_Reader *in, LIME_type *lime_type,
 
 LRL_RecordReader *QIO_open_read_target_record(QIO_Reader *in, 
     LIME_type *lime_type_list, int ntypes, LIME_type *lime_type,
-    off_t *expected_rec_size, int *status){
+    uint64_t *expected_rec_size, int *status){
   LRL_RecordReader *lrl_record_in;
   int lrl_status;
   char myname[] = "QIO_read_target_record_type";
@@ -558,9 +558,8 @@ LRL_RecordReader *QIO_open_read_target_record(QIO_Reader *in,
 
 int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type *lime_type){
   char *buf;
-  off_t buf_size;
   LRL_RecordReader *lrl_record_in;
-  off_t actual_rec_size,expected_rec_size;
+  uint64_t expected_rec_size;
   int status;
   char myname[] = "QIO_read_string";
 
@@ -582,10 +581,10 @@ int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type *lime_type){
 /* Read string data from a previously opened record */
 
 int QIO_read_string_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in, 
-			 QIO_String *xml,  off_t expected_rec_size){
+			 QIO_String *xml,  uint64_t expected_rec_size){
   char *buf;
-  off_t buf_size;
-  off_t actual_rec_size;
+  size_t buf_size;
+  uint64_t actual_rec_size;
   char myname[] = "QIO_read_string_data";
 
   buf_size = QIO_string_length(xml);   /* The size allocated for the string */
@@ -593,18 +592,18 @@ int QIO_read_string_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
 
   /* Realloc if necessary */
   if(expected_rec_size+1 > buf_size){
-    QIO_string_realloc(xml,expected_rec_size+1);  /* +1 for null termination */
+    QIO_string_realloc(xml,(size_t)expected_rec_size+1);  /* +1 for null termination */
   }
-
-  buf_size = QIO_string_length(xml);   /* Get this again */
+  /* Get this again: Guard against truncation in (size_t) conversion */
+  buf_size = QIO_string_length(xml);
   buf      = QIO_string_ptr(xml);
 
-  actual_rec_size = LRL_read_bytes(lrl_record_in, buf, expected_rec_size);
+  actual_rec_size = LRL_read_bytes(lrl_record_in, buf, buf_size-1);
   LRL_close_read_record(lrl_record_in);
 
   if(actual_rec_size != expected_rec_size){
-    printf("%s(%d): bytes read %lu != expected rec_size %lu\n",
-	   myname, in->layout->this_node, (unsigned long)actual_rec_size, 
+    printf("%s(%d): bytes read %llu != expected rec_size %lu\n",
+	   myname, in->layout->this_node, (unsigned long long)actual_rec_size, 
 	   (unsigned long)expected_rec_size);
     return QIO_ERR_BAD_READ_BYTES;
   }
@@ -659,7 +658,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
   LRL_RecordReader *lrl_record_in = NULL;
   DML_RecordReader *dml_record_in;
   DML_SiteList *sites = in->sites;
-  off_t announced_rec_size, expected_rec_size;
+  uint64_t announced_rec_size, expected_rec_size;
   int this_node = in->layout->this_node;
   int do_open, do_read;
   int lrl_status;
@@ -746,12 +745,12 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
       /* Field data */
       if(in->serpar == QIO_SERIAL)
 	/* Serial input. Record size equals the size we actually write */
-	expected_rec_size = ((off_t)sites->number_of_io_sites) * datum_size; 
+	expected_rec_size = ((uint64_t)sites->number_of_io_sites) * datum_size; 
       else
 	/* Parallel input.  Record size equals the total volume
 	   NOTE: If we later decide to read partitions in parallel,
 	   this has to be changed to the size for the partition. */
-	expected_rec_size = ((off_t)in->layout->volume) * datum_size;
+	expected_rec_size = ((uint64_t)in->layout->volume) * datum_size;
     }    
     if (announced_rec_size != expected_rec_size){
       printf("%s(%d): rec_size mismatch: found %llu expected %llu\n",
@@ -804,7 +803,7 @@ int QIO_init_read_field(QIO_Reader *in, int globaldata, size_t datum_size,
   LRL_RecordReader *lrl_record_in = NULL;
   DML_RecordReader *dml_record_in;
   DML_SiteList *sites = in->sites;
-  off_t announced_rec_size, expected_rec_size;
+  uint64_t announced_rec_size, expected_rec_size;
   int status;
   int this_node = in->layout->this_node;
   char myname[] = "QIO_init_read_field";
@@ -902,7 +901,7 @@ int QIO_read_field_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
  	   DML_Checksum *checksum, uint64_t* nbytes){
 
   DML_SiteList *sites = in->sites;
-  off_t announced_rec_size, expected_rec_size;
+  uint64_t announced_rec_size, expected_rec_size;
   int this_node = in->layout->this_node;
   int status;
   char myname[] = "QIO_read_field_data";
@@ -958,7 +957,7 @@ int QIO_read_field(QIO_Reader *in, int globaldata,
 
   LRL_RecordReader *lrl_record_in = NULL;
   DML_SiteList *sites = in->sites;
-  off_t announced_rec_size, expected_rec_size;
+  uint64_t announced_rec_size, expected_rec_size;
   int this_node = in->layout->this_node;
   int status;
   int do_open;

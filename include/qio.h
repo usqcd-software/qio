@@ -297,12 +297,12 @@ int QIO_write_string(QIO_Writer *out, int msg_begin, int msg_end,
 int QIO_read_string(QIO_Reader *in,
 		    QIO_String *xml, LIME_type *lime_type);
 LRL_RecordReader *QIO_read_record_type(QIO_Reader *in, LIME_type *lime_type,
-				       off_t *expected_rec_size, int *status);
+			       uint64_t *expected_rec_size, int *status);
 LRL_RecordReader *QIO_open_read_target_record(QIO_Reader *in, 
     LIME_type *lime_type_list, int ntypes, LIME_type *lime_type,
-    off_t *expected_rec_size, int *status);
+    uint64_t *expected_rec_size, int *status);
 int QIO_read_string_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in, 
-			 QIO_String *xml,  off_t expected_rec_size);
+			 QIO_String *xml,  uint64_t expected_rec_size);
 int QIO_skip_data(LRL_RecordReader *lrl_record_in);
 
 DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt, int serpar);

@@ -109,7 +109,7 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
  * \return null if failure and set status to error flag
  */
 LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
-				       off_t *rec_size, 
+				       uint64_t *rec_size, 
 				       LIME_type *lime_type, int *status)
 {
   LRL_RecordReader *rr;
@@ -162,7 +162,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
  * \return null if failure and set status to error flag
  */
 LRL_RecordReader *LRL_open_read_target_record(LRL_FileReader *fr,
-	      LIME_type *lime_type_list, int ntypes, off_t *rec_size, 
+	      LIME_type *lime_type_list, int ntypes, uint64_t *rec_size, 
 	      LIME_type *lime_type_found, int *status)
 {
   LRL_RecordReader *rr;
@@ -230,7 +230,7 @@ LRL_RecordWriter *LRL_create_record_writer(LRL_FileWriter *fw)
  */
 int LRL_write_record_header(LRL_RecordWriter *rw, 
 			    int msg_begin, int msg_end, 
-			    off_t rec_size, 
+			    uint64_t rec_size, 
 			    LIME_type lime_type)
 {
   LimeRecordHeader *h;
@@ -263,7 +263,7 @@ int LRL_write_record_header(LRL_RecordWriter *rw,
  */
 LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fw, 
 					int msg_begin, int msg_end, 
-					off_t rec_size, 
+					uint64_t rec_size, 
 					LIME_type lime_type)
 {
   LRL_RecordWriter *rw;
@@ -405,11 +405,11 @@ int LRL_set_writer_state(LRL_RecordWriter *rw, void *state_ptr){
  *
  * \return number of bytes read
  */
-off_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, 
-		      off_t nbytes)
+uint64_t LRL_read_bytes(LRL_RecordReader *rr, char *buf, 
+		      uint64_t nbytes)
 {
   int status;
-  off_t nbyt = nbytes;
+  uint64_t nbyt = nbytes;
   char myname[] = "LRL_read_bytes";
 
   if (rr == NULL)
@@ -435,11 +435,11 @@ off_t LRL_read_bytes(LRL_RecordReader *rr, char *buf,
  *
  * \return number of bytes written
  */
-off_t LRL_write_bytes(LRL_RecordWriter *rw, char *buf, 
-		       off_t nbytes)
+uint64_t LRL_write_bytes(LRL_RecordWriter *rw, char *buf, 
+		       uint64_t nbytes)
 {
   int status;
-  off_t nbyt = nbytes;
+  uint64_t nbyt = nbytes;
 
   if (rw == NULL)
     return 0;
