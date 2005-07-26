@@ -38,7 +38,7 @@ GENERATE_BUGLIST       = YES
 ALIASES                = 
 ENABLED_SECTIONS       = 
 MAX_INITIALIZER_LINES  = 30
-OPTIMIZE_OUTPUT_FOR_C  = NO
+OPTIMIZE_OUTPUT_FOR_C  = yes
 SHOW_USED_FILES        = YES
 #---------------------------------------------------------------------------
 # configuration options related to warning and progress messages
