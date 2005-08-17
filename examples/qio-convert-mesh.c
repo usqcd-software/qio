@@ -79,6 +79,7 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   int *latsize;
   QIO_Reader *qio_in;
   char *filename;
+  char *newfilename;
   char *stringLFN;
   QIO_String *ildgLFN;
 
@@ -107,10 +108,23 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   mpp_layout = create_mpp_layout(numnodes, NULL, 0);
   if(!mpp_layout)return 1;
 
-  /* Get lattice dimensions from file */
-  qio_in = QIO_open_read_master(filename, mpp_layout, 0, fs->my_io_node,
-                       fs->master_io_node);
-  if(!qio_in)return 1;
+  if(part_to_single == 0){
+    /* If we are converting single to partfile the input master file is
+       the current single file */
+    qio_in = QIO_open_read_master(filename, mpp_layout, 0, fs->my_io_node,
+				  fs->master_io_node);
+  }
+  else{
+    /* Otherwise the input master file is a partfile */
+    /* Set input path for file according to MULTI/SINGLE PATH flag */
+    newfilename = QIO_set_filepath(fs,filename,fs->master_io_node());
+    
+    /* Get lattice dimensions from file */
+    qio_in = QIO_open_read_master(newfilename, mpp_layout, 0, fs->my_io_node,
+				  fs->master_io_node);
+    free(newfilename);
+    if(!qio_in)return 1;
+  }
 
   latdim = QIO_get_reader_latdim(qio_in);
   latsize = QIO_get_reader_latsize(qio_in);

@@ -26,6 +26,7 @@ bin_PROGRAMS =
 # Only scalar arch
 if ARCH_SCALAR
 bin_PROGRAMS += qio-convert-mesh-singlefs
+bin_PROGRAMS += qio-convert-mesh-pfs
 check_PROGRAMS += 
 endif
 
@@ -49,6 +50,7 @@ qio_test8_SOURCES = qio-test8.c ${ADD_MPP_SOURCE}
 qio_host_test1_SOURCES = qio-host-test1.c ${ADD_HOST_SOURCE}
 qio_host_test2_SOURCES = qio-host-test2.c ${ADD_HOST_SOURCE}
 qio_convert_mesh_singlefs_SOURCES = qio-convert-mesh-singlefs.c ${ADD_MESH_SOURCE}
+qio_convert_mesh_pfs_SOURCES = qio-convert-mesh-pfs.c ${ADD_MESH_SOURCE}
 
 DEPENDENCIES = ../lib/libqio.a ../other_libs/c-lime/lib/liblime.a
 ${check_PROGRAMS}: ${DEPENDENCIES}
