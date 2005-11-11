@@ -739,6 +739,7 @@ int QIO_decode_ILDG_format_info(QIO_ILDGFormatInfo *ildg_info,
     parse_pt = QIO_get_tag_value(parse_pt, tag, value_string);
     
     QIO_decode_as_string(tag,value_string,&ildg_info->version);
+    QIO_decode_as_string(tag,value_string,&ildg_info->field);
     QIO_decode_as_int   (tag,value_string,&ildg_info->precision);
     QIO_decode_as_int   (tag,value_string,&ildg_info->lx);
     QIO_decode_as_int   (tag,value_string,&ildg_info->ly);
@@ -749,6 +750,7 @@ int QIO_decode_ILDG_format_info(QIO_ILDGFormatInfo *ildg_info,
   /* Check for completeness */
   
   errors += QIO_check_string_occur(&ildg_info->version);
+  errors += QIO_check_string_occur(&ildg_info->field);
   errors += QIO_check_int_occur   (&ildg_info->precision);
   errors += QIO_check_int_occur   (&ildg_info->lx);
   errors += QIO_check_int_occur   (&ildg_info->ly);
@@ -772,6 +774,7 @@ void QIO_encode_ILDG_format_info(QIO_String *ildg_string,
   /* Build inner tag string by appending tags */
   *buf = '\0';
   buf = QIO_encode_as_string(buf,&ildg_info->version, &remainder);
+  buf = QIO_encode_as_string(buf,&ildg_info->field, &remainder);
   buf = QIO_encode_as_int   (buf,&ildg_info->precision, &remainder);
   buf = QIO_encode_as_int   (buf,&ildg_info->lx, &remainder);
   buf = QIO_encode_as_int   (buf,&ildg_info->ly, &remainder);
@@ -1388,7 +1391,7 @@ QIO_ILDGFormatInfo *QIO_create_ildg_format_info(int precision, int *dims){
 
   *ildg_info = templ;
   QIO_insert_ildgformat_version(ildg_info,QIO_ILDGFORMATVERSION);
-  QIO_insert_ildgformat_field(ildg_info,"su3_gauge");
+  QIO_insert_ildgformat_field(ildg_info,"su3gauge");
   if(precision != 0)
     QIO_insert_ildgformat_precision(ildg_info,precision);
   if(dims != NULL){

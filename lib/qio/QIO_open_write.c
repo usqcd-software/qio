@@ -100,7 +100,16 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
     mode = oflag->mode;
     qio_out->serpar = oflag->serpar;
     qio_out->ildgstyle = oflag->ildgstyle;
-    qio_out->ildgLFN = oflag->ildgLFN;
+    /* This should be a deep rather than pointer copy I think */
+    /* qio_out->ildgLFN = oflag->ildgLFN; */
+    if( oflag->ildgLFN != NULL ) { 
+      qio_out->ildgLFN=QIO_string_create();
+      QIO_string_copy(qio_out->ildgLFN, oflag->ildgLFN);
+    }
+    else { 
+      qio_out->ildgLFN = NULL ; /* NO user supplied LFN */
+    }
+
   }
   serpar = qio_out->serpar;
 
