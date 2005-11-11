@@ -229,7 +229,7 @@ typedef struct {
   QIO_TagCharValue     ildgformatinfo_tags;
 } QIO_ILDGFormatInfoWrapper;
 
-#define QIO_ILDGFORMATSCHEMA "xmlns=\"http://www.lqcd.org/ildg\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.lqcd.org/ildg filefmt.xsd\""
+#define QIO_ILDGFORMATSCHEMA "xmlns=\"http://www.lqcd.org/ildg\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.lqcd.org/ildg/filefmt.xsd\""
 
 #define QIO_ILDG_FORMAT_INFO_WRAPPER {\
   {"ildgFormat", QIO_ILDGFORMATSCHEMA, "" , 0}       \
