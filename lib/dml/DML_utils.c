@@ -164,6 +164,7 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
     }
 #endif
 
+
   sites->number_of_io_sites = number_of_io_sites;
   sites->number_of_my_ionodes = number_of_my_ionodes;
   free(coords);

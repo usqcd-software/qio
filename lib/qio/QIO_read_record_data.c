@@ -21,12 +21,13 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   	     DML_Checksum *checksum, uint64_t *nbytes)
 {
   char myname[] = "QIO_generic_read_record_data";
-  int count = QIO_get_datacount(&(in->record_info));
+  int count;
   LRL_RecordReader *lrl_record_in;
   size_t datum_size_info;
-  int this_node = in->layout->this_node;
+  int this_node; 
   int status;
-  int globaldata = QIO_get_globaldata(&(in->record_info));
+  int globaldata; 
+
   /* List of acceptable binary data LIME types */
   int ntypes = 2;
   LIME_type lime_type_list[2] = {
@@ -34,6 +35,11 @@ int QIO_generic_read_record_data(QIO_Reader *in,
     QIO_LIMETYPE_ILDG_BINARY_DATA
   };
   LIME_type lime_type;
+
+
+  count = QIO_get_datacount(&(in->record_info));
+  globaldata = QIO_get_globaldata(&(in->record_info));
+  this_node = in->layout->this_node;
 
   /* It is an error to call for the data before the reading the info
      in a given record */
@@ -47,9 +53,11 @@ int QIO_generic_read_record_data(QIO_Reader *in,
      (per site for field data or total for global data) */
   if(datum_size != 
      QIO_get_typesize(&(in->record_info)) * count){
+    
     printf("%s(%d): requested byte count %lu disagrees with the record %d * %d\n",
 	   myname,this_node,(unsigned long)datum_size,
 	   QIO_get_typesize(&(in->record_info)), count);
+
     if(this_node == in->layout->master_io_node){
       printf("%s(%d): Record header says \n                         datatype %s globaltype %d \n                         precision %s colors %d spins %d count %d\n",
 	     myname,this_node,
@@ -62,6 +70,7 @@ int QIO_generic_read_record_data(QIO_Reader *in,
     }
     return QIO_ERR_BAD_READ_BYTES;
   }
+
 
 #ifdef DO_BINX
   /* Master node reads the BinX record. This may be dropped. */
@@ -81,6 +90,7 @@ int QIO_generic_read_record_data(QIO_Reader *in,
 
   /* Verify byte count per site (for field) or total (for global) */
   datum_size_info = QIO_get_typesize(&(in->record_info)) * count;
+
   if(datum_size != datum_size_info){
     printf("%s(%d): byte count mismatch request %lu != actual %lu\n",
 	   myname, this_node, (unsigned long)datum_size, 
