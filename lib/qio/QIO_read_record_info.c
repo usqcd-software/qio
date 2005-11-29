@@ -31,6 +31,11 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
   if(in->read_state == QIO_RECORD_INFO_PRIVATE_NEXT){
 
     /* Allocate space for internal copy of user record XML */
+    /* This may already be in use, if so free it */
+    if( in->xml_record != NULL ) { 
+      QIO_string_destroy(in->xml_record);
+    }
+
     in->xml_record = QIO_string_create();
     
     /* Master node reads and interprets the private record XML record */

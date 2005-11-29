@@ -288,6 +288,7 @@ int QIO_write_checksum(QIO_Writer *out, DML_Checksum *checksum)
     }
 
     QIO_string_destroy(xml_checksum);
+    QIO_destroy_checksum_info(checksum_info);
   }
   return QIO_SUCCESS;
 }

@@ -610,6 +610,7 @@ int LRL_close_write_record(LRL_RecordWriter *rw)
  */
 int LRL_close_read_file(LRL_FileReader *fr)
 {
+
   if (fr == NULL)
     return LRL_SUCCESS;
 
