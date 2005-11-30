@@ -220,7 +220,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 int QIO_read_record_data(QIO_Reader *in, 
 		 void (*put)(char *buf, size_t index, int count, void *arg),
 		 size_t datum_size, int word_size, void *arg);
-int QIO_next_field(QIO_Reader *in);
+int QIO_next_record(QIO_Reader *in);
 
 LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out, 
     int msg_begin, int msg_end, int globaldata,

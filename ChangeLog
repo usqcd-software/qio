@@ -1,3 +1,9 @@
+
+2005-11-30: Changed QIO_next_field to QIO_next_record in qio.h.
+            Fixed documentation to show num_sites function in layout
+	    returning int.
+
+=============================================================================
 Changes for qio-2.1.1
 
 	Large file support is invoked with --enable-largefiles
