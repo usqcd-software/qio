@@ -423,6 +423,16 @@ int QIO_decode_record_info(QIO_RecordInfo *record_info,
     QIO_decode_as_int   (tag,value_string,&record_info->datacount);
   }
 
+  /* Backward compatibility */
+
+  /* If  the globaldata tag is missing, insert a default value */
+
+  if(QIO_check_int_occur(&record_info->globaldata) != 0){
+    record_info->globaldata.occur = 1;
+    /* Default is "field" record type */
+    record_info->globaldata.value = QIO_FIELD;
+  }
+
   /* Check for completeness */
   
   errors += QIO_check_string_occur(&record_info->version);
