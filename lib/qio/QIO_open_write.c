@@ -301,7 +301,10 @@ QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename,
 				   DML_io_node, DML_master_io_node);
 
   /* Prevent premature file truncation in parallel writes */
-  DML_sync();
+  /* Note, the test will cause a hang if the oflag->serpar value is
+     not the same for all nodes */
+  if(qio_out->serpar == QIO_PARALLEL)
+    DML_sync();
 
   status = QIO_write_file_header(qio_out, xml_file);
   if(status != QIO_SUCCESS)return NULL;
