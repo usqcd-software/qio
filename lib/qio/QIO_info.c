@@ -428,6 +428,7 @@ int QIO_decode_record_info(QIO_RecordInfo *record_info,
   /* If  the globaldata tag is missing, insert a default value */
 
   if(QIO_check_int_occur(&record_info->globaldata) != 0){
+    printf("QIO_decode_record_info: Using default value for missing tag\n");
     record_info->globaldata.occur = 1;
     /* Default is "field" record type */
     record_info->globaldata.value = QIO_FIELD;
