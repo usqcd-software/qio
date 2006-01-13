@@ -110,7 +110,7 @@ int QIO_read_user_record_info(QIO_Reader *in, QIO_String *xml_record){
       }
     }
     else{
-      QIO_string_set(in->xml_record,"Non SciDAC record");
+      QIO_string_set(in->xml_record,QIO_NONSCIDAC_RECORD);
     }
     
     if(QIO_verbosity() >= QIO_VERB_DEBUG && 
@@ -210,6 +210,10 @@ int QIO_read_ILDG_LFN(QIO_Reader *in){
       
       /* Restore reader position */
       status = QIO_set_reader_pointer(in,offset);
+    }
+    else { 
+      if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	printf("Currently not grokking ILDG LFN from non SciDAC produced files\n",myname,this_node);     
     }
     
     /* Set state in case record is being reread */

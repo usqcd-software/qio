@@ -699,7 +699,7 @@ int QIO_read_user_file_xml(QIO_String *xml_file, QIO_Reader *qio_in){
       }
     }
     else{
-      QIO_string_set(xml_file,"Non SciDAC file");
+      QIO_string_set(xml_file,QIO_NONSCIDAC_FILE);
     }
     
     if(QIO_verbosity() >= QIO_VERB_DEBUG){
