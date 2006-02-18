@@ -115,11 +115,14 @@ DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt, int serpar){
   }
 
   /* Populate the sitelist */
-  if(DML_fill_sitelist(sites, volfmt, serpar, layout)){
-    printf("%s(%d): Error building the site list\n", 
-	   myname,layout->this_node);fflush(stdout);
-    DML_free_sitelist(sites);
-    return NULL;
+  /* unless we are reading in discovery mode */
+  if(!layout->discover_dims_mode){
+    if(DML_fill_sitelist(sites, volfmt, serpar, layout)){
+      printf("%s(%d): Error building the site list\n", 
+	     myname,layout->this_node);fflush(stdout);
+      DML_free_sitelist(sites);
+      return NULL;
+    }
   }
 
   return sites;

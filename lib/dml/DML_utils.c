@@ -143,7 +143,10 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   number_of_io_sites = 0;
   for(node = 0; node < number_of_nodes; node++){
     if(layout->ionode(node) == my_io_node){
-      number_of_io_sites += layout->num_sites(node);
+      /* ( If we are discovering the lattice dimensions, we won't know
+	 the number of sites on any node ) */
+      if(layout->latdim != 0)
+	number_of_io_sites += layout->num_sites(node);
       number_of_my_ionodes++;
     }
   }
@@ -383,6 +386,7 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
 
 /*------------------------------------------------------------------*/
 /* Read and check the sitelist for input */
+/* return 0 for success and 1 for failure */
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
 		      LIME_type *lime_type){
@@ -403,10 +407,12 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 
   /* Require that the record size matches expectations */
   check = sites->number_of_io_sites * sizeof(DML_SiteRank);
-  if(announced_rec_size != check){
+  /* Ignore a mismatch if we are trying to discover the lattice dimension */
+  if(!layout->discover_dims_mode && announced_rec_size != check){
     printf("%s(%d): sitelist size mismatch: found %lu expected %lu lime type %s\n",
 	   myname, this_node, (unsigned long)announced_rec_size,
 	   (unsigned long)check, *lime_type);
+    printf("%s(%d): latdim = %d\n",myname, this_node,layout->latdim);
     return 1;
   }
 
@@ -415,7 +421,7 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
   inputlist = (DML_SiteRank *)malloc(announced_rec_size);
   if(inputlist == NULL)return 1;
   
-  /* Read the check list and close the record */
+  /* Read the site list and close the record */
   check = LRL_read_bytes(lrl_record_in, (char *)inputlist, announced_rec_size);
   
   LRL_close_read_record(lrl_record_in);
@@ -438,15 +444,21 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
     DML_byterevn((char *)inputlist, announced_rec_size, sizeof(DML_SiteRank));
   
   /* All input sitelists must agree exactly with what we expect */
-  not_ok = DML_compare_sitelists(sites->list, inputlist, 
-				 sites->number_of_io_sites);
+  /* Unless we are reading in discovery mode */
+  if(!layout->discover_dims_mode){
+    not_ok = DML_compare_sitelists(sites->list, inputlist, 
+				   sites->number_of_io_sites);
+    
+    if(not_ok)
+      printf("%s(%d): sitelist does not conform to I/O layout.\n",
+	     myname,this_node);
 
-  if(not_ok)
-    printf("%s(%d): sitelist does not conform to I/O layout.\n",
-	   myname,this_node);
-
-  /* Return 1 if not OK and 0 if OK */
-  free(inputlist); return not_ok;
+    /* Return 1 if not OK and 0 if OK */
+    free(inputlist); 
+    return not_ok;
+  }
+  else
+    return 0;
 }
 
 

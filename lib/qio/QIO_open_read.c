@@ -49,6 +49,7 @@ QIO_Reader *QIO_create_reader(const char *filename,
   dml_layout->sites_on_node        = layout->sites_on_node;
   dml_layout->this_node            = layout->this_node;
   dml_layout->number_of_nodes      = layout->number_of_nodes;
+  dml_layout->discover_dims_mode   = (layout->latdim == 0);
 			           
   dml_layout->ionode               = io_node;
   dml_layout->master_io_node       = master_io_node();
@@ -445,10 +446,10 @@ QIO_Reader *QIO_open_read_master(const char *filename,
     if(file_info_found == NULL)return NULL;
 
     /* Compare what we found with what we expected */
-    /* If latdim <= 0 we read in discovery mode and accept
-       whatever the file gives us */
+    /* If we read in discovery mode, accept whatever the file gives
+       us */
 
-    if(layout->latdim > 0){
+    if(!qio_in->layout->discover_dims_mode){
       status = QIO_check_file_info(dml_layout, file_info_found);
       if(status != QIO_SUCCESS)return NULL;
     }
@@ -460,7 +461,7 @@ QIO_Reader *QIO_open_read_master(const char *filename,
 
     /* Get lattice dimensions from the file info
        if we are in discovery mode */
-    if(layout->latdim <= 0){
+    if(qio_in->layout->discover_dims_mode){
       status = QIO_set_latdim(qio_in, QIO_get_spacetime(file_info_found),
 			      QIO_get_dims(file_info_found));
       if(status != QIO_SUCCESS)return NULL;
@@ -733,9 +734,10 @@ QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename,
 
   /* Master I/O node broadcasts the volume format to all the nodes, */
   /* inserting the value in the qio_in structure */
-  /* In discovery mode (layout->latdim <= 0) the master also
-     broadcasts the lattice dimensions to all the nodes */
-  status = QIO_broadcast_file_reader_info(qio_in, layout->latdim <= 0);
+  /* In discovery mode the master also broadcasts the lattice
+     dimensions to all the nodes */
+  status = QIO_broadcast_file_reader_info(qio_in, 
+					  qio_in->layout->discover_dims_mode);
 
   /* Read the rest of the header */
   status = QIO_open_read_nonmaster(qio_in, filename, iflag);

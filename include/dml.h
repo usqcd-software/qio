@@ -58,6 +58,7 @@ typedef struct {
   int this_node;
   int number_of_nodes;
   int broadcast_globaldata;
+  int discover_dims_mode;
 
   /* I/O partitions */
   int (*ionode)(int node);
