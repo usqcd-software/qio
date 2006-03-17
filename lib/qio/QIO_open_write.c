@@ -75,6 +75,7 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   dml_layout->sites_on_node      = layout->sites_on_node;
   dml_layout->this_node          = layout->this_node;
   dml_layout->number_of_nodes    = layout->number_of_nodes;
+  dml_layout->discover_dims_mode = 0;
   
   dml_layout->ionode             = io_node;
   dml_layout->master_io_node     = master_io_node();
