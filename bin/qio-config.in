@@ -21,6 +21,8 @@ qio_copts="@CFLAGS@"
 qio_cflags="-I@includedir@"
 qio_ldflags="-L@libdir@"
 qio_libs="-lqio -llime"
+qio_ranlib="@RANLIB@"
+qio_ar="@AR@"
 
 usage()
 {
@@ -36,6 +38,8 @@ Options:
   [--cflags]
   [--ldflags]
   [--libs]
+  [--ranlib]
+  [--ar]
 
 EOF
   exit $1
@@ -100,6 +104,12 @@ while test $# -gt 0; do
       echo_libs=yes
       ;;
 
+    --ranlib)
+      echo ${qio_ranlib}
+      ;;
+    --ar)
+      echo ${qio_ar}
+      ;;
     *)
       usage 1 1>&2
       ;;
