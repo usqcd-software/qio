@@ -1,5 +1,7 @@
 2006-05-17 15:04  tag qdp1-20-4
 
+2006-05-17 15:04  tag qdp1-20-5
+
 2006-05-17 15:04  bjoo
 
 	* bin/qio-config.in: added ranlib and ar flags to the config
