@@ -242,6 +242,7 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
   float diff_field = 0, diff_array = 0;
   QMP_thread_level_t provided;
   int status;
+  int sites_on_node = 0;
   int i,volume;
   char filename[] = "binary_test";
   char myname[] = "qio_test";

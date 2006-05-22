@@ -57,7 +57,7 @@ int vcreate_M(suN_matrix *field[], int count)
   int i;
   /* Create an output field */
   for(i = 0; i < count; i++){
-    field[i] = (suN_matrix *)malloc(sizeof(suN_matrix)*sites_on_node);
+    field[i] = (suN_matrix *)malloc(sizeof(suN_matrix)*num_sites(this_node));
     if(field[i] == NULL){
       printf("vcreate_M(%d): Can't malloc field\n",this_node);
       return 1;
@@ -82,7 +82,7 @@ float vcompare_M (suN_matrix *fielda[], suN_matrix *fieldb[], int count)
   float diff;
   float sum2 = 0;
   
-  for(k = 0; k < count; k++)for(m = 0; m < sites_on_node; m++)
+  for(k = 0; k < count; k++)for(m = 0; m < num_sites(this_node); m++)
     {
       for ( j=0; j< NCLR; j++)
 	for ( i=0; i< NCLR; i++)
@@ -222,7 +222,7 @@ int vcreate_R(float *field[], int count){
   int i;
   /* Create an output field */
   for(i = 0; i < count; i++){
-    field[i] = (float *)malloc(sizeof(float)*sites_on_node);
+    field[i] = (float *)malloc(sizeof(float)*num_sites(this_node));
     if(field[i] == NULL){
       printf("vcreate_R(%d): Can't malloc field\n",this_node);
       return 1;
@@ -246,7 +246,7 @@ float vcompare_R(float *fielda[], float *fieldb[], int count){
   float sum2 = 0;
 
   for(i = 0; i < count; i++)
-    for(j = 0; j < sites_on_node; j++){
+    for(j = 0; j < num_sites(this_node); j++){
       diff = fielda[i][j] - fieldb[i][j];
       sum2 += diff*diff;
     }

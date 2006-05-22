@@ -8,6 +8,7 @@
 
 QIO_Layout *create_mpp_layout(int numnodes, int *latsize, int latdim){
   int i;
+  int sites_on_node = 0;
   size_t volume;
   QIO_Layout *layout;
 
@@ -27,7 +28,7 @@ QIO_Layout *create_mpp_layout(int numnodes, int *latsize, int latdim){
   layout->latsize = latsize;
   layout->latdim = latdim;
   layout->volume = volume;
-  layout->sites_on_node = sites_on_node;
+  layout->sites_on_node = num_sites(this_node);
   layout->this_node = 0;      /* Reset */
   layout->number_of_nodes = numnodes;
   return layout;
@@ -75,7 +76,6 @@ int qio_host_test(QIO_Filesystem *fs, int argc, char *argv[])
   filename = argv[n++];
 
   /* Start from a dummy layout */
-  sites_on_node = 0;
   mpp_layout = create_mpp_layout(numnodes, NULL, 0);
   if(!mpp_layout)return 1;
 

@@ -20,7 +20,6 @@ int node_number(const int x[]);
 int node_index(const int x[]);
 void get_coords(int x[], int node, int index);
 int num_sites(int node);
-EXTERN int sites_on_node;
 EXTERN int this_node;
 
 #define NCLR 3
