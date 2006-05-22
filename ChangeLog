@@ -1,3 +1,20 @@
+2006-05-22 11:52  edwards
+
+	* NEWS: Info on 2.1.6
+
+2006-05-22 11:50  edwards
+
+	* aclocal.m4, configure: Induced changes.
+
+2006-05-22 11:49  edwards
+
+	* configure.ac: Changed to 2.1.6.
+
+2006-05-22 11:49  edwards
+
+	* examples/layout_hyper.c: Fix - commented out redecl of
+	  sites_on_node.
+
 2006-05-17 15:04  tag qdp1-20-4
 
 2006-05-17 15:04  tag qdp1-20-5
