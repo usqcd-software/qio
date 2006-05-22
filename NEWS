@@ -1,3 +1,7 @@
+05/21/2006 -- Robert Edwards
+
+	Version 2.1.6. Tiny compilation fix in examples/layout_hyper.c 
+
 03/24/2006 -- Robert Edwards
 
 	Version 2.1.5. Tagged Carleton's fix in QIO_open_write.c (grrhh).
