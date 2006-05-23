@@ -50,7 +50,7 @@ static int *nsquares;     /* number of hypercubes in each direction */
 static int ndim;
 static int *size1[2], *size2;
 static int prime[] = {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53};
-/* static int sites_on_node; */
+static int sites_on_node;
 static int *mcoord;
 
 #define MAXPRIMES (sizeof(prime)/sizeof(int))
