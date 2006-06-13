@@ -116,7 +116,7 @@ void DML_global_xor(uint32_t *x){
 void DML_sync(void){
 
   int my_int=5;
-  //  QMP_barrier();
+  /*  QMP_barrier(); */
   QMP_sum_int(&my_int);
 
 }
