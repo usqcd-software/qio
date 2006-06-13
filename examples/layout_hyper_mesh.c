@@ -73,7 +73,7 @@ setup_layout(
     size1[1][i] = size2[i-1]*(squaresize[i-1]/2)
                 + size1[1][i-1]*(squaresize[i-1]%2);
     size2[i] = size1[0][i] + size1[1][i];
-    //printf("%i\t%i\t%i\n", size1[0][i], size1[1][i], size2[i]);
+    /* printf("%i\t%i\t%i\n", size1[0][i], size1[1][i], size2[i]); */
   }
   return 0;
 }
@@ -81,8 +81,15 @@ setup_layout(
 int
 node_number(const int x[])
 {
-  int i, m[ndim];
+  int i; 
+  int *m;
   int rank;
+
+  m = (int *)malloc(sizeof(int)*ndim);
+  if( m==(int *)NULL ) {
+    printf("Error allocating m in node_number\n");
+    exit(1);
+  }  
 
   /* Get mesh node or "logical" coordinates */
   for(i=0; i<ndim; i++) {
@@ -94,6 +101,7 @@ node_number(const int x[])
   for (i = ndim - 1; i >=0; i--)
     rank = rank * nsquares[i] + m[i];
 
+  free(m);
   return rank;
 }
 
@@ -133,12 +141,12 @@ get_coords(int x[], int node, int index)
   }
 
   s = 0;
-  //p = node;
+  /* p = node; */
   for(i=0; i<ndim; ++i) {
-    //x[i] = (p%nsquares[i])*squaresize[i];
+    /* x[i] = (p%nsquares[i])*squaresize[i]; */
     x[i] = m[i] * squaresize[i];
     s += x[i];
-    //p /= nsquares[i];
+    /* p /= nsquares[i]; */
   }
   s &= 1;
 
