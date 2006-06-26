@@ -2,6 +2,8 @@
 
 2006-06-13 13:52  tag qdp1-20-8-pre1
 
+2006-06-13 13:52  tag qdp1-20-8-pre2
+
 2006-06-13 13:52  bjoo
 
 	* lib/dml/DML_parscalar.c: Replaced Cplusplus style comment
