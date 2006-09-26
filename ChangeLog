@@ -12,6 +12,8 @@
 
 2006-06-13 13:52  tag qdp1-21-1
 
+2006-06-13 13:52  tag qdp1-21-2
+
 2006-06-13 13:52  bjoo
 
 	* lib/dml/DML_parscalar.c: Replaced Cplusplus style comment
