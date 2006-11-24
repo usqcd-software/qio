@@ -385,7 +385,7 @@ static QIO_Writer *QIO_open_write_partfile(int io_node_rank, QIO_Oflag *oflag,
   /* Set output path according to MULTI/SINGLE PATH flag */
   newfilename = QIO_set_filepath(fs,filename,io_node_rank);
   
-  /* Open to write with truncation if the file exists */
+  /* Open to write by appending or with truncation if the file exists */
   outfile = QIO_generic_open_write(newfilename,volfmt,
 				   ionode_layout,oflag,
 				   fs->my_io_node,fs->master_io_node);

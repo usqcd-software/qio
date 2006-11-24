@@ -131,7 +131,7 @@ int QIO_read_user_record_info(QIO_Reader *in, QIO_String *xml_record){
 }
 
     
-/* Look for and reads the ILDG format record and the ILDG
+/* Look for and read the ILDG format record and the ILDG
    logical file name record, if present.  The result is placed in
    the string member of the reader. */
 
@@ -212,8 +212,9 @@ int QIO_read_ILDG_LFN(QIO_Reader *in){
       status = QIO_set_reader_pointer(in,offset);
     }
     else { 
-      if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	printf("Currently not grokking ILDG LFN from non SciDAC produced files\n",myname,this_node);     
+      if(this_node == in->layout->master_io_node && 
+	 QIO_verbosity() >= QIO_VERB_DEBUG)
+	printf("%s(%d): Currently not grokking ILDG LFN from non SciDAC produced files\n",myname,this_node);     
     }
     
     /* Set state in case record is being reread */

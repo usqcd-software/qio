@@ -109,7 +109,7 @@ QIO_Reader *QIO_create_reader(const char *filename,
 	if(lrl_file_in != NULL)qio_in->volfmt = QIO_SINGLEFILE;
 	else if(qio_in->volfmt == QIO_UNKNOWN || 
 		qio_in->volfmt == QIO_SINGLEFILE){
-	  printf("%s(%d): Can't open %s in singlefile format.  Will try partfile or multifle.\n",
+	  printf("%s(%d): Can't open %s in singlefile format.\n Trying partfile or multifile.\n",
 		 myname,this_node,filename);
 	}
       }

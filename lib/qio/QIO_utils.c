@@ -365,6 +365,8 @@ int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 
 /* Random access write.
 
+   Currently used only in file format conversion.
+
    Write a single site's data to a location in the binary payload
    specified by a site rank parameter.  The record must first be
    initialized with QIO_init_write_field and closed with
