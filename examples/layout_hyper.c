@@ -123,7 +123,7 @@ void setup_hyper_prime(int len[], int nd, int numnodes)
   }
 }
 
-void setup_layout(int len[], int nd, int numnodes){
+int setup_layout(int len[], int nd, int numnodes){
   int i;
 
   ndim = nd;
@@ -138,7 +138,8 @@ void setup_layout(int len[], int nd, int numnodes){
 
   /* setup QMP logical topology */
   if(!QMP_logical_topology_is_declared()) {
-    QMP_declare_logical_topology(nsquares, ndim);
+    if(QMP_declare_logical_topology(nsquares, ndim)!=0)
+      return 1;
   }
 
   sites_on_node = 1;
@@ -161,6 +162,7 @@ void setup_layout(int len[], int nd, int numnodes){
     size2[i] = size1[0][i] + size1[1][i];
     //printf("%i\t%i\t%i\n", size1[0][i], size1[1][i], size2[i]);
   }
+  return 0;
 }
 
 int node_number(const int x[])
@@ -194,6 +196,7 @@ void get_coords(int x[], int node, int index)
 {
   int i, s, si;
   int *m;
+
   si = index;
 
   m = QMP_get_logical_coordinates_from(node);

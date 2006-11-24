@@ -266,7 +266,8 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
   }
 
   /* Set the mapping of coordinates to nodes */
-  setup_layout(lattice_size, 4, QMP_get_number_of_nodes());
+  if(setup_layout(lattice_size, 4, QMP_get_number_of_nodes())!=0)
+    return 1;
   printf("%s(%d) layout set for %d nodes\n",myname,this_node,
 	 QMP_get_number_of_nodes());
   sites_on_node = num_sites(this_node);

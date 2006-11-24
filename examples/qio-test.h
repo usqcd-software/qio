@@ -15,7 +15,7 @@ EXTERN int lattice_dim;
 EXTERN int lattice_size[4];
 
 /* layout_hyper */
-void setup_layout(int len[], int nd, int numnodes);
+int setup_layout(int len[], int nd, int numnodes);
 int node_number(const int x[]);
 int node_index(const int x[]);
 void get_coords(int x[], int node, int index);
