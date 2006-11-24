@@ -1,3 +1,8 @@
+2006-11-24 13:10  detar
+
+	* lib/qio/: QIO_open_read.c, QIO_read_record_info.c, QIO_utils.c,
+	  QIO_host_file_conversion.c: Trivia
+
 2006-06-13 13:52  tag qdp1-20-7
 
 2006-06-13 13:52  tag qdp1-20-8
