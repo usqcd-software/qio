@@ -29,6 +29,11 @@
 #define DML_BUF_BYTES  QIO_DML_BUF_BYTES
 #endif
 
+/* Size of message buffers (bytes).  Doesn't usually need to be bigger
+   than the x dimension of the local subvolume times the size of the
+   data per site */
+#define DML_TBUF_BYTES 65536
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -156,17 +161,15 @@ int DML_big_endian(void);
 void DML_byterevn(char *buf, size_t size, int word_size);
 size_t DML_max_buf_sites(size_t size, int factor);
 char *DML_allocate_buf(size_t size, size_t max_buf_sites);
-size_t DML_seek_write_buf(LRL_RecordWriter *lrl_record_out, 
-			  DML_SiteRank seeksite, size_t size,
-			  char *lbuf, size_t buf_sites, size_t max_buf_sites, 
-			  size_t isite, size_t max_dest_sites, 
+int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out, 
+		       DML_SiteRank seeksite, 
+		       char *lbuf, size_t buf_sites, size_t size,
+		       uint64_t *nbytes, char *myname, 
+		       int this_node);
+int DML_write_buf_current(LRL_RecordWriter *lrl_record_out, 
+			  char *lbuf, size_t buf_sites, size_t size,
 			  uint64_t *nbytes, char *myname, 
-			  int this_node, int *err);
-size_t DML_write_buf_next(LRL_RecordWriter *lrl_record_out, size_t size,
-			  char *lbuf, size_t buf_sites, size_t max_buf_sites, 
-			  size_t isite, size_t max_dest_sites, 
-			  uint64_t *nbytes, char *myname, 
-			  int this_node, int *err);
+			  int this_node);
 size_t DML_seek_read_buf(LRL_RecordReader *lrl_record_in, 
 			 DML_SiteRank seeksite, size_t size,
 			 char *lbuf, size_t *buf_extract, size_t buf_sites, 
