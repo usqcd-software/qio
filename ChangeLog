@@ -1,3 +1,5 @@
+2007-02-06 10:01  tag qdp1-21-7
+
 2007-02-06 10:01  bjoo
 
 	* include/qio_config_internal.h.in: Added more spin ops and hooks.
