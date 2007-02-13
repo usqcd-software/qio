@@ -177,9 +177,9 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
     printf("%s(%d): sitelist structure created \n",
 	   myname,this_node);
     printf("%s(%d): I/O for %lu sites \n",
-	   myname,this_node,qio_out->sites->number_of_io_sites);
+	   myname,this_node,(unsigned long)qio_out->sites->number_of_io_sites);
   }
-  
+
   return qio_out;
 }
 

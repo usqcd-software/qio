@@ -1,3 +1,8 @@
+02/12/2007 -- James Osborn
+
+        Version 2.1.8 Eliminated compiler warnings and now save configure
+                      options in qio-config.
+
 11/24/2006 -- Carleton DeTar
 
         Version 2.1.7 Introduced buffered message passing for serial writes.

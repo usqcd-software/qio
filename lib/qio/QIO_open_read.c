@@ -7,6 +7,7 @@
 #include <qio_string.h>
 #include <qioxml.h>
 #include <stdio.h>
+#include <string.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif

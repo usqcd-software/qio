@@ -15,6 +15,7 @@ exec_prefix_set=no
 
 version="@VERSION@"
 
+qio_configure_options="@QIO_CONFIGURE_OPTIONS@"
 qio_parallel_arch="@PARALLEL_ARCH@"
 qio_cc="@CC@"
 qio_copts="@CFLAGS@"

@@ -205,7 +205,6 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
   uint64_t planned_rec_size;
   int this_node = out->layout->this_node;
   size_t number_of_io_sites = out->sites->number_of_io_sites;
-  int dml_status;
   char myname[] = "QIO_open_write_field";
 
   /* Compute record size */
@@ -328,7 +327,6 @@ int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   LRL_RecordWriter *lrl_record_out;
   DML_RecordWriter *dml_record_out;
   int this_node = out->layout->this_node;
-  size_t number_of_io_sites = out->sites->number_of_io_sites;
   int do_output;
   int status;
   char myname[] = "QIO_init_write_field";
@@ -426,10 +424,7 @@ int QIO_write_field_data(QIO_Writer *out, LRL_RecordWriter *lrl_record_out,
 	    int count, size_t datum_size, int word_size, void *arg, 
 	    DML_Checksum *checksum, uint64_t *nbytes)
 {
-  size_t number_of_io_sites = out->sites->number_of_io_sites;
   int this_node = out->layout->this_node;
-  int status;
-  int serpar = out->serpar;
   char myname[] = "QIO_write_field_data";
 
   /* Initialize byte count and checksum */
@@ -473,12 +468,8 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 	    const LIME_type lime_type){
   
   LRL_RecordWriter *lrl_record_out = NULL;
-  size_t number_of_io_sites = out->sites->number_of_io_sites;
-  int this_node = out->layout->this_node;
   int do_output;
   int status;
-  int serpar = out->serpar;
-  char myname[] = "QIO_write_field";
 
   lrl_record_out = QIO_open_write_field(out, msg_begin, msg_end, 
 		       globaldata, datum_size, lime_type, &do_output, &status);
@@ -507,7 +498,6 @@ LRL_RecordReader *QIO_read_record_type(QIO_Reader *in, LIME_type *lime_type,
 			       uint64_t *expected_rec_size, int *status){
   LRL_RecordReader *lrl_record_in;
   int lrl_status;
-  char myname[] = "QIO_read_record_type";
 
   if(!in->lrl_file_in){
     *status = QIO_SUCCESS;
@@ -536,7 +526,6 @@ LRL_RecordReader *QIO_open_read_target_record(QIO_Reader *in,
     uint64_t *expected_rec_size, int *status){
   LRL_RecordReader *lrl_record_in;
   int lrl_status;
-  char myname[] = "QIO_read_target_record_type";
 
   /* Open record and find record size */
   if(!in->lrl_file_in){
@@ -562,11 +551,9 @@ LRL_RecordReader *QIO_open_read_target_record(QIO_Reader *in,
 /* Read an XML record */
 
 int QIO_read_string(QIO_Reader *in, QIO_String *xml, LIME_type *lime_type){
-  char *buf;
   LRL_RecordReader *lrl_record_in;
   uint64_t expected_rec_size;
   int status;
-  char myname[] = "QIO_read_string";
 
   /* Open record and find record size */
   if(!in->lrl_file_in)return QIO_SUCCESS;
@@ -620,7 +607,6 @@ int QIO_read_string_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
 /* Skip the LIME record data and close the record reader */
 
 int QIO_close_read_record(LRL_RecordReader *lrl_record_in){
-  char myname[] = "QIO_skip_data";
   int status;
 
   status = LRL_close_read_record(lrl_record_in);
@@ -661,7 +647,6 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
                LIME_type *lime_type, int *status)
 {
   LRL_RecordReader *lrl_record_in = NULL;
-  DML_RecordReader *dml_record_in;
   DML_SiteList *sites = in->sites;
   uint64_t announced_rec_size, expected_rec_size;
   int this_node = in->layout->this_node;
@@ -807,8 +792,6 @@ int QIO_init_read_field(QIO_Reader *in, int globaldata, size_t datum_size,
 {
   LRL_RecordReader *lrl_record_in = NULL;
   DML_RecordReader *dml_record_in;
-  DML_SiteList *sites = in->sites;
-  uint64_t announced_rec_size, expected_rec_size;
   int status;
   int this_node = in->layout->this_node;
   char myname[] = "QIO_init_read_field";
@@ -905,10 +888,7 @@ int QIO_read_field_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
 	   int count, size_t datum_size, int word_size, void *arg, 
  	   DML_Checksum *checksum, uint64_t* nbytes){
 
-  DML_SiteList *sites = in->sites;
-  uint64_t announced_rec_size, expected_rec_size;
   int this_node = in->layout->this_node;
-  int status;
   char myname[] = "QIO_read_field_data";
 
   /* Initialize byte count and checksum */
@@ -961,12 +941,7 @@ int QIO_read_field(QIO_Reader *in, int globaldata,
 	   LIME_type *lime_type){
 
   LRL_RecordReader *lrl_record_in = NULL;
-  DML_SiteList *sites = in->sites;
-  uint64_t announced_rec_size, expected_rec_size;
-  int this_node = in->layout->this_node;
   int status;
-  int do_open;
-  char myname[] = "QIO_read_field";
 
   lrl_record_in = QIO_open_read_field(in, globaldata, datum_size, NULL, 0, 
 				      lime_type, &status);

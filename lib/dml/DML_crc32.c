@@ -163,6 +163,7 @@ local uLongf crc_table[256] = {
 /* =========================================================================
  * This function can be used by asm versions of crc32()
  */
+#if 0 /* we don't need it -- avoid unused code warnings */
 static uLongf *get_crc_table()
 {
 #ifdef DYNAMIC_CRC_TABLE
@@ -170,6 +171,7 @@ static uLongf *get_crc_table()
 #endif
   return (uLongf *)crc_table;
 }
+#endif
 
 /* ========================================================================= */
 #define DO1(buf) crc = crc_table[((int)crc ^ (*buf++)) & 0xff] ^ (crc >> 8);

@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 2.1.7, detar@physics.utah.edu)
+AC_INIT(qio, 2.1.8, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
@@ -7,18 +7,23 @@ AC_CONFIG_HEADER([include/qio_config_internal.h])
 
 AM_INIT_AUTOMAKE
 
+dnl for saving the configure options
+qio_conf_opts=
+
 dnl
 dnl --enable-parallel-io
 dnl
 AC_ARG_ENABLE(parallel-io,
   AC_HELP_STRING([--enable-parallel-io],
     [Only supported for parallel file systems with a parallel fseek]),
-  [ac_parallel_io=1],
+  [ac_parallel_io=1
+   qio_conf_opts="$qio_conf_opts --enable-parallel-io"],
   [ac_parallel_io=0]
 )
 
-
+dnl
 dnl --enable-parallel-arch argument
+dnl
 AC_ARG_ENABLE(parallel-arch,
   AC_HELP_STRING([--enable-parallel-arch=<arch>],
     [Build QIO for parallel architecture <arch>]),
@@ -26,14 +31,16 @@ AC_ARG_ENABLE(parallel-arch,
   AC_SUBST(PARALLEL_ARCH, [parscalar])
 )
 
+dnl
 dnl --enable-qmp-route
+dnl
 AC_ARG_ENABLE(qmp-route,
   AC_HELP_STRING([--enable-qmp-route],
      [Enable usage of QMP_route if it exists default is on]),
-  [ ac_qmp_route=$enableval],
-  [ ac_qmp_route="yes"] 
+  [ac_qmp_route=$enableval
+   qio_conf_opts="$qio_conf_opts --enable-qmp-route=$enableval"],
+  [ac_qmp_route="yes"] 
 )
-
 
 dnl
 dnl --with-qmp=
@@ -46,33 +53,40 @@ AC_ARG_WITH(qmp,
   [QMP_HOME="${with_qmp}"]
 )
 
+dnl
 dnl Enable changing DML buffersize
+dnl
 AC_ARG_ENABLE(dml-bufsize, 
    AC_HELP_STRING(
      [ --enable-dml-bufsize=X ],
      [ Set the DML buffer size to X bytes ]
    ),
-  [ AC_MSG_NOTICE([Setting DML_BUF_BYTES to ${enable_dml_bufsize}])
-    AC_DEFINE([QIO_DML_BUF_BYTES], [${enable_dml_bufsize}], [ Maximum DML Buffer Size in bytes ]) 
+  [AC_MSG_NOTICE([Setting DML_BUF_BYTES to ${enable_dml_bufsize}])
+   AC_DEFINE([QIO_DML_BUF_BYTES], [${enable_dml_bufsize}], [ Maximum DML Buffer Size in bytes ])
+   qio_conf_opts="$qio_conf_opts --enable-dml-bufsize=$enableval"
   ],
-  [ AC_MSG_NOTICE([Setting DML_BUF_BYTES to 262144 bytes (256K) ]) 
-    AC_DEFINE([QIO_DML_BUF_BYTES], [ 262144 ], [ Maximum DML buffer size in bytes ])
+  [AC_MSG_NOTICE([Setting DML_BUF_BYTES to 262144 bytes (256K) ]) 
+   AC_DEFINE([QIO_DML_BUF_BYTES], [ 262144 ], [ Maximum DML buffer size in bytes ])
   ]
-)	 
+)
+
+dnl
 dnl Safe QMP route workaround
+dnl
 AC_ARG_ENABLE(slow-route,
    AC_HELP_STRING(
      [ --enable-slow-route ],
      [ When not using QMP_route, use the slow version of DML route ]
    ),
-   [ AC_MSG_NOTICE([Enabling Slow DML_route from Balint])
-     AC_DEFINE([QIO_USE_SLOW_ROUTE],[], [Enable Balints Slow DML route]) ],
-   [ AC_MSG_NOTICE([Using Fast Route from James]) ]
+   [AC_MSG_NOTICE([Enabling Slow DML_route from Balint])
+    AC_DEFINE([QIO_USE_SLOW_ROUTE],[], [Enable Balints Slow DML route])
+    qio_conf_opts="$qio_conf_opts --enable-slow-route"],
+   [AC_MSG_NOTICE([Using Fast Route from James]) ]
 )
 
 dnl
-dnl QIO only supports scalar and parscalar (basically, not-parallel and parallel)
-dnl for other cases, map it to one of these.
+dnl QIO only supports scalar and parscalar (basically, not-parallel and
+dnl parallel) for other cases, map it to one of these.
 dnl
 case ${PARALLEL_ARCH} in
   scalarvec)
@@ -94,7 +108,9 @@ case ${PARALLEL_ARCH} in
     ;;
 esac
 
+dnl
 dnl Now check appropriate cases
+dnl
 case ${LOCAL_PARALLEL_ARCH} in
   scalar)
     AC_SUBST(ARCHDEF_SUBSTITUTION, ARCH_SCALAR)
@@ -143,13 +159,16 @@ dnl --enable-largefile
 dnl
 AC_ARG_ENABLE(largefile,
   AC_HELP_STRING(
-  [--enable-largefile],
-  [ For files larger than 2 GB ]
+    [--enable-largefile],
+    [ For files larger than 2 GB ]
   ),
-  [ AC_MSG_NOTICE([Enabling large file support.])
-    AC_SYS_LARGEFILE
-  ]
+  [AC_MSG_NOTICE([Enabling large file support.])
+   AC_SYS_LARGEFILE
+   qio_conf_opts="$qio_conf_opts --enable-largefile"]
 )
+
+dnl save the configure options
+AC_SUBST(QIO_CONFIGURE_OPTIONS, [$qio_conf_opts])
 
 # Checks for programs.
 AC_PROG_CC
@@ -190,12 +209,6 @@ AC_SUBST(QDP_LDFLAGS)
 AC_SUBST(QLA_CFLAGS)
 AC_SUBST(QLA_LDFLAGS)
 
-#
-# Fricken autoconf does some odd things with these AC include 
-# stuff. I found the AC_FUNC_MALLOC substituted the name 
-# malloc with rpl_malloc - no idea what that is and failed to
-# link on IBM's.
-
 # Check for the fseeko functions
 AC_FUNC_FSEEKO
 
@@ -224,9 +237,6 @@ AC_CHECK_HEADERS([stdint.h inttypes.h],
 ]
 )
 
-
-
-
 # Check for QMP route on parscalar
 if test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX" ; then 
    QMP_BKUP_CFLAGS="${CFLAGS}"
@@ -242,7 +252,6 @@ if test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX" ; then
    LIBS="${LIBS}"
    AC_LANG_RESTORE
 fi
-
 
 # Turn on parallel-io flag
 if test ${ac_parallel_io} -eq 1; then

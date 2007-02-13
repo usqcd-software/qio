@@ -1,6 +1,7 @@
 #include <qio_config.h>
 #include <lrl.h>
 #include <stdio.h>
+#include <string.h>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
@@ -167,7 +168,6 @@ LRL_RecordReader *LRL_open_read_target_record(LRL_FileReader *fr,
 {
   LRL_RecordReader *rr;
   int i, found;
-  char myname[] = "LRL_open_read_target_record";
 
   rr = LRL_open_read_record(fr, rec_size, lime_type_found, status);
   if(rr == NULL)return rr;
@@ -268,7 +268,6 @@ LRL_RecordWriter *LRL_open_write_record(LRL_FileWriter *fw,
 {
   LRL_RecordWriter *rw;
   int status;
-  char myname[] = "LRL_open_write_record";
   
   if (fw == NULL)
     return NULL;
@@ -332,7 +331,6 @@ void LRL_get_writer_state(LRL_RecordWriter *rw,
 			  void **state_ptr, size_t *state_size)
 {
   LimeWriter *spt;
-  size_t ss;
   char myname[] = "LRL_get_writer_state";
 
   /* For now the LIME writer structure defines the state.  It would be

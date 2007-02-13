@@ -179,7 +179,6 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
 DML_SiteList *DML_init_sitelist(int volfmt, int serpar, DML_Layout *layout){
   DML_SiteList *sites;
   int this_node = layout->this_node;
-  size_t number_of_io_sites;
   char myname[] = "DML_init_sitelist";
 
   sites = (DML_SiteList *)malloc(sizeof(DML_SiteList));
@@ -767,9 +766,7 @@ int DML_my_ionode(int volfmt, int serpar, DML_Layout *layout){
 int DML_synchronize_out(LRL_RecordWriter *lrl_record_out, DML_Layout *layout){
   void *state_ptr;
   size_t state_size;
-  int status;
   int master_io_node = layout->master_io_node;
-  char myname[] = "DML_synchronize_out";
 
   /* DML isn't supposed to know the inner workings of LRL or LIME,
      so the state is captured as a string of bytes that only LRL
@@ -1043,7 +1040,7 @@ uint64_t DML_partition_close_out(DML_RecordWriter *dml_record_out)
 static int DML_flush_outbuf(LRL_RecordWriter *lrl_record_out, int serpar,
 			   DML_SiteRank snd_coords, 
 			   char *outbuf, size_t buf_sites, size_t size,
-			   int64_t *nbytes,  int this_node)
+			   uint64_t *nbytes,  int this_node)
 {
   char myname[] = "DML_flush_outbuf";
   int status;
@@ -1101,7 +1098,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   int my_io_node;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
-  size_t isite,buf_sites,tbuf_sites,max_buf_sites,max_tbuf_sites,
+  size_t isite,buf_sites,tbuf_sites,max_buf_sites=0,max_tbuf_sites,
     max_dest_sites;
   int status;
   DML_SiteRank snd_coords,prev_coords,outbuf_coords;
@@ -1661,12 +1658,9 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 /* Synchronize the readers */
 
 int DML_synchronize_in(LRL_RecordReader *lrl_record_in, DML_Layout *layout){
-  LRL_RecordReader *lrl_record_in_copy;
   void *state_ptr;
   size_t state_size;
-  int status;
   int master_io_node = layout->master_io_node;
-  char myname[] = "DML_synchronize_in";
 
   /* DML isn't supposed to know the inner workings of LRL or LIME,
      so the state is captured as a string of bytes that only LRL
