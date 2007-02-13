@@ -1814,11 +1814,11 @@ fi;
 # Check whether --enable-dml-bufsize or --disable-dml-bufsize was given.
 if test "${enable_dml_bufsize+set}" = set; then
   enableval="$enable_dml_bufsize"
-  { echo "$as_me:$LINENO: Setting DML_BUF_BYTES to ${enable_dml_bufsize}" >&5
-echo "$as_me: Setting DML_BUF_BYTES to ${enable_dml_bufsize}" >&6;}
+  { echo "$as_me:$LINENO: Setting DML_BUF_BYTES to $enableval" >&5
+echo "$as_me: Setting DML_BUF_BYTES to $enableval" >&6;}
 
-cat >>confdefs.h <<\_ACEOF
-#define QIO_DML_BUF_BYTES ${enable_dml_bufsize}
+cat >>confdefs.h <<_ACEOF
+#define QIO_DML_BUF_BYTES $enableval
 _ACEOF
 
    qio_conf_opts="$qio_conf_opts --enable-dml-bufsize=$enableval"
@@ -1828,7 +1828,7 @@ else
 echo "$as_me: Setting DML_BUF_BYTES to 262144 bytes (256K) " >&6;}
 
 cat >>confdefs.h <<\_ACEOF
-#define QIO_DML_BUF_BYTES  262144
+#define QIO_DML_BUF_BYTES 262144
 _ACEOF
 
 

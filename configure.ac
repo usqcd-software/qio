@@ -61,12 +61,12 @@ AC_ARG_ENABLE(dml-bufsize,
      [ --enable-dml-bufsize=X ],
      [ Set the DML buffer size to X bytes ]
    ),
-  [AC_MSG_NOTICE([Setting DML_BUF_BYTES to ${enable_dml_bufsize}])
-   AC_DEFINE([QIO_DML_BUF_BYTES], [${enable_dml_bufsize}], [ Maximum DML Buffer Size in bytes ])
+  [AC_MSG_NOTICE([Setting DML_BUF_BYTES to $enableval])
+   AC_DEFINE_UNQUOTED([QIO_DML_BUF_BYTES], [$enableval], [Maximum DML Buffer Size in bytes])
    qio_conf_opts="$qio_conf_opts --enable-dml-bufsize=$enableval"
   ],
   [AC_MSG_NOTICE([Setting DML_BUF_BYTES to 262144 bytes (256K) ]) 
-   AC_DEFINE([QIO_DML_BUF_BYTES], [ 262144 ], [ Maximum DML buffer size in bytes ])
+   AC_DEFINE([QIO_DML_BUF_BYTES], [262144], [Maximum DML buffer size in bytes])
   ]
 )
 

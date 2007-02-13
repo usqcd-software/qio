@@ -167,7 +167,7 @@ int setup_layout(int len[], int nd, int numnodes){
 
 int node_number(const int x[])
 {
-  int i, r;
+  int i;
 
   for(i=0; i<ndim; i++) {
     mcoord[i] = x[i]/squaresize[i];
