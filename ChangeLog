@@ -1,3 +1,9 @@
+2007-03-05 14:40  tag qdp1-22-1
+
+2007-03-05 14:40  bjoo
+
+	* aclocal.m4, configure: Configure.ac version bump
+
 2007-02-12 20:32  tag qdp1-22-0
 
 2007-02-12 20:32  tag qdp_pre_subset_cleanup
