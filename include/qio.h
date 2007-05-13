@@ -247,6 +247,8 @@ int QIO_close_write_field(QIO_Writer *out, uint64_t *nbytes);
 
 
 /* Internal utilities  */
+double QIO_time(void);
+void QIO_wait(double sec);
 void QIO_suppress_global_broadcast(QIO_Reader *qio_in);
 
 QIO_Reader *QIO_open_read_master(const char *filename, 

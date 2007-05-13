@@ -307,8 +307,11 @@ char *QIO_set_filepath(QIO_Filesystem *fs,
 	printf("QIO_set_filepath: Can't malloc newfilename\n");
 	return NULL;
       }
-      strncpy(newfilename, path, drlength+1);
-      strncat(newfilename, "/", 2);
+      newfilename[0] = '\0';
+      if(drlength > 0){
+	strncpy(newfilename, path, drlength+1);
+	strncat(newfilename, "/", 2);
+      }
       strncat(newfilename, filename, fnlength+1);
     }
   else if (fs->type == QIO_SINGLE_PATH)
@@ -364,6 +367,7 @@ static QIO_Reader *QIO_open_read_partfile(int io_node_rank, QIO_Iflag *iflag,
   status = QIO_read_check_sitelist(infile);
   if(status != QIO_SUCCESS)return NULL;
 
+  free(newfilename);
   return infile;
 }
 
@@ -836,11 +840,11 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
      designed to autodetect the file format, QIO_open_read can't tell
      whether to open it or the input partition file. */
   
-  check = fopen(filename,"r");
+  check = DCAPL(fopen)(filename,"r");
   if(check){
     printf("%s: No conversion since the file %s already exists\n",
 	   myname, filename);
-    fclose(check);
+    DCAP(fclose)(check);
     return 1;
   }
 

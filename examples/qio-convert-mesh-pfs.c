@@ -1,11 +1,11 @@
 /* Host file conversion for grid machines.  FOR SINGLE PROCESSOR ONLY! */
 /* Converts from SINGLEFILE to PARTFILE format. */
 /* Here we treat the simplest case that each node reads its own file
-   from the same directory path */
+   from its own directory path */
 
 /* Usage
 
-   qio-convert-mesh-singlefs <part_sing> <filename> [<ildgLFN>]< layoutfile
+   qio-convert-mesh-pfs <part_sing> <filename> [<ildgLFN>]< layoutfile
  
     where
 
@@ -44,17 +44,17 @@
 #define	BASE_DIRMODE	0775
 
 /* One-to-one */
-int self_io_node(int node){return node;}
+static int self_io_node(int node){return node;}
 
-int zero_master_io_node(){return 0;}
+static int zero_master_io_node(){return 0;}
 
-char *errmsg(void)
+static char *errmsg(void)
 {
   return (strerror(errno) != NULL)?
     strerror(errno): "unknown error";
 }
 
-QIO_Filesystem *create_multi_pfs(int numnodes){
+static QIO_Filesystem *create_multi_pfs(int numnodes){
   QIO_Filesystem *fs;
   int i, k;
   struct stat dir_stat;
@@ -118,7 +118,7 @@ QIO_Filesystem *create_multi_pfs(int numnodes){
   return fs;
 }
 
-void destroy_multi_pfs(QIO_Filesystem *fs){
+static void destroy_multi_pfs(QIO_Filesystem *fs){
   int i;
 
   if(fs != NULL){
@@ -147,7 +147,7 @@ int main(int argc, char *argv[]){
   }
 
   /* Read topology */
-  mesh = qio_read_topology();
+  mesh = qio_read_topology(1);
 
   /* Create layout and file system structure */
   fs = create_multi_pfs(mesh->numnodes);

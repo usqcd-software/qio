@@ -1,3 +1,9 @@
+05/13/2007 -- Carleton DeTar
+
+       Version 2.1.9 Added support for dache/dcap.  Added file splitting for 
+                     I/O partitions.  Add Enno Scholz's support for
+                     constructing and parsing USQCD XML for lattice files.
+
 02/12/2007 -- James Osborn
 
         Version 2.1.8 Eliminated compiler warnings and now save configure

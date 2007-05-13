@@ -24,6 +24,7 @@ endif
 if ARCH_SCALAR
 bin_PROGRAMS += qio-convert-mesh-singlefs
 bin_PROGRAMS += qio-convert-mesh-pfs
+bin_PROGRAMS += qio-convert-mesh-ppfs
 check_PROGRAMS += 
 endif
 
@@ -32,7 +33,7 @@ if ARCH_PARSCALAR
 check_PROGRAMS +=
 endif
 
-EXTRA_DIST = qio-host-test.sh layout_test binary_host_test
+EXTRA_DIST = qio-host-test.sh layout_test layout_test_ppfs binary_host_test
 
 ADD_MPP_SOURCE = qio-test.c qio-test-util.c layout_hyper.c qio-test.h
 ADD_MESH_SOURCE =  qio-convert-mesh.c layout_hyper_mesh.c qio-convert-mesh.h
@@ -47,6 +48,7 @@ qio_test7_SOURCES = qio-test7.c ${ADD_MPP_SOURCE}
 qio_test8_SOURCES = qio-test8.c ${ADD_MPP_SOURCE}
 qio_convert_mesh_singlefs_SOURCES = qio-convert-mesh-singlefs.c ${ADD_MESH_SOURCE}
 qio_convert_mesh_pfs_SOURCES = qio-convert-mesh-pfs.c ${ADD_MESH_SOURCE}
+qio_convert_mesh_ppfs_SOURCES = qio-convert-mesh-ppfs.c ${ADD_MESH_SOURCE}
 
 DEPENDENCIES = ../lib/libqio.a ../other_libs/c-lime/lib/liblime.a
 ${check_PROGRAMS}: ${DEPENDENCIES}

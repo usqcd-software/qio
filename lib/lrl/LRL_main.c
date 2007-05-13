@@ -20,7 +20,7 @@ LRL_FileReader *LRL_open_read_file(const char *filename)
   FILE *fpt;
 
   /* Open and check for a readable file */
-  fpt = fopen(filename,"r");
+  fpt = DCAPL(fopen)(filename,"r");
   if(fpt == NULL)return NULL;
 
   /* Set up LRL_FileReader structure */
@@ -79,10 +79,10 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
 
   /* Open according to requested mode */
   if(mode == LRL_APPEND){
-    fw->file = fopen(filename,"a");
+    fw->file = DCAPL(fopen)(filename,"a");
   }
   else{
-    fw->file = fopen(filename,"w");
+    fw->file = DCAPL(fopen)(filename,"w");
   }
 
   if (fw->file == NULL){
@@ -613,7 +613,7 @@ int LRL_close_read_file(LRL_FileReader *fr)
     return LRL_SUCCESS;
 
   limeDestroyReader(fr->dr);
-  fclose(fr->file);
+  DCAP(fclose)(fr->file);
   free(fr);
 
   return LRL_SUCCESS;
@@ -632,7 +632,7 @@ int LRL_close_write_file(LRL_FileWriter *fw)
     return LRL_SUCCESS;
 
   limeDestroyWriter(fw->dg);
-  fclose(fw->file);
+  DCAP(fclose)(fw->file);
   free(fw);
 
   return LRL_SUCCESS;

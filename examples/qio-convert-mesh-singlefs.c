@@ -27,11 +27,11 @@
 #include <stdio.h>
 #include "qio-convert-mesh.h"
 
-int self_io_node(int node){return node;}
+static int self_io_node(int node){return node;}
 
-int zero_master_io_node(){return 0;}
+static int zero_master_io_node(){return 0;}
 
-QIO_Filesystem *create_simple_fs(int numnodes){
+static QIO_Filesystem *create_simple_fs(int numnodes){
   QIO_Filesystem *fs;
 
   fs = (QIO_Filesystem *)malloc(sizeof(QIO_Filesystem));
@@ -49,7 +49,7 @@ QIO_Filesystem *create_simple_fs(int numnodes){
   return fs;
 }
 
-void destroy_simple_fs(QIO_Filesystem *fs){
+static void destroy_simple_fs(QIO_Filesystem *fs){
   free(fs);
 }
 
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]){
   }
 
   /* Read topology */
-  mesh = qio_read_topology();
+  mesh = qio_read_topology(1);
 
   /* Create layout and file system structure */
   fs = create_simple_fs(mesh->numnodes);

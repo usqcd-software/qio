@@ -284,6 +284,96 @@ int DML_fill_multifile_sitelist(DML_Layout *layout, DML_SiteList *sites){
 }
 
 /*------------------------------------------------------------------*/
+/* This version was slower for small partitions of large files */
+
+/* Fill the sitelist for partitioned I/O format */
+/* Return code 0 = success; 1 = failure */
+int DML_fill_partition_sitelist_try(DML_Layout *layout, DML_SiteList *sites){
+  int latdim = layout->latdim;
+  int *latsize = layout->latsize;
+  int this_node = layout->this_node;
+  int my_io_node = layout->ionode(this_node);
+  size_t number_of_io_sites = sites->number_of_io_sites;
+  DML_SiteRank *list        = sites->list;
+  size_t index;
+  int *coords;
+  DML_SiteRank rank;
+  DML_SiteRank volume = (DML_SiteRank)layout->volume;
+  char myname[] = "DML_fill_partition_sitelist_try";
+
+  /* Space for a coordinate vector */
+  coords = DML_allocate_coords(latdim, myname, this_node);
+  if(!coords)return 1;
+
+  /* Scan all the sites in the lattice to find the sites in our I/O
+     partition */
+  /* The resulting list is automatically in order */
+  for( index = 0, rank = 0; rank < volume; rank++ ){
+    /* Map rank to coordinates */
+    DML_lex_coords(coords, latdim, latsize, rank);
+    /* If we have this site, add it to the list */
+    /* (find the node that has the coords to node and then its I/O node) */
+    if(layout->ionode(layout->node_number(coords)) == my_io_node){
+      list[index] = rank;
+      index++;
+      if(index >= number_of_io_sites)break;  /* memory protection */
+    }
+  }
+
+  if(index != number_of_io_sites){
+    printf("%s(%d) Internal error. Can't count I/O sites\n",
+	   myname,this_node);
+    return 1;
+  }
+
+  free(coords);
+  return 0;
+}
+
+/*------------------------------------------------------------------*/
+/* Heap sort after Numerical Recipes */
+
+/* Pull out the left element and work up the left side of a binary
+   tree, stopping at an element that is smaller than or equal to the
+   left one.  Push down any larger elements encountered on the way.
+   Finally, put the left element in the remaining empty slot -- in
+   effect producing a cyclic rotation. */
+
+void DML_sift_down(DML_SiteRank *array, const long left, const long right)
+{
+  long j,jold;
+  DML_SiteRank a;
+  
+  a = array[left];
+  jold = left;
+  j = 2*left+1;
+  while (j <= right) {
+    /* Use the larger of array[j] and array[j+1] */
+    if (j < right && array[j] < array[j+1]) j++;
+    if (a >= array[j]) break;
+    array[jold] = array[j];
+    jold = j;
+    j = 2*j+1;
+  }
+  array[jold] = a;
+}
+
+void DML_hpsort(DML_SiteRank *array, long n)
+{
+  long i;
+  DML_SiteRank tmp;
+
+  for( i=n/2-1; i>=0; i--)
+    DML_sift_down(array,i,n-1);
+  for( i = n-1; i>0; i--) {
+    tmp = array[0];
+    array[0] = array[i];
+    array[i] = tmp;
+    DML_sift_down(array,0,i-1);
+  }
+}
+
+/*------------------------------------------------------------------*/
 /* Fill the sitelist for partitioned I/O format */
 /* Return code 0 = success; 1 = failure */
 int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
@@ -330,17 +420,7 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   }
 
   /* Put the site list in ascending lexicographic rank order */
-  /* Dumb sort algorithm */
-  for(index = 0; index < number_of_io_sites-1; index++){
-    for(index2 = index+1; index2 < number_of_io_sites; index2++){
-      if(list[index] > list[index2]){
-	tmp = list[index];
-	list[index] = list[index2];
-	list[index2] = tmp;
-      }
-    }
-  }
-  
+  DML_hpsort(list, number_of_io_sites);
   free(coords);
   return 0;
 }
@@ -1038,9 +1118,9 @@ uint64_t DML_partition_close_out(DML_RecordWriter *dml_record_out)
 /*------------------------------------------------------------------*/
 /* Flush the outputbuffer to the file */
 static int DML_flush_outbuf(LRL_RecordWriter *lrl_record_out, int serpar,
-			   DML_SiteRank snd_coords, 
-			   char *outbuf, size_t buf_sites, size_t size,
-			   uint64_t *nbytes,  int this_node)
+			    DML_SiteRank snd_coords, 
+			    char *outbuf, size_t buf_sites, size_t size,
+			    uint64_t *nbytes,  int this_node)
 {
   char myname[] = "DML_flush_outbuf";
   int status;
