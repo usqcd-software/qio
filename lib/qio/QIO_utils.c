@@ -12,8 +12,22 @@
 #ifdef HAVE_STRING_H
 #include <string.h>
 #endif
+#include <sys/time.h>
 
 static int QIO_verbosity_level = QIO_VERB_OFF;
+
+double QIO_time (void)
+{
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  return tv.tv_sec + 1e-6*tv.tv_usec;
+}
+
+/* Wait for "sec" seconds */
+void QIO_wait (double sec){
+  double finish = QIO_time() + sec;
+  while(QIO_time() < finish);
+}
 
 /* Set verbosity level. */
 int QIO_verbose (int level)
@@ -100,7 +114,7 @@ int QIO_write_string(QIO_Writer *out,
 }
 
 /*------------------------------------------------------------------*/
-/* Create list of sites output from this node */
+/* Create list of sites expected for this node */
 
 DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt, int serpar){
   DML_SiteList *sites;
@@ -620,6 +634,7 @@ int QIO_close_read_record(LRL_RecordReader *lrl_record_in){
 
 int QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type){
   int this_node = in->layout->this_node;
+  int number_of_nodes = in->layout->number_of_nodes;
   int volfmt = in->volfmt;
   /* char myname[] = "QIO_read_sitelist"; */
   int status = QIO_SUCCESS;
@@ -630,10 +645,15 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type){
   /* Only I/O nodes read and verify the sitelist */
   if((volfmt == QIO_MULTIFILE) || 
      ((volfmt == QIO_PARTFILE) 
-      && (this_node == in->layout->ionode(this_node))))
+      && (this_node == in->layout->ionode(this_node)))){
+    /* Time release */
+    //double lapse = 1;
+    //QIO_wait(this_node*lapse);
     status = DML_read_sitelist(in->sites, 
 			       in->lrl_file_in, in->volfmt, 
 			       in->layout, lime_type);
+    //QIO_wait((number_of_nodes - this_node)*lapse);
+  }
 
   return status;
 }
