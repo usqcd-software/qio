@@ -31,9 +31,13 @@ QIO_Reader *QIO_create_reader(const char *filename,
   char myname[] = "QIO_create_reader";
 
   /* Make a local copy of lattice size */
-  latsize = (int *)malloc(sizeof(int)*latdim);
-  for(i=0; i < latdim; ++i)
-    latsize[i] = layout->latsize[i];
+  if(latdim != 0){
+    latsize = (int *)malloc(sizeof(int)*latdim);
+    for(i=0; i < latdim; ++i)
+      latsize[i] = layout->latsize[i];
+  }
+  else
+    latsize = NULL;
 
   /* Construct the layout data from the QIO_Layout structure*/
   dml_layout = (DML_Layout *)malloc(sizeof(DML_Layout));
@@ -586,10 +590,13 @@ int QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
 	  /* Construct the file name based on the partition I/O node number */
 	  newfilename = QIO_filename_edit(filename, qio_in->volfmt, this_node);
 	  /* Open the file */
-	  lrl_file_in = LRL_open_read_file(newfilename);
 	  if(QIO_verbosity() >= QIO_VERB_DEBUG)
 	    printf("%s(%d): Calling LRL_open_read_file %s\n",
 		   myname,this_node,newfilename);
+	  lrl_file_in = LRL_open_read_file(newfilename);
+	  if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	    printf("%s(%d): LRL_open_read_file returns %x\n",myname,this_node,
+		   lrl_file_in);
 	  if(lrl_file_in == NULL){
 	    printf("%s(%d): Can't open %s for reading\n",myname,this_node,
 		   newfilename);
