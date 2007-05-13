@@ -30,10 +30,14 @@ int QIO_generic_read_record_data(QIO_Reader *in,
 
   /* List of acceptable binary data LIME types */
   int ntypes = 2;
-  LIME_type lime_type_list[2] = {
-    QIO_LIMETYPE_BINARY_DATA,
-    QIO_LIMETYPE_ILDG_BINARY_DATA
-  };
+  /* Avoid a compiler bug */
+  LIME_type lime_type0 = QIO_LIMETYPE_BINARY_DATA;
+  LIME_type lime_type1 = QIO_LIMETYPE_ILDG_BINARY_DATA;
+  LIME_type lime_type_list[2] = {lime_type0, lime_type1};
+  //  LIME_type lime_type_list[2] = {
+  //    QIO_LIMETYPE_BINARY_DATA,
+  //    QIO_LIMETYPE_ILDG_BINARY_DATA
+  //  };
   LIME_type lime_type;
 
 
@@ -41,7 +45,7 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   globaldata = QIO_get_globaldata(&(in->record_info));
   this_node = in->layout->this_node;
 
-  /* It is an error to call for the data before the reading the info
+  /* It is an error to call for the data before reading the info
      in a given record */
   if(in->read_state != QIO_RECORD_DATA_NEXT){
     printf("%s(%d): Bad read state %d\n",myname,this_node,in->read_state);
@@ -99,12 +103,21 @@ int QIO_generic_read_record_data(QIO_Reader *in,
     return QIO_ERR_BAD_READ_BYTES;
   }
 
+  if(QIO_verbosity() >= QIO_VERB_DEBUG){
+    printf("%s(%d): calling open_read_field\n",myname,this_node);fflush(stdout);
+  }
+
   /* Nodes read the field */
 
   /* Scan ahead and open the record with one of the listed LIME types */
   lrl_record_in = QIO_open_read_field(in, globaldata, datum_size, 
          lime_type_list, ntypes, &lime_type, &status);
   if(status != QIO_SUCCESS)return status;
+
+  if(QIO_verbosity() >= QIO_VERB_DEBUG){
+    printf("%s(%d): Calling QIO_read_field_data\n",
+	   myname,this_node);fflush(stdout);
+  }
 
   /* Then read the data and close the record */
   status = QIO_read_field_data(in, lrl_record_in, globaldata, 
@@ -217,6 +230,11 @@ int QIO_read_record_data(QIO_Reader *in,
   int this_node = in->layout->this_node;
   int status;
   int globaldata = QIO_get_globaldata(&(in->record_info));
+
+  if(QIO_verbosity() >= QIO_VERB_DEBUG){
+    printf("%s(%d): Calling QIO_generic_read_record_data\n",
+	   myname,this_node);fflush(stdout);
+  }
 
   status = QIO_generic_read_record_data(in, put, datum_size, word_size, arg,
 					&checksum, &nbytes);
