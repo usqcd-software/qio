@@ -33,6 +33,8 @@
 	* lib/qio/QIO_open_read.c: Avoid a null malloc.  Add a debug
 	  statement.
 
+2007-05-13 16:36  tag adat1-32-0
+
 2007-05-13 16:36  detar
 
 	* other_libs/c-lime/: aclocal.m4, configure, configure.ac,
