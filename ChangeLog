@@ -1,3 +1,11 @@
+2007-06-10 10:32  edwards
+
+	* include/qio_config_internal.h.in: Reorganized BinaryReader/Writer
+	  and TextReader. Now, these classes are abstract classes (just
+	  like XMLWriter) for BinaryBufferReader/Writer and
+	  BinaryFileReader/Writer .  Also, removed the old
+	  QDP_BEGIN/END_NAMESPACE macro and now simply use "namespace QDP".
+
 2007-06-09 18:15  edwards
 
 	* aclocal.m4, configure: Induced changes
