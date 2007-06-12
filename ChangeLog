@@ -1,5 +1,7 @@
 2007-06-10 10:32  tag qdp1-24-0
 
+2007-06-10 10:32  tag qdp1-24-1
+
 2007-06-10 10:32  edwards
 
 	* include/qio_config_internal.h.in: Reorganized BinaryReader/Writer
