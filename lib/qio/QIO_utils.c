@@ -211,18 +211,18 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 /*------------------------------------------------------------------*/
 
 LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out, 
-	    int msg_begin, int msg_end, int globaldata,
+	    int msg_begin, int msg_end, int recordtype,
 	    size_t datum_size,
 	    const LIME_type lime_type, int *do_output, int *status){
   
   LRL_RecordWriter *lrl_record_out = NULL;
   uint64_t planned_rec_size;
   int this_node = out->layout->this_node;
-  size_t number_of_io_sites = out->sites->number_of_io_sites;
+  DML_SiteList *sites = out->sites;
   char myname[] = "QIO_open_write_field";
 
   /* Compute record size */
-  if(globaldata == QIO_GLOBAL){
+  if(recordtype == QIO_GLOBAL){
     /* Global data */
     planned_rec_size = datum_size;
     if(QIO_verbosity() >= QIO_VERB_DEBUG){
@@ -231,20 +231,26 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
     }
   }
   else{
-    /* Field data */
+    /* Create list of sites in subset for output and count them */
+    if(DML_create_subset_rank(out->sites, out->layout) == 1){
+      printf("%s(%d) No room for subset rank list\n",
+	     myname,this_node);
+      return NULL;
+    }
+    /* Field or subset data */
     if(out->serpar == QIO_SERIAL)
       /* Serial output.  Record size equals the size we write. */
-      planned_rec_size = ((uint64_t)number_of_io_sites) * datum_size;
+      planned_rec_size = ((uint64_t)sites->subset_io_sites) * datum_size;
     else
       /* Parallel output.  Record size equals the total volume
 	 NOTE: If we later decide to write partitions in parallel,
 	 this has to be changed to the size for the partition. */
-      planned_rec_size = ((uint64_t)out->layout->volume) * datum_size;
+      planned_rec_size = ((uint64_t)out->layout->subsetvolume) * datum_size;
     
     if(QIO_verbosity() >= QIO_VERB_DEBUG){
       printf("%s(%d): field data: sites %lu datum %lu\n",
 	     myname,this_node,
-	     (unsigned long)number_of_io_sites,
+	     (unsigned long)sites->subset_io_sites,
 	     (unsigned long)datum_size);
     }
   }
@@ -252,7 +258,7 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
   /* For global data only the master node opens and writes the record.
      Otherwise, all nodes process output, even though only some nodes
      actually write */
-  *do_output = (globaldata == QIO_FIELD) ||
+  *do_output = (recordtype == QIO_FIELD) || (recordtype == QIO_HYPER) ||
     (this_node == out->layout->master_io_node);
   
   /* Open record only if we have a file handle and are writing */
@@ -285,7 +291,7 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
       }
       /* For field data other nodes just create the reader without
 	 writing a header */
-      else if( globaldata == QIO_FIELD )
+      else if( recordtype == QIO_FIELD || recordtype == QIO_HYPER )
 	{
 	if(QIO_verbosity() >= QIO_VERB_DEBUG)
 	  printf("%s(%d): calling LRL_create_record_header\n",
@@ -295,7 +301,8 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
 
       /* Then, if we are writing a field in parallel mode, we have to
 	 synchronize the writers */
-      if(out->serpar == DML_PARALLEL && globaldata == QIO_FIELD){
+      if(out->serpar == DML_PARALLEL && (recordtype == QIO_FIELD ||
+					 recordtype == QIO_HYPER)){
 	if(QIO_verbosity() >= QIO_VERB_DEBUG)
 	  printf("%s(%d): Doing parallel write sync\n",myname,this_node);
 	if(DML_synchronize_out(lrl_record_out,out->layout) != 0){
@@ -334,7 +341,7 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
 /* Opens the field and initializes data movement */
 
 int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
-	    int globaldata,
+	    int recordtype,
 	    size_t datum_size, DML_Checksum *checksum,
 	    const LIME_type lime_type){
   
@@ -347,7 +354,7 @@ int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 
   /* NOTE: we aren't currently returning do_output */
   lrl_record_out = QIO_open_write_field(out, msg_begin, msg_end,
-					globaldata, datum_size,
+					recordtype, datum_size,
 					lime_type, &do_output, &status);
 
   if(lrl_record_out == NULL)
@@ -433,7 +440,7 @@ int QIO_close_write_field(QIO_Writer *out, uint64_t *nbytes)
 /* Write the whole binary lattice field or global data at once */
 
 int QIO_write_field_data(QIO_Writer *out, LRL_RecordWriter *lrl_record_out,
-	    int globaldata,
+	    int recordtype,
 	    void (*get)(char *buf, size_t index, int count, void *arg),
 	    int count, size_t datum_size, int word_size, void *arg, 
 	    DML_Checksum *checksum, uint64_t *nbytes)
@@ -451,7 +458,7 @@ int QIO_write_field_data(QIO_Writer *out, LRL_RecordWriter *lrl_record_out,
     printf("%s(%d): starting DML call\n", myname,this_node);
 
   /* Global data type. */
-  if(globaldata == DML_GLOBAL){
+  if(recordtype == DML_GLOBAL){
     *nbytes = DML_global_out(lrl_record_out, get, count, datum_size, word_size,
 			     arg, out->layout, out->volfmt, checksum);
   }
@@ -475,7 +482,7 @@ int QIO_write_field_data(QIO_Writer *out, LRL_RecordWriter *lrl_record_out,
 /* Write the whole binary lattice field or global data at once */
 
 int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
-	    int globaldata,
+	    int recordtype,
 	    void (*get)(char *buf, size_t index, int count, void *arg),
 	    int count, size_t datum_size, int word_size, void *arg, 
 	    DML_Checksum *checksum, uint64_t *nbytes,
@@ -486,7 +493,7 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   int status;
 
   lrl_record_out = QIO_open_write_field(out, msg_begin, msg_end, 
-		       globaldata, datum_size, lime_type, &do_output, &status);
+		       recordtype, datum_size, lime_type, &do_output, &status);
 
   if(status != QIO_SUCCESS)
     return status;
@@ -498,9 +505,14 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 
   /* Write data and close LRL record writer */
   if(do_output)
-    status = QIO_write_field_data(out, lrl_record_out, globaldata,
+    status = QIO_write_field_data(out, lrl_record_out, recordtype,
 			 get, count, datum_size, word_size, arg,
 			 checksum, nbytes);
+
+  /* Clean up */
+  if(recordtype != QIO_GLOBAL)
+    DML_destroy_subset_rank(out->sites);
+
   return status;
 }
 
@@ -661,7 +673,7 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type){
 /*------------------------------------------------------------------*/
 /* Open field data record */
 
-LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
+LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int recordtype,
                size_t datum_size, 
   	       LIME_type *lime_type_list, int ntypes,
                LIME_type *lime_type, int *status)
@@ -678,10 +690,11 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
   *status = QIO_SUCCESS;
 
   /* Will we read the data?
-     For field data all nodes with readers will read.
+     For field or hypercube data all nodes with readers will read.
      For global data only the master node reads. */
 
-  do_read = ( in->lrl_file_in && (globaldata == QIO_FIELD) ) || 
+  do_read = ( in->lrl_file_in && (recordtype == QIO_FIELD ||
+				  recordtype == QIO_HYPER) ) || 
     (this_node == in->layout->master_io_node);
 
   /* Should we open the next record with one of the desired LIME types? */
@@ -691,7 +704,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
     do_open = do_read;
   else
     /* For parallel I/O all nodes should have a file reader.
-       For field data all nodes read.
+       For field or hypercube data all nodes read.
        For global data only the master node reads but
        other nodes must also open and seek to maintain 
        record-level synchronization. */
@@ -743,24 +756,33 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
     }
   }
 
+  /* Create list of sites in subset for output and count them */
+  if(recordtype != QIO_GLOBAL){
+    if(DML_create_subset_rank(in->sites, in->layout) == 1){
+      printf("%s(%d) No room for subset rank list\n",
+	     myname,this_node);
+      return NULL;
+    }
+  }
+
   /* Now check the record size for consistency */
 
   if( do_read )
   {
     /* Check that the record size matches the expected size of the data */
-    if(globaldata == QIO_GLOBAL)
+    if(recordtype == QIO_GLOBAL)
       /* Global data */
       expected_rec_size = datum_size;
     else {
-      /* Field data */
+      /* Field data or hypercube data */
       if(in->serpar == QIO_SERIAL)
-	/* Serial input. Record size equals the size we actually write */
-	expected_rec_size = ((uint64_t)sites->number_of_io_sites) * datum_size; 
+	/* Serial input. Record size equals the size we actually read */
+	expected_rec_size = ((uint64_t)sites->subset_io_sites) * datum_size; 
       else
 	/* Parallel input.  Record size equals the total volume
 	   NOTE: If we later decide to read partitions in parallel,
 	   this has to be changed to the size for the partition. */
-	expected_rec_size = ((uint64_t)in->layout->volume) * datum_size;
+	expected_rec_size = ((uint64_t)in->layout->subsetvolume) * datum_size;
     }    
     if (announced_rec_size != expected_rec_size){
       printf("%s(%d): rec_size mismatch: found %llu expected %llu\n",
@@ -806,7 +828,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int globaldata,
 
 /* Start reading a field */
 
-int QIO_init_read_field(QIO_Reader *in, int globaldata, size_t datum_size, 
+int QIO_init_read_field(QIO_Reader *in, int recordtype, size_t datum_size, 
 			LIME_type *lime_type_list, int ntypes,
 			DML_Checksum *checksum, LIME_type *lime_type)
 {
@@ -816,7 +838,7 @@ int QIO_init_read_field(QIO_Reader *in, int globaldata, size_t datum_size,
   int this_node = in->layout->this_node;
   char myname[] = "QIO_init_read_field";
 
-  lrl_record_in = QIO_open_read_field(in, globaldata, datum_size, 
+  lrl_record_in = QIO_open_read_field(in, recordtype, datum_size, 
               lime_type_list, ntypes, lime_type, &status);
 
   if(lrl_record_in == NULL){
@@ -903,7 +925,7 @@ int QIO_close_read_field(QIO_Reader *in, uint64_t *nbytes)
    Close record when done. */
 
 int QIO_read_field_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
-	   int globaldata,
+	   int recordtype,
 	   void (*put)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t datum_size, int word_size, void *arg, 
  	   DML_Checksum *checksum, uint64_t* nbytes){
@@ -919,7 +941,7 @@ int QIO_read_field_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
      for node*/
 
   /* Global data */
-  if(globaldata == DML_GLOBAL){
+  if(recordtype == QIO_GLOBAL){
     *nbytes = DML_global_in(lrl_record_in,
                          put, count, datum_size, word_size, arg, in->layout, 
 			 in->volfmt, in->layout->broadcast_globaldata, 
@@ -941,6 +963,10 @@ int QIO_read_field_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
   }
 
   /* Close record when done and clean up*/
+
+  if(recordtype != QIO_GLOBAL)
+    DML_destroy_subset_rank(in->sites);
+
   if(lrl_record_in)
     LRL_close_read_record(lrl_record_in);
 
@@ -954,7 +980,7 @@ int QIO_read_field_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
 /*------------------------------------------------------------------*/
 /* Read binary data for a lattice field */
 
-int QIO_read_field(QIO_Reader *in, int globaldata,
+int QIO_read_field(QIO_Reader *in, int recordtype,
 	   void (*put)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t datum_size, int word_size, void *arg, 
 	   DML_Checksum *checksum, uint64_t* nbytes,
@@ -963,10 +989,10 @@ int QIO_read_field(QIO_Reader *in, int globaldata,
   LRL_RecordReader *lrl_record_in = NULL;
   int status;
 
-  lrl_record_in = QIO_open_read_field(in, globaldata, datum_size, NULL, 0, 
+  lrl_record_in = QIO_open_read_field(in, recordtype, datum_size, NULL, 0, 
 				      lime_type, &status);
 
-  status = QIO_read_field_data(in, lrl_record_in, globaldata,
+  status = QIO_read_field_data(in, lrl_record_in, recordtype,
 			       put, count, datum_size, word_size, arg,
 			       checksum, nbytes);
   return status;

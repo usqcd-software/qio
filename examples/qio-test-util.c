@@ -1,6 +1,7 @@
 /* Utilities for testing QIO */
 #include "qio-test.h"
 #include <stdio.h>
+#include <string.h>
 
 void print_m(suN_matrix *a)
 {
@@ -216,6 +217,36 @@ void vset_R(float *field[], int count){
 	    }
 }
 
+/* Copy a subset */
+int inside_subset(int x[], int lower[], int upper[])
+{
+  int i;
+  int status = 1;
+
+  for(i = 0; i < 4; i++)
+    if(lower[i] > x[i] || upper[i] < x[i]){
+      status = 0;
+      break;
+    }
+  
+  return status;
+}
+
+/* Copy only values in the subset specified by the lower and upper bounds */
+void vsubset_R(float *out[], float *in[], int lower[], int upper[], int count)
+{
+  int x[4];
+  int index,i;
+
+  for(index = 0; index < num_sites(this_node); index++){
+    get_coords(x, this_node, index);
+    if(inside_subset(x, lower, upper)){
+      for(i = 0; i < count; i++)
+	out[i][index] = in[i][index];
+    }
+  }
+}
+
 
 /* create an array of real fields */
 int vcreate_R(float *field[], int count){
@@ -227,6 +258,7 @@ int vcreate_R(float *field[], int count){
       printf("vcreate_R(%d): Can't malloc field\n",this_node);
       return 1;
     }
+    memset(field[i], 0, sizeof(float)*num_sites(this_node));
   }
 
   return 0;

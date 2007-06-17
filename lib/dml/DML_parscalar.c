@@ -122,7 +122,8 @@ void DML_sync(void){
 }
 
 /* I/O layout */
-int DML_io_node(int node){
+/* Default choices.  Otherwise, set by user.  See QIO_Filesystem */
+int DML_io_node(const int node){
   return QMP_io_node(node);
 }
 

@@ -35,13 +35,13 @@ void QIO_reset_writer_ILDG_flags(QIO_Writer *out, QIO_Oflag *oflag){
 QIO_Writer *QIO_generic_open_write(const char *filename, 
 				   int volfmt, QIO_Layout *layout, 
 				   QIO_Oflag *oflag, 
-				   int (*io_node)(int), 
-				   int (*master_io_node)())
+				   DML_io_node_t io_node, 
+				   DML_master_io_node_t master_io_node)
 {
   QIO_Writer *qio_out = NULL;
   LRL_FileWriter *lrl_file_out = NULL;
   DML_Layout *dml_layout;
-  int *latsize;
+  int *latsize, *upper, *lower;
   int latdim = layout->latdim;
   int this_node = layout->this_node;
   int i;
@@ -54,6 +54,10 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   latsize = (int *)malloc(sizeof(int)*latdim);
   for(i=0; i < latdim; ++i)
     latsize[i] = layout->latsize[i];
+
+  /* Set up hypercube subset dimensions in case they are needed */
+  upper = (int *)malloc(sizeof(int)*latdim);
+  lower = (int *)malloc(sizeof(int)*latdim);
 
   /* Construct the layout data from the QIO_Layout structure*/
   dml_layout = (DML_Layout *)malloc(sizeof(DML_Layout));
@@ -77,6 +81,10 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   dml_layout->number_of_nodes    = layout->number_of_nodes;
   dml_layout->discover_dims_mode = 0;
   
+  dml_layout->hyperlower           = lower;
+  dml_layout->hyperupper           = upper;
+  dml_layout->subsetvolume         = layout->volume;
+
   dml_layout->ionode             = io_node;
   dml_layout->master_io_node     = master_io_node();
   
@@ -293,13 +301,32 @@ int QIO_write_file_header(QIO_Writer* qio_out, QIO_String *xml_file)
 }
  
 QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename, 
-			   int volfmt, QIO_Layout *layout, QIO_Oflag *oflag)
+			   int volfmt, QIO_Layout *layout, 
+			   QIO_Filesystem *fs, QIO_Oflag *oflag)
 {
   QIO_Writer *qio_out;
   int status;
+  DML_io_node_t my_io_node;
+  DML_master_io_node_t master_io_node;
+
+  /* Assign default behavior for io_node functions if needed */
+  if(fs == NULL){
+    my_io_node = DML_io_node;
+    master_io_node = DML_master_io_node;
+  }
+  else{
+    if(fs->my_io_node == NULL)
+      my_io_node = DML_io_node;
+    else
+      my_io_node = fs->my_io_node;
+    if(fs->master_io_node == NULL)
+      master_io_node = DML_master_io_node;
+    else
+      master_io_node = fs->master_io_node;
+  }
 
   qio_out = QIO_generic_open_write(filename, volfmt, layout, oflag,
-				   DML_io_node, DML_master_io_node);
+				   my_io_node, master_io_node);
 
   /* Prevent premature file truncation in parallel writes */
   /* Note, the test will cause a hang if the oflag->serpar value is

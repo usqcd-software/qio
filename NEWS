@@ -1,3 +1,12 @@
+06/16/2007 -- Carleton DeTar
+
+       Version 2.2.0 Added support for USQCD propagator file formats.  
+                     Added hypercube record type.  (Breaks previous API.)
+                     Add support for user-defined I/O nodes. (Breaks 
+                     previous API.)
+                     Rearranged QIO_info*.c and qioxml*.h for clarity.
+                     Updated documentation.
+
 05/13/2007 -- Carleton DeTar
 
        Version 2.1.9 Added support for dache/dcap.  Added file splitting for 

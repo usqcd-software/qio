@@ -351,11 +351,11 @@ static QIO_Reader *QIO_open_read_partfile(int io_node_rank, QIO_Iflag *iflag,
   if(infile == NULL)return NULL;
 
   /* Check the volume format */
-  volfmt = QIO_get_read_volfmt(infile);
+  volfmt = QIO_get_reader_volfmt(infile);
 
   if (volfmt != QIO_PARTFILE){
     printf("%s(%d) File %s volume format must be PARTFILE.  Found %d\n",
-	   myname, io_node_rank, newfilename, QIO_get_read_volfmt(infile));
+	   myname, io_node_rank, newfilename, QIO_get_reader_volfmt(infile));
     return NULL;
   }
 
@@ -419,7 +419,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   int master_io_node = fs->master_io_node();
   uint64_t total_bytes;
   size_t datum_size;
-  int typesize,datacount,globaldata,word_size,volfmt;
+  int typesize,datacount,recordtype,word_size,volfmt;
   int ntypes = 2;
   LIME_type lime_type_list[2] = {
     QIO_LIMETYPE_BINARY_DATA,
@@ -467,10 +467,10 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 				QIO_host_master_io_node);
   if(infile == NULL)return QIO_ERR_OPEN_READ;
   
-  if (QIO_get_read_volfmt(infile) != QIO_SINGLEFILE)
+  if (QIO_get_reader_volfmt(infile) != QIO_SINGLEFILE)
     {
       printf("%s: File %s format %d is not SINGLEFILE\n",
-	     myname, filename, QIO_get_read_volfmt(infile));
+	     myname, filename, QIO_get_reader_volfmt(infile));
       return QIO_ERR_BAD_VOLFMT;
     }
   
@@ -538,7 +538,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       datacount  = QIO_get_datacount(&rec_info);
       typesize   = QIO_get_typesize(&rec_info);
       word_size  = QIO_bytes_of_word(QIO_get_precision(&rec_info));
-      globaldata = QIO_get_globaldata(&rec_info);
+      recordtype = QIO_get_recordtype(&rec_info);
       datum_size = typesize*datacount;
       
       /* Create and read the input user record XML */
@@ -583,7 +583,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       /* Next we process the payload.  Processing depends on whether
 	 we have global data or a field */
 
-      if( globaldata == QIO_GLOBAL){
+      if( recordtype == QIO_GLOBAL){
 
 	/* Read global data in its entirety and write it all to the
 	   the master_io_node file */
@@ -645,7 +645,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 			     QIO_host_master_io_node());
 	
 	/* Expected total for the entire field */
-	total_bytes = ((uint64_t)layout->volume) * datum_size;
+	total_bytes = ((uint64_t)infile->layout->subsetvolume) * datum_size;
 	totnbytes_out = 0;
 	DML_checksum_init(&checksum_out);
 	
@@ -727,7 +727,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       checksum_info_expect = QIO_read_checksum(infile);
       if(checksum_info_expect == NULL)return QIO_ERR_CHECKSUM_INFO;
       
-      if(QIO_get_read_format(infile) == QIO_SCIDAC_NATIVE){
+      if(QIO_get_reader_format(infile) == QIO_SCIDAC_NATIVE){
 	/* Only native SciDAC files have a checksum to compare */
 	status = QIO_compare_checksum(0, checksum_info_expect, &checksum_in);
 	if(status != QIO_SUCCESS){
@@ -742,7 +742,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       status = QIO_write_checksum(outfile, &checksum_out);
       
       if(QIO_verbosity() >= QIO_VERB_LOW){
-	if(globaldata == QIO_GLOBAL)printf("Global data\n");
+	if(recordtype == QIO_GLOBAL)printf("Global data\n");
 	else printf("Field data\n");
 	printf("  %s\n  Datatype %s\n  precision %s colors %d spins %d count %d\n",
 	       QIO_string_ptr(xml_record_in),
@@ -766,7 +766,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 
       /* If this is a non-native ILDG file, only one data field (the
 	 lattice) is permitted, so we bail out here */
-      if(QIO_get_read_format(infile) == QIO_ILDG_ALIEN)break;
+      if(QIO_get_reader_format(infile) == QIO_ILDG_ALIEN)break;
     }
   /************* end iteration on records *********/
   
@@ -804,7 +804,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
   int number_io_nodes = fs->number_io_nodes;
   int master_io_node = fs->master_io_node();
   size_t datum_size;
-  int typesize,datacount,globaldata,word_size;
+  int typesize,datacount,recordtype,word_size;
   int ntypes = 2;
   LIME_type lime_type_list[2] = {
     QIO_LIMETYPE_BINARY_DATA,
@@ -937,7 +937,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
       datacount   = QIO_get_datacount(&rec_info_in);
       typesize    = QIO_get_typesize(&rec_info_in);
       word_size   = QIO_bytes_of_word(QIO_get_precision(&rec_info_in));
-      globaldata  = QIO_get_globaldata(&rec_info_in);
+      recordtype  = QIO_get_recordtype(&rec_info_in);
       datum_size  = typesize*datacount;
 
       /* Read the user record info from the master ionode file. */
@@ -989,7 +989,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 
       /* Process the record according to type: global data or field data */
 
-      if( globaldata == QIO_GLOBAL)
+      if( recordtype == QIO_GLOBAL)
 	{
 	  /* Global data.  Read the data in its entirety and write it */
 
@@ -1066,7 +1066,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 	  lime_type_out = NULL;
 
 	  /* Input byte counting and checksums */
-	  total_bytes = ((uint64_t)layout->volume) * datum_size;
+	  total_bytes = ((uint64_t)infile->layout->subsetvolume) * datum_size;
 	  totnbytes_in = 0;
 	  DML_checksum_init(&checksum_in);
 
@@ -1135,7 +1135,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 	      if(checksum_info_tmp == NULL)return QIO_ERR_CHECKSUM_INFO;
 	      checksum_info_expect = checksum_info_tmp;
 	      /* Save read format for later */
-	      read_format = QIO_get_read_format(infile);
+	      read_format = QIO_get_reader_format(infile);
 	    }
 	    
 	    /* Add partial byte count to total output bytes */
@@ -1193,7 +1193,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
       if(status != QIO_SUCCESS)return status;      
 
       if(QIO_verbosity() >= QIO_VERB_LOW){
-	if(globaldata == QIO_GLOBAL)printf("Global data\n");
+	if(recordtype == QIO_GLOBAL)printf("Global data\n");
 	else printf("Field data\n");
 	printf("  %s\n  Datatype %s\n  precision %s colors %d spins %d count %d\n",
 	       QIO_string_ptr(xml_record_out),

@@ -9,6 +9,37 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Utility for printing the record info */
+void QIO_print_record_info(QIO_RecordInfo *record_info){
+
+  printf("Record header: datatype %s recordtype %d \n",
+	 QIO_get_datatype(record_info),
+	 QIO_get_recordtype(record_info));
+  printf("precision %s colors %d spins %d count %d\n",
+	 QIO_get_precision(record_info),
+	 QIO_get_colors(record_info),
+	 QIO_get_spins(record_info),
+	 QIO_get_datacount(record_info));
+  
+  if(QIO_get_recordtype(record_info) == QIO_HYPER){
+    int i;
+    int n = QIO_get_hyper_spacetime(record_info);
+    int *lower = QIO_get_hyperlower(record_info);
+    int *upper = QIO_get_hyperupper(record_info);
+    printf("Hypercube lower");
+    for(i = 0; i < n; i++){
+      printf(" %d",lower[i]);
+    }
+    printf("\n");
+    printf("Hypercube upper");
+    for(i = 0; i < n; i++){
+      printf(" %d",upper[i]);
+    }
+    printf("\n");
+  }
+}
+
+
 /* Read record data */
 /* Can be called separately from QIO_read, but then QIO_read_record_info
    must be called first */
@@ -24,9 +55,12 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   int count;
   LRL_RecordReader *lrl_record_in;
   size_t datum_size_info;
-  int this_node; 
+  DML_Layout *layout = in->layout;
+  int this_node = layout->this_node; 
   int status;
-  int globaldata; 
+  int recordtype; 
+  int latdim;
+  QIO_RecordInfo *record_info = &in->record_info;
 
   /* List of acceptable binary data LIME types */
   int ntypes = 2;
@@ -41,10 +75,6 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   LIME_type lime_type;
 
 
-  count = QIO_get_datacount(&(in->record_info));
-  globaldata = QIO_get_globaldata(&(in->record_info));
-  this_node = in->layout->this_node;
-
   /* It is an error to call for the data before reading the info
      in a given record */
   if(in->read_state != QIO_RECORD_DATA_NEXT){
@@ -52,48 +82,36 @@ int QIO_generic_read_record_data(QIO_Reader *in,
     return QIO_ERR_INFO_MISSED;
   }
 
+  /* Add record type and subset data to layout structure */
+  recordtype = QIO_get_recordtype(record_info);
+  layout->recordtype = recordtype;
+  status = DML_insert_subset_data(layout, 
+				  QIO_get_hyperlower(record_info),
+				  QIO_get_hyperupper(record_info),
+				  QIO_get_hyper_spacetime(record_info));
+  if(status != 0)
+    return QIO_ERR_BAD_SUBSET;
+
   /* Require consistency between the byte count obtained from the
      private record metadata and the datum_size and count parameters
-     (per site for field data or total for global data) */
-  if(datum_size != 
-     QIO_get_typesize(&(in->record_info)) * count){
-    
-    printf("%s(%d): requested byte count %lu disagrees with the record %d * %d\n",
-	   myname,this_node,(unsigned long)datum_size,
-	   QIO_get_typesize(&(in->record_info)), count);
-
-    if(this_node == in->layout->master_io_node){
-      printf("%s(%d): Record header says \n                         datatype %s globaltype %d \n                         precision %s colors %d spins %d count %d\n",
-	     myname,this_node,
-	     QIO_get_datatype(&(in->record_info)),
-	     QIO_get_globaldata(&(in->record_info)),
-	     QIO_get_precision(&(in->record_info)),
-	     QIO_get_colors(&(in->record_info)),
-	     QIO_get_spins(&(in->record_info)),
-	     QIO_get_datacount(&(in->record_info)));
+     (per site for field or hypercube data or total for global data) */
+  count = QIO_get_datacount(record_info);
+  if(datum_size !=  QIO_get_typesize(record_info) * count)
+    {
+      printf("%s(%d): requested byte count %lu disagrees with the record %d * %d\n",
+	     myname,this_node,(unsigned long)datum_size,
+	     QIO_get_typesize(record_info), count);
+      
+      if(this_node == layout->master_io_node)
+	QIO_print_record_info(record_info);
+      
+      return QIO_ERR_BAD_READ_BYTES;
     }
-    return QIO_ERR_BAD_READ_BYTES;
-  }
-
-
-#ifdef DO_BINX
-  /* Master node reads the BinX record. This may be dropped. */
-  /* We assume the BinX_record was created by the caller */
-
-  if(this_node == in->layout->master_io_node){
-    if((status=QIO_read_string(in, BinX, &lime_type))!=QIO_SUCCESS){
-      printf("%s(%d): Bad BinX record\n",myname,this_node);
-      return status;
-    }
-
-    if(QIO_verbosity() >= QIO_VERB_DEBUG){
-      printf("%s(%d): BinX = %s\n",myname,this_node,QIO_string_ptr(BinX));
-    }
-  }
-#endif
-
-  /* Verify byte count per site (for field) or total (for global) */
-  datum_size_info = QIO_get_typesize(&(in->record_info)) * count;
+  
+  
+  /* Verify byte count per site (for field or hypercube) or total (for
+     global) */
+  datum_size_info = QIO_get_typesize(record_info) * count;
 
   if(datum_size != datum_size_info){
     printf("%s(%d): byte count mismatch request %lu != actual %lu\n",
@@ -104,13 +122,13 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   }
 
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
-    printf("%s(%d): calling open_read_field\n",myname,this_node);fflush(stdout);
+    printf("%s(%d): Calling QIO_open_read_field\n",myname,this_node);fflush(stdout);
   }
 
   /* Nodes read the field */
 
   /* Scan ahead and open the record with one of the listed LIME types */
-  lrl_record_in = QIO_open_read_field(in, globaldata, datum_size, 
+  lrl_record_in = QIO_open_read_field(in, recordtype, datum_size, 
          lime_type_list, ntypes, &lime_type, &status);
   if(status != QIO_SUCCESS)return status;
 
@@ -120,7 +138,7 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   }
 
   /* Then read the data and close the record */
-  status = QIO_read_field_data(in, lrl_record_in, globaldata, 
+  status = QIO_read_field_data(in, lrl_record_in, recordtype, 
 			       put, count, datum_size, word_size, 
 			       arg, checksum, nbytes);
   if(status != QIO_SUCCESS){
@@ -135,16 +153,10 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   /* Copy most recent node checksum into reader */
   memcpy(&(in->last_checksum), checksum, sizeof(DML_Checksum));
 
-  if(this_node == in->layout->master_io_node){
+  if(this_node == layout->master_io_node){
     if(QIO_verbosity() >= QIO_VERB_REG){
-      printf("%s(%d): Read field. datatype %s globaltype %d \n                         precision %s colors %d spins %d count %d\n",
-	     myname,this_node,
-	     QIO_get_datatype(&(in->record_info)),
-	     QIO_get_globaldata(&(in->record_info)),
-	     QIO_get_precision(&(in->record_info)),
-	     QIO_get_colors(&(in->record_info)),
-	     QIO_get_spins(&(in->record_info)),
-	     QIO_get_datacount(&(in->record_info)));
+      printf("%s(%d): Read field\n",myname,this_node);
+      QIO_print_record_info(record_info);
     }
   }
       
@@ -226,10 +238,10 @@ int QIO_read_record_data(QIO_Reader *in,
   uint64_t nbytes, expect_bytes;
   QIO_ChecksumInfo *checksum_info_expect;
   size_t buf_size;
-  size_t volume = in->layout->volume;
+  size_t volume;
   int this_node = in->layout->this_node;
   int status;
-  int globaldata = QIO_get_globaldata(&(in->record_info));
+  int recordtype = QIO_get_recordtype(&(in->record_info));
 
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d): Calling QIO_generic_read_record_data\n",
@@ -240,11 +252,14 @@ int QIO_read_record_data(QIO_Reader *in,
 					&checksum, &nbytes);
   if(status != QIO_SUCCESS)return status;
 
+  /* Total number of sites in this record */
+  volume = in->layout->subsetvolume;
+
   /* Compute the number of bytes read by all nodes */
   DML_sum_uint64_t(&nbytes);
 
   /* Check that the record size matches the expected size of the data */
-  if(globaldata == QIO_GLOBAL){
+  if(recordtype == QIO_GLOBAL){
     buf_size = datum_size; /* Global data */
     expect_bytes = buf_size;
   }

@@ -67,11 +67,13 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
 	if(in->ildg_precision == 32)
 	  /* Single precision SU(3) matrix */
 	  alien_info = 
-	    QIO_create_record_info(QIO_FIELD, "QDP_F3_ColorMatrix",
+	    QIO_create_record_info(QIO_FIELD, NULL, NULL, 0,
+				   "USQCD_F3_ColorMatrix",
 				   "F", 3, 0, 72, 4);
 	else
 	  alien_info = 
-	    QIO_create_record_info(QIO_FIELD, "QDP_D3_ColorMatrix",
+	    QIO_create_record_info(QIO_FIELD, NULL, NULL, 0,
+				   "USQCD_D3_ColorMatrix",
 				   "D", 3, 0, 144, 4);
 	memcpy(&(in->record_info), alien_info, sizeof(QIO_RecordInfo));
 	QIO_destroy_record_info(alien_info);

@@ -24,7 +24,7 @@ QIO_Reader *QIO_create_reader(const char *filename,
   LRL_FileReader *lrl_file_in = NULL;
   DML_Layout *dml_layout;
   int i;
-  int *latsize;
+  int *latsize, *upper, *lower;
   int latdim = layout->latdim;
   int this_node = layout->this_node;
   char *newfilename;
@@ -38,6 +38,15 @@ QIO_Reader *QIO_create_reader(const char *filename,
   }
   else
     latsize = NULL;
+
+  /* Set up hypercube subset dimensions in case they are needed */
+  if(latdim != 0){
+    upper = (int *)malloc(sizeof(int)*latdim);
+    lower = (int *)malloc(sizeof(int)*latdim);
+  }  else {
+    upper = NULL;
+    lower = NULL;
+  }
 
   /* Construct the layout data from the QIO_Layout structure*/
   dml_layout = (DML_Layout *)malloc(sizeof(DML_Layout));
@@ -55,7 +64,11 @@ QIO_Reader *QIO_create_reader(const char *filename,
   dml_layout->this_node            = layout->this_node;
   dml_layout->number_of_nodes      = layout->number_of_nodes;
   dml_layout->discover_dims_mode   = (layout->latdim == 0);
-			           
+
+  dml_layout->hyperlower           = lower;
+  dml_layout->hyperupper           = upper;
+  dml_layout->subsetvolume         = layout->volume;
+
   dml_layout->ionode               = io_node;
   dml_layout->master_io_node       = master_io_node();
   dml_layout->broadcast_globaldata = 1;
@@ -308,11 +321,11 @@ int QIO_get_ildgstyle(QIO_Reader *in){
   return in->ildgstyle;
 }
 
-int QIO_get_read_volfmt(QIO_Reader *in){
+int QIO_get_reader_volfmt(QIO_Reader *in){
   return in->volfmt;
 }
 
-int QIO_get_read_format(QIO_Reader *in){
+int QIO_get_reader_format(QIO_Reader *in){
   return in->format;
 }
 
@@ -725,19 +738,39 @@ int QIO_read_user_file_xml(QIO_String *xml_file, QIO_Reader *qio_in){
 /**************************************/
 
 QIO_Reader *QIO_open_read(QIO_String *xml_file, const char *filename, 
-			  QIO_Layout *layout, QIO_Iflag *iflag){
+			  QIO_Layout *layout, QIO_Filesystem *fs,
+			  QIO_Iflag *iflag){
   QIO_Reader *qio_in;
   DML_Layout *dml_layout;
   char myname[] = "QIO_open_read";
   int this_node = layout->this_node;
   int status;
   int length;
+  DML_io_node_t my_io_node;
+  DML_master_io_node_t master_io_node;
+
+  /* Assign default behavior for io_node functions if needed */
+  if(fs == NULL){
+    my_io_node = DML_io_node;
+    master_io_node = DML_master_io_node;
+  }
+  else{
+    if(fs->my_io_node == NULL)
+      my_io_node = DML_io_node;
+    else
+      my_io_node = fs->my_io_node;
+    if(fs->master_io_node == NULL)
+      master_io_node = DML_master_io_node;
+    else
+      master_io_node = fs->master_io_node;
+  }
+
 
   /* On the compute nodes, we use DML calls to specify the I/O nodes
      and the master I/O node */
 
   qio_in = QIO_open_read_master(filename, layout, iflag,
-				   DML_io_node, DML_master_io_node);
+				   my_io_node, master_io_node);
   if(qio_in == NULL)return NULL;
 
   /* Master I/O node broadcasts the volume format to all the nodes, */

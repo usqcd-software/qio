@@ -1,4 +1,4 @@
-/* $Id: DML_scalar.c,v 1.9 2004-11-30 19:52:04 osborn Exp $ */
+/* $Id: DML_scalar.c,v 1.10 2007-06-17 13:18:59 detar Exp $ */
 /* Scalar versions of QMP-dependent utilities for DML */
 
 #include <lrl.h>
@@ -49,7 +49,7 @@ void DML_global_xor(uint32_t *x){}
 void DML_sync(void){}
 
 /* I/O layout */
-int DML_io_node(int node){
+int DML_io_node(const int node){
   return 0;
 }
 

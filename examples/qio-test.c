@@ -39,8 +39,8 @@ QIO_Writer *open_test_output(char *filename, int volfmt,
   QIO_string_set(xml_file_out,xml_write_file);
 
   /* Open the file for writing */
-  outfile = QIO_open_write(xml_file_out, filename, volfmt, &layout, &oflag);
-  printf("%s(%d): QIO_open_write returns address %x\n",myname,this_node,(unsigned int)outfile);
+  outfile = QIO_open_write(xml_file_out, filename, volfmt,  
+			   &layout, NULL, &oflag);
   if(outfile == NULL){
     printf("%s(%d): QIO_open_write returned NULL\n",myname,this_node);
     fflush(stdout);
@@ -58,7 +58,36 @@ int write_real_field(QIO_Writer *outfile, int count,
   QIO_RecordInfo *rec_info;
 
   /* Create the record info for the field */
-  rec_info = QIO_create_record_info(QIO_FIELD, "QDP_F_Real", "F", 0,
+  rec_info = QIO_create_record_info(QIO_FIELD, NULL, NULL, 0, 
+				    "QDP_F_Real", "F", 0,
+				    0, sizeof(float), count);
+  /* Create the record XML for the field */
+  xml_record_out = QIO_string_create();
+  QIO_string_set(xml_record_out,xml_write_field);
+
+  /* Write the record for the field */
+  status = QIO_write(outfile, rec_info, xml_record_out, vget_R, 
+		     count*sizeof(float), sizeof(float), field_out);
+  printf("%s(%d): QIO_write returns status %d\n",myname,this_node,status);
+  if(status != QIO_SUCCESS)return 1;
+
+  QIO_destroy_record_info(rec_info);
+  QIO_string_destroy(xml_record_out);
+
+  return 0;
+}
+
+int write_real_field_subset(QIO_Writer *outfile, int count, 
+			    float *field_out[], int lower[],
+			    int upper[], int dim, char *myname){
+  QIO_String *xml_record_out;
+  char xml_write_field[] = "Dummy user record XML for subset of real field";
+  int status;
+  QIO_RecordInfo *rec_info;
+
+  /* Create the record info for the field */
+  rec_info = QIO_create_record_info(QIO_HYPER, lower, upper, dim, 
+				    "QDP_F_Real", "F", 0,
 				    0, sizeof(float), count);
   /* Create the record XML for the field */
   xml_record_out = QIO_string_create();
@@ -84,7 +113,8 @@ int write_su3_field(QIO_Writer *outfile, int count,
   QIO_RecordInfo *rec_info;
 
   /* Create the record info for the field */
-  rec_info = QIO_create_record_info(QIO_FIELD, "QDP_F3_ColorMatrix", "F", 3,
+  rec_info = QIO_create_record_info(QIO_FIELD, NULL, NULL, 0,
+				    "QDP_F3_ColorMatrix", "F", 3,
 				    0, sizeof(suN_matrix), count);
   /* Create the record XML for the field */
   xml_record_out = QIO_string_create();
@@ -112,7 +142,8 @@ int write_real_global(QIO_Writer *outfile, int count, float array_out[],
   /* Create the record info for the global array */
   xml_record_out = QIO_string_create();
   QIO_string_set(xml_record_out,xml_write_global);
-  rec_info = QIO_create_record_info(QIO_GLOBAL, "QLA_F_Real", "F", 0,
+  rec_info = QIO_create_record_info(QIO_GLOBAL, NULL, NULL, 0,
+				    "QLA_F_Real", "F", 0,
 				    0, sizeof(float), count);
   /* Write the array to a file */
   status = QIO_write(outfile, rec_info, xml_record_out, vget_r, 
@@ -139,7 +170,7 @@ QIO_Reader *open_test_input(char *filename, int volfmt, int serpar,
   xml_file_in = QIO_string_create();
 
   /* Open the file for reading */
-  infile = QIO_open_read(xml_file_in, filename, &layout, &iflag);
+  infile = QIO_open_read(xml_file_in, filename, &layout, NULL, &iflag);
   if(infile == NULL){
     printf("%s(%d): QIO_open_read returns NULL.\n",myname,this_node);
     return NULL;
@@ -182,6 +213,26 @@ int read_real_field(QIO_Reader *infile, int count,
   /* Read the field record */
   status = QIO_read_record_data(infile, vput_R, sizeof(float)*count, 
 				sizeof(float), field_in);
+  printf("%s(%d): QIO_read_record_data returns status %d\n",
+	 myname,this_node,status);
+  if(status != QIO_SUCCESS)return 1;
+  return 0;
+}
+ 
+int read_real_field_subset(QIO_Reader *infile, int count, 
+			   float *field_in[], char *myname)
+{
+  QIO_String *xml_record_in;
+  QIO_RecordInfo rec_info;
+  int status;
+  
+  /* Create the record XML */
+  xml_record_in = QIO_string_create();
+
+  /* Read the field record */
+  status = QIO_read(infile, &rec_info, xml_record_in,
+		    vput_R, sizeof(float)*count, 
+		    sizeof(float), field_in);
   printf("%s(%d): QIO_read_record_data returns status %d\n",
 	 myname,this_node,status);
   if(status != QIO_SUCCESS)return 1;
@@ -235,16 +286,20 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
 	     int input_volfmt, int input_serpar, int argc, char *argv[]){
 
   float array_in[NARRAY], array_out[NARRAY];
-  float *field_in[NREAL], *field_out[NREAL];
+  float *field_in[NREAL], *subset_in[NREAL], 
+    *field_out[NREAL], *subset_out[NREAL];
   suN_matrix *field_su3_out[NMATRIX], *field_su3_in[NMATRIX];
   QIO_Writer *outfile;
   QIO_Reader *infile;
-  float diff_field = 0, diff_array = 0;
+  float diff_field = 0, diff_array = 0, diff_su3 = 0, diff_subset = 0;
   QMP_thread_level_t provided;
   int status;
   int sites_on_node = 0;
   int i,volume;
   char filename[] = "binary_test";
+  int dim = 4;
+  int lower[4] = {2, 0, 0, 2};
+  int upper[4] = {2, 3, 3, 2};
   char myname[] = "qio_test";
   
   /* Start message passing */
@@ -289,6 +344,7 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
 			     ildgstyle, myname);
   if(outfile == NULL)return 1;
 
+  /* If this is not the ILDG file test */
   if(ildgstyle == QIO_ILDGNO){
     /* Create the test output field */
     status = vcreate_R(field_out, NREAL);
@@ -299,6 +355,11 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
     
     /* Write the real test field */
     status = write_real_field(outfile, NREAL, field_out, myname);
+    if(status)return status;
+    
+    /* Write a subset of the real test field */
+    status = write_real_field_subset(outfile, NREAL, field_out, 
+				     lower, upper, dim, myname);
     if(status)return status;
     
     /* Set some values for the global array */
@@ -327,6 +388,10 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
 
   /* Set up a dummy input field */
   status = vcreate_R(field_in, NREAL);
+  if(status)return status;
+    
+  /* Set up a dummy input field for subset */
+  status = vcreate_R(subset_in, NREAL);
   if(status)return status;
     
   /* Set up a dummy input SU(N) field */
@@ -358,6 +423,12 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
     
 #endif
 
+    /* Read the subset of the field */
+    printf("%s(%d) reading subset of real field\n",
+	   myname,this_node); fflush(stdout);
+    status = read_real_field_subset(infile, NREAL, subset_in, myname);
+    if(status)return status;
+    
     /* Read the global array record */
     printf("%s(%d) reading global field\n",myname,this_node); fflush(stdout);
     status = read_real_global(infile, NARRAY, array_in, myname);
@@ -383,6 +454,20 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
 	     myname,this_node,diff_field);
     }
     
+    /* Create the subset output field */
+    status = vcreate_R(subset_out, NREAL);
+    if(status)return status;
+
+    /* Copy the subset */
+    vsubset_R(subset_out, field_out, lower, upper, NREAL);
+    
+    /* Compare the input and output subsets */
+    diff_subset = vcompare_R(subset_out, subset_in, NREAL);
+    if(this_node == 0){
+      printf("%s(%d): Comparison of subsets of in and out real fields |in - out|^2 = %e\n",
+	     myname,this_node,diff_subset);
+    }
+    
     /* Compare the input and output global arrays */
     diff_array = vcompare_r(array_out, array_in, NREAL);
     if(this_node == 0){
@@ -392,7 +477,7 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
   }
 
   /* Compare the input and output suN fields */
-  diff_field = vcompare_M(field_su3_out, field_su3_in, NMATRIX);
+  diff_su3 = vcompare_M(field_su3_out, field_su3_in, NMATRIX);
   if(this_node == 0){
     printf("%s(%d): Comparison of in and out suN fields |in - out|^2 = %e\n",
 	   myname, this_node, diff_field);
@@ -402,6 +487,8 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
   if(ildgstyle == QIO_ILDGNO){
     vdestroy_R(field_out, NREAL);
     vdestroy_R(field_in, NREAL);
+    vdestroy_R(subset_in, NREAL);
+    vdestroy_R(subset_out, NREAL);
   }
   vdestroy_M(field_su3_in, NMATRIX);
   vdestroy_M(field_su3_out, NMATRIX);
@@ -410,7 +497,7 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
   QMP_finalize_msg_passing();
 
   /* Report result */
-  if(diff_field + diff_array > 0){
+  if(diff_field + diff_subset + diff_su3 + diff_array > 0){
     printf("%s(%d): Test failed\n",myname,this_node);
     return 1;
   }

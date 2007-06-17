@@ -98,10 +98,12 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
     ildg_precision = 0;
     
     /* The ILDG lattice must have the correct data type */
-    if(strcmp(QIO_get_datatype(record_info),"QDP_F3_ColorMatrix") == 0)
+    if(strcmp(QIO_get_datatype(record_info),"QDP_F3_ColorMatrix") == 0 ||
+       strcmp(QIO_get_datatype(record_info),"USQCD_F3_ColorMatrix") == 0)
       ildg_precision = 32;
 
-    else if(strcmp(QIO_get_datatype(record_info),"QDP_D3_ColorMatrix") == 0)
+    else if(strcmp(QIO_get_datatype(record_info),"QDP_D3_ColorMatrix") == 0 ||
+	    strcmp(QIO_get_datatype(record_info),"USQCD_D3_ColorMatrix") == 0) 
       ildg_precision = 64;
 
     /* There must be four color matrices per site */
@@ -161,27 +163,6 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
     }
   }
 
-#ifdef DO_BINX
-  /* Master node writes the BinX record */
-  if(this_node == master_io_node){
-    if ((status = 
-	 QIO_write_string(out, *msg_begin, *msg_end, BinX, 
-			  (LIME_type)"scidac-binx-xml"))
-	!= QIO_SUCCESS){
-      printf("%s(%d): Error writing BinX\n",myname,this_node);
-      return status;
-    }
-    if(QIO_verbosity() >= QIO_VERB_DEBUG){
-      printf("%s(%d): BinX = %s\n",myname,this_node,QIO_string_ptr(BinX));
-    }
-    *msg_begin = 0;
-  }
-  /* In singlefile parallel mode all nodes pretend they also wrote the
-     BinX record */
-  if(out->serpar == QIO_PARALLEL && out->volfmt == QIO_SINGLEFILE)
-    *msg_begin = 0;
-#endif
-  
   return QIO_SUCCESS;
 }
 
@@ -197,7 +178,7 @@ int QIO_write_record_data(QIO_Writer *out, QIO_RecordInfo *record_info,
   int this_node = out->layout->this_node;
   int master_io_node = out->layout->master_io_node;
   int status;
-  int globaldata = QIO_get_globaldata(record_info);
+  int recordtype = QIO_get_recordtype(record_info);
   int count = QIO_get_datacount(record_info);
   char scidac_type[] = QIO_LIMETYPE_BINARY_DATA;
   char ildg_type[] = QIO_LIMETYPE_ILDG_BINARY_DATA;
@@ -216,7 +197,7 @@ int QIO_write_record_data(QIO_Writer *out, QIO_RecordInfo *record_info,
   else lime_type = scidac_type;
 
   status = 
-    QIO_write_field(out, *msg_begin, *msg_end, globaldata,
+    QIO_write_field(out, *msg_begin, *msg_end, recordtype,
 		    get, count, datum_size, word_size, arg, 
 		    checksum, nbytes, lime_type);
   if(status != QIO_SUCCESS){
@@ -248,6 +229,23 @@ int QIO_generic_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 	      int *msg_begin, int *msg_end){
 
   int status;
+  DML_Layout *layout= out->layout;
+  int *lower, *upper;
+  size_t subsetvolume;
+  int latdim = layout->latdim;
+  int *latsize = layout->latsize;
+  int recordtype;
+  int this_node = layout->this_node;
+
+  /* Add subset data to layout structure and check it */
+  recordtype = QIO_get_recordtype(record_info);
+  layout->recordtype = recordtype;
+  status = DML_insert_subset_data(layout, 
+				  QIO_get_hyperlower(record_info),
+				  QIO_get_hyperupper(record_info),
+				  QIO_get_hyper_spacetime(record_info));
+  if(status != 0)
+    return QIO_ERR_BAD_SUBSET;
 
   status = QIO_write_record_info(out, record_info, datum_size, word_size, 
 				 xml_record, msg_begin, msg_end);
@@ -307,8 +305,8 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   int msg_begin, msg_end;
   int status;
   uint64_t total_bytes;
-  size_t volume = out->layout->volume;
-  int globaldata = QIO_get_globaldata(record_info);
+  size_t volume;
+  int recordtype = QIO_get_recordtype(record_info);
   char myname[] = "QIO_write";
 
 
@@ -328,7 +326,8 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   DML_sum_uint64_t(&nbytes);
 
   /* Compute and compare byte count with expected record size */
-  if(globaldata == QIO_GLOBAL)total_bytes = datum_size;
+  volume = out->layout->subsetvolume;
+  if(recordtype == QIO_GLOBAL)total_bytes = datum_size;
   else total_bytes = ((uint64_t)volume) * datum_size;
 
   if(nbytes != total_bytes){
@@ -343,10 +342,10 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 
   /* Some useful information */
   if(QIO_verbosity() >= QIO_VERB_REG){
-    printf("%s(%d): Wrote field. datatype %s globaltype %d \n              precision %s colors %d spins %d count %d\n",
+    printf("%s(%d): Wrote field. datatype %s recordtype %d \n              precision %s colors %d spins %d count %d\n",
 	   myname,this_node,
 	   QIO_get_datatype(record_info),
-	   QIO_get_globaldata(record_info),
+	   QIO_get_recordtype(record_info),
 	   QIO_get_precision(record_info),
 	   QIO_get_colors(record_info),
 	   QIO_get_spins(record_info),

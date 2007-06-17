@@ -8,6 +8,10 @@ QIO_SRCS = \
    qio/QIO_close_read.c \
    qio/QIO_close_write.c \
    qio/QIO_info.c \
+   qio/QIO_info_ildg_record.c \
+   qio/QIO_info_private.c \
+   qio/QIO_info_usqcd_gauge.c \
+   qio/QIO_info_usqcd_prop.c \
    qio/QIO_next_record.c \
    qio/QIO_open_read.c \
    qio/QIO_open_write.c \

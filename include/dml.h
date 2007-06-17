@@ -15,6 +15,7 @@
 /* Data distribution */
 #define DML_FIELD      0
 #define DML_GLOBAL     1
+#define DML_HYPER      2
 
 /* The following choices are ORed to create the oflag or iflag */
 
@@ -51,7 +52,7 @@ typedef uint32_t DML_SiteRank;
 /* For collecting and passing layout information */
 /* See qio.h for QIO_Layout */
 typedef struct {
-  /* Data distribution */
+  /* Data distribution fixed for the entire file */
   int (*node_number)(const int coords[]);
   int (*node_index)(const int coords[]);
   void (*get_coords)(int coords[], int node, const int index);
@@ -65,17 +66,32 @@ typedef struct {
   int broadcast_globaldata;
   int discover_dims_mode;
 
+  /* Subset parameters that can change with each record */
+  int recordtype;
+  int *hyperlower;
+  int *hyperupper;
+  size_t subsetvolume;
+
   /* I/O partitions */
   int (*ionode)(int node);
   int master_io_node;
 } DML_Layout;
 
 typedef struct {
-  DML_SiteRank *list;
+  /* Constant for the file */
+  DML_SiteRank *list;            /* List of sites assigned to file */
   int use_list;
   DML_SiteRank first, current_rank;
-  size_t current_index, number_of_io_sites;
+  size_t number_of_io_sites;
   int number_of_my_ionodes;
+
+  /* Variable */
+  size_t current_index;
+
+  /* Constant for a record */
+  int use_subset;
+  int *subset_rank;     /* Rank order of sites in subset */
+  int subset_io_sites;
 } DML_SiteList;
 
 
@@ -112,7 +128,7 @@ typedef struct {
   size_t max_send_sites;    /* Total sites to be read by this node */
 } DML_RecordReader;
 
-uint64_t DML_stream_out(LRL_RecordWriter *lrl_record_out, int globaldata,
+uint64_t DML_stream_out(LRL_RecordWriter *lrl_record_out, int recordtype,
 	   void (*get)(char *buf, size_t index, int count, void *arg),
            int count, size_t size, int word_size, void *arg, 
 	   DML_Layout *layout, DML_SiteList *sites,
@@ -123,7 +139,7 @@ size_t DML_stream_global_out(LRL_RecordWriter *lrl_record_out,
 			     size_t size, int word_size, DML_Layout *layout,
 			     DML_Checksum *checksum);
 
-uint64_t DML_stream_in(LRL_RecordReader *lrl_record_in, int globaldata,
+uint64_t DML_stream_in(LRL_RecordReader *lrl_record_in, int recordtype,
 	     void (*put)(char *buf, size_t index, int count, void *arg),
 	     int count, size_t size, int word_size, void *arg, 
              DML_Layout *layout, DML_SiteList *sites, 
@@ -151,11 +167,15 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
 		      LIME_type *lime_type);
 int DML_compare_sitelists(DML_SiteRank *lista, DML_SiteRank *listb, size_t n);
+int DML_insert_subset_data(DML_Layout *layout, 
+			   int *lower, int *upper, int n);
 void DML_checksum_init(DML_Checksum *checksum);
 void DML_checksum_accum(DML_Checksum *checksum, DML_SiteRank rank, 
 			char *buf, size_t size);
 void DML_checksum_combine(DML_Checksum *checksum);
 void DML_checksum_peq(DML_Checksum *total, DML_Checksum *checksum);
+int DML_create_subset_rank(DML_SiteList *sites, DML_Layout *layout);
+void DML_destroy_subset_rank(DML_SiteList *sites);
 void DML_global_xor(uint32_t *x);
 int DML_big_endian(void);
 void DML_byterevn(char *buf, size_t size, int word_size);
@@ -251,7 +271,10 @@ int DML_clear_to_send(char *buf, size_t size, int my_io_node, int tonode);
 void DML_sync(void);
 
 /* I/O layout */
-int DML_io_node(int node);
+typedef int (*DML_io_node_t)(const int);
+typedef int (*DML_master_io_node_t)(void);
+
+int DML_io_node(const int node);
 int DML_master_io_node(void);
 
 uint32_t DML_crc32(uint32_t crc, const unsigned char *buf, uint32_t len);
