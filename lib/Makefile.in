@@ -388,57 +388,57 @@ QIO_info.obj: qio/QIO_info.c
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o QIO_info.obj `if test -f 'qio/QIO_info.c'; then $(CYGPATH_W) 'qio/QIO_info.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info.c'; fi`
 
 QIO_info_ildg_record.o: qio/QIO_info_ildg_record.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_ildg_record.o -MD -MP -MF "$(DEPDIR)/QIO_info_ildg_record.Tpo" -c -o QIO_info_ildg_record.o `test -f 'qio/QIO_info_ildg_record.c' || echo '$(srcdir)/'`qio/QIO_info_ildg_record.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/QIO_info_ildg_record.Tpo" "$(DEPDIR)/QIO_info_ildg_record.Po"; else rm -f "$(DEPDIR)/QIO_info_ildg_record.Tpo"; exit 1; fi
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_ildg_record.o -MD -MP -MF $(DEPDIR)/QIO_info_ildg_record.Tpo -c -o QIO_info_ildg_record.o `test -f 'qio/QIO_info_ildg_record.c' || echo '$(srcdir)/'`qio/QIO_info_ildg_record.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/QIO_info_ildg_record.Tpo $(DEPDIR)/QIO_info_ildg_record.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='qio/QIO_info_ildg_record.c' object='QIO_info_ildg_record.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o QIO_info_ildg_record.o `test -f 'qio/QIO_info_ildg_record.c' || echo '$(srcdir)/'`qio/QIO_info_ildg_record.c
 
 QIO_info_ildg_record.obj: qio/QIO_info_ildg_record.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_ildg_record.obj -MD -MP -MF "$(DEPDIR)/QIO_info_ildg_record.Tpo" -c -o QIO_info_ildg_record.obj `if test -f 'qio/QIO_info_ildg_record.c'; then $(CYGPATH_W) 'qio/QIO_info_ildg_record.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_ildg_record.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/QIO_info_ildg_record.Tpo" "$(DEPDIR)/QIO_info_ildg_record.Po"; else rm -f "$(DEPDIR)/QIO_info_ildg_record.Tpo"; exit 1; fi
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_ildg_record.obj -MD -MP -MF $(DEPDIR)/QIO_info_ildg_record.Tpo -c -o QIO_info_ildg_record.obj `if test -f 'qio/QIO_info_ildg_record.c'; then $(CYGPATH_W) 'qio/QIO_info_ildg_record.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_ildg_record.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/QIO_info_ildg_record.Tpo $(DEPDIR)/QIO_info_ildg_record.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='qio/QIO_info_ildg_record.c' object='QIO_info_ildg_record.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o QIO_info_ildg_record.obj `if test -f 'qio/QIO_info_ildg_record.c'; then $(CYGPATH_W) 'qio/QIO_info_ildg_record.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_ildg_record.c'; fi`
 
 QIO_info_private.o: qio/QIO_info_private.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_private.o -MD -MP -MF "$(DEPDIR)/QIO_info_private.Tpo" -c -o QIO_info_private.o `test -f 'qio/QIO_info_private.c' || echo '$(srcdir)/'`qio/QIO_info_private.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/QIO_info_private.Tpo" "$(DEPDIR)/QIO_info_private.Po"; else rm -f "$(DEPDIR)/QIO_info_private.Tpo"; exit 1; fi
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_private.o -MD -MP -MF $(DEPDIR)/QIO_info_private.Tpo -c -o QIO_info_private.o `test -f 'qio/QIO_info_private.c' || echo '$(srcdir)/'`qio/QIO_info_private.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/QIO_info_private.Tpo $(DEPDIR)/QIO_info_private.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='qio/QIO_info_private.c' object='QIO_info_private.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o QIO_info_private.o `test -f 'qio/QIO_info_private.c' || echo '$(srcdir)/'`qio/QIO_info_private.c
 
 QIO_info_private.obj: qio/QIO_info_private.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_private.obj -MD -MP -MF "$(DEPDIR)/QIO_info_private.Tpo" -c -o QIO_info_private.obj `if test -f 'qio/QIO_info_private.c'; then $(CYGPATH_W) 'qio/QIO_info_private.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_private.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/QIO_info_private.Tpo" "$(DEPDIR)/QIO_info_private.Po"; else rm -f "$(DEPDIR)/QIO_info_private.Tpo"; exit 1; fi
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_private.obj -MD -MP -MF $(DEPDIR)/QIO_info_private.Tpo -c -o QIO_info_private.obj `if test -f 'qio/QIO_info_private.c'; then $(CYGPATH_W) 'qio/QIO_info_private.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_private.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/QIO_info_private.Tpo $(DEPDIR)/QIO_info_private.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='qio/QIO_info_private.c' object='QIO_info_private.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o QIO_info_private.obj `if test -f 'qio/QIO_info_private.c'; then $(CYGPATH_W) 'qio/QIO_info_private.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_private.c'; fi`
 
 QIO_info_usqcd_gauge.o: qio/QIO_info_usqcd_gauge.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_usqcd_gauge.o -MD -MP -MF "$(DEPDIR)/QIO_info_usqcd_gauge.Tpo" -c -o QIO_info_usqcd_gauge.o `test -f 'qio/QIO_info_usqcd_gauge.c' || echo '$(srcdir)/'`qio/QIO_info_usqcd_gauge.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/QIO_info_usqcd_gauge.Tpo" "$(DEPDIR)/QIO_info_usqcd_gauge.Po"; else rm -f "$(DEPDIR)/QIO_info_usqcd_gauge.Tpo"; exit 1; fi
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_usqcd_gauge.o -MD -MP -MF $(DEPDIR)/QIO_info_usqcd_gauge.Tpo -c -o QIO_info_usqcd_gauge.o `test -f 'qio/QIO_info_usqcd_gauge.c' || echo '$(srcdir)/'`qio/QIO_info_usqcd_gauge.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/QIO_info_usqcd_gauge.Tpo $(DEPDIR)/QIO_info_usqcd_gauge.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='qio/QIO_info_usqcd_gauge.c' object='QIO_info_usqcd_gauge.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o QIO_info_usqcd_gauge.o `test -f 'qio/QIO_info_usqcd_gauge.c' || echo '$(srcdir)/'`qio/QIO_info_usqcd_gauge.c
 
 QIO_info_usqcd_gauge.obj: qio/QIO_info_usqcd_gauge.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_usqcd_gauge.obj -MD -MP -MF "$(DEPDIR)/QIO_info_usqcd_gauge.Tpo" -c -o QIO_info_usqcd_gauge.obj `if test -f 'qio/QIO_info_usqcd_gauge.c'; then $(CYGPATH_W) 'qio/QIO_info_usqcd_gauge.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_usqcd_gauge.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/QIO_info_usqcd_gauge.Tpo" "$(DEPDIR)/QIO_info_usqcd_gauge.Po"; else rm -f "$(DEPDIR)/QIO_info_usqcd_gauge.Tpo"; exit 1; fi
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_usqcd_gauge.obj -MD -MP -MF $(DEPDIR)/QIO_info_usqcd_gauge.Tpo -c -o QIO_info_usqcd_gauge.obj `if test -f 'qio/QIO_info_usqcd_gauge.c'; then $(CYGPATH_W) 'qio/QIO_info_usqcd_gauge.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_usqcd_gauge.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/QIO_info_usqcd_gauge.Tpo $(DEPDIR)/QIO_info_usqcd_gauge.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='qio/QIO_info_usqcd_gauge.c' object='QIO_info_usqcd_gauge.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o QIO_info_usqcd_gauge.obj `if test -f 'qio/QIO_info_usqcd_gauge.c'; then $(CYGPATH_W) 'qio/QIO_info_usqcd_gauge.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_usqcd_gauge.c'; fi`
 
 QIO_info_usqcd_prop.o: qio/QIO_info_usqcd_prop.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_usqcd_prop.o -MD -MP -MF "$(DEPDIR)/QIO_info_usqcd_prop.Tpo" -c -o QIO_info_usqcd_prop.o `test -f 'qio/QIO_info_usqcd_prop.c' || echo '$(srcdir)/'`qio/QIO_info_usqcd_prop.c; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/QIO_info_usqcd_prop.Tpo" "$(DEPDIR)/QIO_info_usqcd_prop.Po"; else rm -f "$(DEPDIR)/QIO_info_usqcd_prop.Tpo"; exit 1; fi
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_usqcd_prop.o -MD -MP -MF $(DEPDIR)/QIO_info_usqcd_prop.Tpo -c -o QIO_info_usqcd_prop.o `test -f 'qio/QIO_info_usqcd_prop.c' || echo '$(srcdir)/'`qio/QIO_info_usqcd_prop.c
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/QIO_info_usqcd_prop.Tpo $(DEPDIR)/QIO_info_usqcd_prop.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='qio/QIO_info_usqcd_prop.c' object='QIO_info_usqcd_prop.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o QIO_info_usqcd_prop.o `test -f 'qio/QIO_info_usqcd_prop.c' || echo '$(srcdir)/'`qio/QIO_info_usqcd_prop.c
 
 QIO_info_usqcd_prop.obj: qio/QIO_info_usqcd_prop.c
-@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_usqcd_prop.obj -MD -MP -MF "$(DEPDIR)/QIO_info_usqcd_prop.Tpo" -c -o QIO_info_usqcd_prop.obj `if test -f 'qio/QIO_info_usqcd_prop.c'; then $(CYGPATH_W) 'qio/QIO_info_usqcd_prop.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_usqcd_prop.c'; fi`; \
-@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/QIO_info_usqcd_prop.Tpo" "$(DEPDIR)/QIO_info_usqcd_prop.Po"; else rm -f "$(DEPDIR)/QIO_info_usqcd_prop.Tpo"; exit 1; fi
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT QIO_info_usqcd_prop.obj -MD -MP -MF $(DEPDIR)/QIO_info_usqcd_prop.Tpo -c -o QIO_info_usqcd_prop.obj `if test -f 'qio/QIO_info_usqcd_prop.c'; then $(CYGPATH_W) 'qio/QIO_info_usqcd_prop.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_usqcd_prop.c'; fi`
+@am__fastdepCC_TRUE@	mv -f $(DEPDIR)/QIO_info_usqcd_prop.Tpo $(DEPDIR)/QIO_info_usqcd_prop.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='qio/QIO_info_usqcd_prop.c' object='QIO_info_usqcd_prop.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o QIO_info_usqcd_prop.obj `if test -f 'qio/QIO_info_usqcd_prop.c'; then $(CYGPATH_W) 'qio/QIO_info_usqcd_prop.c'; else $(CYGPATH_W) '$(srcdir)/qio/QIO_info_usqcd_prop.c'; fi`
