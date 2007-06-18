@@ -280,7 +280,7 @@ fi
 AC_SUBST(DISTCHECK_CONFIGURE_FLAGS)
 
 # export CC and CFLAGS so that the other_libs will use the same
-export CC CFLAGS
+# export CC CFLAGS
 # Configure subdir packages
 AC_CONFIG_SUBDIRS(other_libs/c-lime)
 
