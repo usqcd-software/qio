@@ -31,7 +31,7 @@ passing package.  Three data models are treated: full volume lattice
 fields, consisting of data of the same format residing on each site of
 a hypercubic lattice, subvolume lattice fields, consisting of data of
 the same format residing on a hypercubic subset of a hypercubic
-lattice, and global data (e.g.\ a 3D time slice), constant across all
+lattice (e.g.\ a 3D time slice), and global data, constant across all
 lattice sites.  Lattice field data is distributed among multiple
 nodes.
 
@@ -593,11 +593,17 @@ typedef struct {
 \end{verbatim}
 %
 
-It contains parameters that control whether the file is to be
-truncated or data is to be appended and has a placeholder for future
-use for specifying whether the file is to be written in parallel or
-serially.  At present only serial writing is supported.  The structure
-is initialized as in the following example:
+The \verb|serpar| member specifies whether the component file(s)
+is(are) to be written in parallel (many nodes writing to the same
+component file) or serially (only one writer for each component file).
+The \verb|mode| member specifies whether the file is to be truncated
+or data is to be appended.  The \verb|ildgstyle| member specifies
+whether the file (currently only a lattice file) is to be written with
+additional LIME records for ILDG compatibility. If so, a pointer to
+the ILDG logical file name (LFN) must be supplied through the
+\verb|ildgLFN| member.  
+
+The structure is initialized as in the following example:
 
 %
 \begin{verbatim}
@@ -609,6 +615,7 @@ is initialized as in the following example:
    QIO_string_set(oflag.ildgLFN,"MILC.ks_imp_3flav.4096f21b708m0031m031b.696");
 \end{verbatim}
 %
+(Please note, this illustrative LFN is not valid.)
 
 When the \verb|&oflag| parameter is passed as a null pointer, the
 default values are serial mode, truncate, non-ILDG, and null LFN.  If
@@ -617,12 +624,12 @@ then be appended later to produce a file that is fully ILDG compatible.
 
 Parallel I/O is supported only in singlefile format.  If parallel mode
 is requested for other formats, the request is currently ignored.  Of
-course, in a sense multifile and partfile formats are really parallel
+course, in a sense multifile and partfile formats are parallel
 formats, but the component files are opened by only one node.  So we
 say each component file is accessed serially.  It is conceivable in
 future versions of QIO that one could have a subset of nodes on a
 partition open the same partition file.  We would call that parallel
-I/O of a partfile.
+I/O of a partition file.
 
 Caution: If a file is opened for appending, QIO presently does not
 verify that the fields being appended conform to the lattice
@@ -677,9 +684,8 @@ specify a preference.  Otherwise, the parameter can be safely passed
 as \verb|QIO_UNKNOWN| or \verb|QIO_SINGLEFILE|, regardless of the file
 format, and the format will be set according to the existing file.
 The structure also has a placeholder for future use for specifying
-whether the file is to be read in parallel or serially.  At present
-only serial reading is supported.  The structure is initialized as in
-the following example:
+whether the file is to be read in parallel or serially.  The structure
+is initialized as in the following example:
 
 %
 \begin{verbatim}
@@ -1333,7 +1339,7 @@ Here is an example of a call to create the private record XML:
 \begin{verbatim}
   QIO_RecordInfo *rec_info;
 
-  rec_info = QIO_create_record_info(QIO_FIELD, 0, 0, 0, "USQCD_ColorMatrix",
+  rec_info = QIO_create_record_info(QIO_FIELD, 0, 0, 0, "USQCD_F3_ColorMatrix",
                "F", 3, 72, 4); 
 \end{verbatim}
 
@@ -1345,19 +1351,26 @@ the source field or fields as a complex scalar or Dirac field as well
 as the solution fields.
 %
 \begin{enumerate}
-\item \verb|C1D12|: One complex scalar source record and twelve solution 
-      records, one for each source spin and color.  The solution
-      records correspond to each source spin and color.  Color varies
-      most rapidly.
-\item \verb|CD_PAIRS|: Alternating source and solution for any number of pairs.
-      The source in each case is a complex field.
-\item \verb|DD_PAIRS|: Alternating source and solution for any number of pairs.
-      The source in each case is a Dirac field.
+\item \verb|C1D12|: One complex scalar source record and twelve
+  solution records, one for each source spin and color.  The solution
+  records correspond to each source spin and color.  The order of
+  source spin and color should be sequential with color varying most
+  rapidly.
+\item \verb|CD_PAIRS|: Alternating source and solution for any number
+  of pairs.  The source in each case is a complex field.
+\item \verb|DD_PAIRS|: Alternating source and solution for any number
+  of pairs.  The source in each case is a Dirac field.
 \item \verb|LHPC|: [USQCD standard under development.]
 \end{enumerate}
 %
 In all cases the source can be specified either on a time slice or as
-a full field.
+a full field.  The \verb|CD_PAIRS| and \verb|DD_PAIRS| formats could
+be used for a series of random source/solution pairs, or they could be
+used for a series of sequential sources plus their solutions.  Thus in
+some, but not all cases, the file contains twelve solutions, one for
+each source color and spin.  When it does, the order of the pairs
+should be the same as for the \verb|C1D12| format, namely, sequential
+with color varying most rapidly.
 
 \subsubsection{File information}
 
@@ -1554,14 +1567,19 @@ QIO_RecordInfo *QIO_create_record_info(int recordtype, int lower[],
 				       int datacount);
 \end{verbatim}
 %
-The data type field is \verb|"USQCD_F_Complex"| or
-\verb|"USQCD_D_Complex"|, the precision field is \verb|"F"| or
-\verb|"D"|, and the record type field is \verb|QIO_FIELD| or
-\verb|QIO_HYPER|.  In the former case it is permissible to pass null
-pointers for \verb|lower| and \verb|upper| and a zero value for
-\verb|n|.  For a source specified on a single time slice, these arrays
-specify the bounds of the time slice, as illustrated in
-Sec.~\ref{sec:recordinfo} above.
+The record type field is \verb|QIO_FIELD| or \verb|QIO_HYPER|. In the
+former case it is permissible to pass null pointers for \verb|lower|
+and \verb|upper| and a zero value for \verb|n|.  For a source
+specified on a single time slice, these arrays specify the bounds of
+the time slice, as illustrated in Sec.~\ref{sec:recordinfo} above.
+For complex source fields, the data type field is
+\verb|"USQCD_F_Complex"| or \verb|"USQCD_D_Complex"| and for Dirac
+vector source fields, the data type field is
+\verb|"USQCD_F3_DiracFermion"| or \verb|"USQCD_D3_DiracFermion"|.  The
+precision field in either case is \verb|"F"| or \verb|"D"|.  The
+colors and spins parameters apply to a Dirac spinor field and should
+be zero for a complex source field.  The type size specifies the byte
+count for the site data, and the data count field should always be 1.
 
 \subsubsection{Dirac solution fields}
 
