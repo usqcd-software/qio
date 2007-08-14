@@ -327,14 +327,24 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 
   /* Compute and compare byte count with expected record size */
   volume = out->layout->subsetvolume;
-  if(recordtype == QIO_GLOBAL)total_bytes = datum_size;
-  else total_bytes = ((uint64_t)volume) * datum_size;
+  if(recordtype == QIO_GLOBAL)
+    total_bytes = datum_size;
+  else 
+    total_bytes = ((uint64_t)volume) * datum_size;
 
-  if(nbytes != total_bytes){
-    printf("%s(%d): bytes written %llu != expected rec_size %llu\n",
-	   myname, this_node, (unsigned long long)nbytes, 
-	   (unsigned long long)total_bytes);
-    return QIO_ERR_BAD_WRITE_BYTES;
+  /* 
+   * Global data may only live on the master_io_node, so only return an
+   * error if this node expects data to have been written
+   */
+  if (! (recordtype == QIO_GLOBAL && total_bytes == 0))
+  {
+    if(nbytes != total_bytes)
+    {
+      printf("%s(%d): bytes written %llu != expected rec_size %llu\n",
+	     myname, this_node, (unsigned long long)nbytes, 
+	     (unsigned long long)total_bytes);
+      return QIO_ERR_BAD_WRITE_BYTES;
+    }
   }
 
   /* Write the checksum */
