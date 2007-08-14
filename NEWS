@@ -1,17 +1,22 @@
+08/14/2007 -- Robert Edwards
+
+	Version 2.2.1 Patched byterevn and QIO_write. The latter now supports
+        global data living on only the master_io_node.
+
 06/16/2007 -- Carleton DeTar
 
-       Version 2.2.0 Added support for USQCD propagator file formats.  
-                     Added hypercube record type.  (Breaks previous API.)
-                     Add support for user-defined I/O nodes. (Breaks 
-                     previous API.)
-                     Rearranged QIO_info*.c and qioxml*.h for clarity.
-                     Updated documentation.
+        Version 2.2.0 Added support for USQCD propagator file formats.  
+                      Added hypercube record type.  (Breaks previous API.)
+                      Add support for user-defined I/O nodes. (Breaks 
+                      previous API.)
+                      Rearranged QIO_info*.c and qioxml*.h for clarity.
+                      Updated documentation.
 
 05/13/2007 -- Carleton DeTar
 
-       Version 2.1.9 Added support for dache/dcap.  Added file splitting for 
-                     I/O partitions.  Add Enno Scholz's support for
-                     constructing and parsing USQCD XML for lattice files.
+        Version 2.1.9 Added support for dache/dcap.  Added file splitting for 
+                      I/O partitions.  Add Enno Scholz's support for
+                      constructing and parsing USQCD XML for lattice files.
 
 02/12/2007 -- James Osborn
 
