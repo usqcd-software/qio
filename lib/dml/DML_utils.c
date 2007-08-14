@@ -831,13 +831,19 @@ void DML_byterevn64(uint32_t w[], size_t n)
 
 /* Do byte reversal on size bytes of contiguous words,
    each word consisting of word_size bytes 
-   word_size = 4 or 8 are the only choices */
+   word_size = 1, 4 or 8 are the only choices. */
 
-void DML_byterevn(char *buf, size_t size, int word_size){
-  if(word_size == 4)
+void DML_byterevn(char *buf, size_t size, int word_size)
+{
+  if(word_size == 1) {
+    /* NOP */
+  }
+  else if(word_size == 4) {
     DML_byterevn32((uint32_t *)buf, size/word_size);
-  else if(word_size == 8)
+  }
+  else if(word_size == 8) {
     DML_byterevn64((uint32_t *)buf, size/word_size);
+  }
   else{
     printf("DML_byterevn: illegal word_size %d\n",word_size);
   }
