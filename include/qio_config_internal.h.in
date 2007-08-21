@@ -66,6 +66,9 @@
 /* Maximum DML buffer size in bytes */
 #undef QIO_DML_BUF_BYTES
 
+/* Enables DML output buffering of sites */
+#undef QIO_USE_DML_OUT_BUFFERING
+
 /* Enable parallel file-system read */
 #undef QIO_USE_PARALLEL_READ
 
