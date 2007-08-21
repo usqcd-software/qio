@@ -1,3 +1,11 @@
+2007-08-21 14:17  edwards
+
+	* aclocal.m4: Induced changes
+
+2007-08-21 14:16  edwards
+
+	* configure.ac: Changed to 2.2.2
+
 2007-08-14 12:02  tag qdp1-24-4
 
 2007-08-14 12:02  tag qio2-2-1
@@ -10,10 +18,6 @@
 2007-08-14 12:01  edwards
 
 	* NEWS: Info on 2.2.1
-
-2007-08-14 11:59  edwards
-
-	* configure.ac: Changed to 2.2.1
 
 2007-08-14 00:15  edwards
 
