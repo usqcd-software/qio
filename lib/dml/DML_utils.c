@@ -1330,7 +1330,7 @@ static void DML_flush_tbuf_to_outbuf(size_t size,
 }
 
 /*------------------------------------------------------------------*/
-if defined(QIO_USE_DML_OUT_BUFFERING)
+#if defined(QIO_USE_DML_OUT_BUFFERING)
 /* Each I/O node (or the master node) receives data from all of its
    nodes and writes it to its file.
    Returns the checksum and number of bytes written by this node only */
