@@ -1330,6 +1330,7 @@ static void DML_flush_tbuf_to_outbuf(size_t size,
 }
 
 /*------------------------------------------------------------------*/
+if defined(QIO_USE_DML_OUT_BUFFERING)
 /* Each I/O node (or the master node) receives data from all of its
    nodes and writes it to its file.
    Returns the checksum and number of bytes written by this node only */
@@ -1540,7 +1541,8 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 }
 
 /*------------------------------------------------------------------*/
-/* THIS PROCEDURE IS OBSOLETE */
+#else  /* not defined(IO_USE_DML_OUT_BUFFERING) */
+
 /* Each I/O node (or the master node) receives data from all of its
    nodes and writes it to its file.
    Returns the checksum and number of bytes written by this node only */
@@ -1553,7 +1555,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 
 /* This is the old algorithm that sent only one site's worth at a time */
 
-uint64_t DML_partition_out_old(LRL_RecordWriter *lrl_record_out, 
+uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out, 
 	   void (*get)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t size, int word_size, void *arg, 
 	   DML_Layout *layout, DML_SiteList *sites, int volfmt, 
@@ -1707,6 +1709,8 @@ uint64_t DML_partition_out_old(LRL_RecordWriter *lrl_record_out,
   /* Number of bytes written by this node only */
   return nbytes;
 }
+#endif  /* if defined(QIO_USE_DML_OUT_BUFFERING) */
+
 
 /*------------------------------------------------------------------*/
 /* The master node fetches the global data in one call to "get"  and writes */
