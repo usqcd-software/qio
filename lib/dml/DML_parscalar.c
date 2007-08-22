@@ -89,23 +89,39 @@ int DML_clear_to_send(char *scratch_buf, size_t size,
 
 int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode) 
 {
-  if (QMP_get_msg_passing_type() == QMP_GRID)
-  {
-    DML_grid_route(buf, size, fromnode, tonode);
-  }
-  else
-  {
-    int this_node = QMP_get_node_number();
+ /* Check if we are BGL native somehow... */
+ /* EG: We can use the HAVE_BGL option. Currently this is specified
+    in the QMP MPI headres (in the config.h.in  whic is included
+    by the COMMON_P_H etc etc. However, one can always just make it a QIO
+    define too, it is really no big deal.
 
-    if (this_node == tonode)
-      DML_get_bytes(buf,size,fromnode);
+    Non MPI QIOs probably dont have this defined - as always check before use
+    caveat emptor etc etc. Biggest danger, have BGL defined and it meant something
+    else, this can be circumvented by making this a QIO define eg: QIO_HAVE_BLUEGENE 
+  */ 
+#if HAVE_BGL
+ int grid_route_p = QMP_SWITCH;
+#else
+ int grid_route_p = QMP_get_msg_passing_type();
+#endif
 
-    if (this_node == fromnode)
-      DML_send_bytes(buf,size,tonode);
-  }
+ if (grid_route_p == QMP_GRID)
+ {
+   DML_grid_route(buf, size, fromnode, tonode);
+ }
+ else
+ {
+   int this_node = QMP_get_node_number();
 
-  return 0;
-}
+   if (this_node == tonode)
+     DML_get_bytes(buf,size,fromnode);
+
+   if (this_node == fromnode)
+     DML_send_bytes(buf,size,tonode);
+ }
+
+ return 0;
+} 
 
 void DML_global_xor(uint32_t *x){
   unsigned long work = (unsigned long)*x;
