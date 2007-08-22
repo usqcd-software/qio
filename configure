@@ -856,9 +856,8 @@ Optional Features:
                           Build QIO for parallel architecture <arch>
   --enable-qmp-route      Enable usage of QMP_route if it exists default is on
   --enable-dml-output-buffering       Buffering enabled in partition output
-   --enable-dml-bufsize=X
-                          Set the DML buffer size to X bytes
-   --enable-slow-route    When not using QMP_route, use the slow version of
+  --enable-dml-bufsize=X  Set the DML buffer size to X bytes
+  --enable-fast-route     When not using QMP_route, use the slow version of
                           DML route
   --enable-largefile      For files larger than 2 GB
   --disable-largefile     omit support for large files
@@ -1852,20 +1851,20 @@ _ACEOF
 
 fi;
 
-# Check whether --enable-slow-route or --disable-slow-route was given.
-if test "${enable_slow_route+set}" = set; then
-  enableval="$enable_slow_route"
-  { echo "$as_me:$LINENO: Enabling Slow DML_route from Balint" >&5
-echo "$as_me: Enabling Slow DML_route from Balint" >&6;}
+# Check whether --enable-fast-route or --disable-fast-route was given.
+if test "${enable_fast_route+set}" = set; then
+  enableval="$enable_fast_route"
+  { echo "$as_me:$LINENO: Enabling Fast DML_route from J. Osborn" >&5
+echo "$as_me: Enabling Fast DML_route from J. Osborn" >&6;}
 
 cat >>confdefs.h <<\_ACEOF
-#define QIO_USE_SLOW_ROUTE
+#define QIO_USE_FAST_ROUTE
 _ACEOF
 
-    qio_conf_opts="$qio_conf_opts --enable-slow-route"
+    qio_conf_opts="$qio_conf_opts --enable-fast-route"
 else
-  { echo "$as_me:$LINENO: Using Fast Route from James" >&5
-echo "$as_me: Using Fast Route from James" >&6;}
+  { echo "$as_me:$LINENO: Using Slow Route from Balint" >&5
+echo "$as_me: Using Slow Route from Balint" >&6;}
 
 fi;
 
