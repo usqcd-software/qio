@@ -72,8 +72,8 @@ dnl Enable changing DML buffersize
 dnl
 AC_ARG_ENABLE(dml-bufsize, 
    AC_HELP_STRING(
-     [ --enable-dml-bufsize=X ],
-     [ Set the DML buffer size to X bytes ]
+     [--enable-dml-bufsize=X],
+     [Set the DML buffer size to X bytes]
    ),
   [AC_MSG_NOTICE([Setting DML_BUF_BYTES to $enableval])
    AC_DEFINE_UNQUOTED([QIO_DML_BUF_BYTES], [$enableval], [Maximum DML Buffer Size in bytes])
@@ -85,17 +85,17 @@ AC_ARG_ENABLE(dml-bufsize,
 )
 
 dnl
-dnl Safe QMP route workaround
+dnl Faster but not necessarily safter QMP route workaround
 dnl
-AC_ARG_ENABLE(slow-route,
+AC_ARG_ENABLE(fast-route,
    AC_HELP_STRING(
-     [ --enable-slow-route ],
-     [ When not using QMP_route, use the slow version of DML route ]
+     [--enable-fast-route],
+     [When not using QMP_route, use the slow version of DML route]
    ),
-   [AC_MSG_NOTICE([Enabling Slow DML_route from Balint])
-    AC_DEFINE([QIO_USE_SLOW_ROUTE],[], [Enable Balints Slow DML route])
-    qio_conf_opts="$qio_conf_opts --enable-slow-route"],
-   [AC_MSG_NOTICE([Using Fast Route from James]) ]
+   [AC_MSG_NOTICE([Enabling Fast DML_route from J. Osborn])
+    AC_DEFINE([QIO_USE_FAST_ROUTE],[], [Enable J. Osborns Fast DML route])
+    qio_conf_opts="$qio_conf_opts --enable-fast-route"],
+   [AC_MSG_NOTICE([Using Slow Route from Balint]) ]
 )
 
 dnl
