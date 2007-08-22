@@ -1,3 +1,13 @@
+08/21/2007 -- Robert Edwards
+
+	Version 2.3.0 Added --enable-dml-output-buffering which turns on the
+        DML_partition_out routine that buffers sites to send to master-io-node.
+        Changed --enable-slow-route to --enable-fast-route. Now, by default the
+        slow but safe code is used and the enable option turns on the faster
+        but problematic code. These two changes now allow a build out-of-the-box
+        to work on JLab grid machines plus potentially other grid machines as
+        well, as well as QMP/MPI in mesh mode.
+
 08/14/2007 -- Robert Edwards
 
 	Version 2.2.1 Patched byterevn and QIO_write. The latter now supports
