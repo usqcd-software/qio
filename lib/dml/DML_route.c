@@ -17,7 +17,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 }
 #else
 
-#ifdef QIO_USE_SLOW_ROUTE
+#ifndef QIO_USE_FAST_ROUTE
 
 #warning "Using Balints slow DML GRID ROUTE"
 

@@ -69,6 +69,9 @@
 /* Enables DML output buffering of sites */
 #undef QIO_USE_DML_OUT_BUFFERING
 
+/* Enable J. Osborns Fast DML route */
+#undef QIO_USE_FAST_ROUTE
+
 /* Enable parallel file-system read */
 #undef QIO_USE_PARALLEL_READ
 
@@ -77,9 +80,6 @@
 
 /* Enable QMP_route if it exists */
 #undef QIO_USE_QMP_ROUTE
-
-/* Enable Balints Slow DML route */
-#undef QIO_USE_SLOW_ROUTE
 
 /* The size of a `unsigned char', as computed by sizeof. */
 #undef SIZEOF_UNSIGNED_CHAR
