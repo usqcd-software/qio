@@ -28,6 +28,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   int* l_src_coords;      /* Coordinates of the source */
   int* l_dst_coords;      /* Coordinates of the destination */
   int* l_disp_vec;           /* Displacement vector dst_coords - src_coords */
+  char myname[] = "DML_grid_route";
   
   QMP_msgmem_t sendbufmm, recvbufmm; /* Message memory handles */
 
@@ -62,7 +63,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   log_top_declP = QMP_logical_topology_is_declared();
   
   if ( log_top_declP == QMP_FALSE ) { 
-    fprintf(stderr, "QMP_route: QMP logical topology MUST be declared\n");
+    fprintf(stderr, "%s: QMP logical topology MUST be declared\n",myname);
     fprintf(stderr, "It appears not to be\n");
     return QMP_TOPOLOGY_EXISTS;
   }
@@ -78,20 +79,20 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   /* Allocate space for the coordinates */
   l_src_coords =(int *)QMP_get_logical_coordinates_from(src);
   if( l_src_coords == (int *)NULL ) { 
-    fprintf(stderr, "QMP_route: QMP_get_logical_coordinates_from failed\n");
+    fprintf(stderr, "%s: QMP_get_logical_coordinates_from failed\n",myname);
     return QMP_NOMEM_ERR;
   }
 
   l_dst_coords = (int *)QMP_get_logical_coordinates_from(dest);
   if( l_dst_coords == (int *)NULL ) { 
-    fprintf(stderr, "QMP_route: QMP_get_logical_coordinates_from failed\n");
+    fprintf(stderr, "%s: QMP_get_logical_coordinates_from failed\n",myname);
     return QMP_NOMEM_ERR;
   }
 
   /* Will definitely have to free this */
   l_disp_vec = (int *)malloc(sizeof(int)*ndim);
   if( l_disp_vec == (int *)NULL ) {
-    fprintf(stderr, "QMP_route: Unable to allocate displacement array\n");
+    fprintf(stderr, "%s: Unable to allocate displacement array\n",myname);
     return QMP_NOMEM_ERR;
   }
 
@@ -115,13 +116,13 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   /* Will have to free these with QMP_free_memory */
   sendbuf_qmp_mem_t = (QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_COMMS);
   if( sendbuf_qmp_mem_t == (QMP_mem_t *)NULL ) { 
-    fprintf(stderr, "Unable to allocate sendbuf in QMP_route\n");
+    fprintf(stderr, "%s: Unable to allocate sendbuf in QMP_route\n",myname);
     return QMP_NOMEM_ERR;
   }
 
   recvbuf_qmp_mem_t =(QMP_mem_t *)QMP_allocate_aligned_memory(bufsize,alignment,QMP_MEM_COMMS);
   if( recvbuf_qmp_mem_t == (QMP_mem_t *)NULL ) { 
-    fprintf(stderr ,"Unable to allocate recvbuf in QMP_route\n");
+    fprintf(stderr ,"%s: Unable to allocate recvbuf in QMP_route\n",myname);
     return QMP_NOMEM_ERR;
   }
 
@@ -174,7 +175,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 						 0);
 
       if( recv_handle == NULL) { 
-	fprintf(stderr, "QMP_declare_receive_relative returned NULL\n");
+	fprintf(stderr, "%s: QMP_declare_receive_relative returned NULL\n",myname);
 	return QMP_BAD_MESSAGE;
       }
 
@@ -185,7 +186,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 					      0);
 
       if( send_handle == NULL ) { 
-	fprintf(stderr, "QMP_declare_send_relative returned NULL\n");
+	fprintf(stderr, "%s: QMP_declare_send_relative returned NULL\n",myname);
 	return QMP_BAD_MESSAGE;
       }
 	
@@ -194,28 +195,28 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 	/* Start receiving */
 	err = QMP_start(recv_handle);
 	if(err != QMP_SUCCESS ) { 
-	  fprintf(stderr, "QMP_start() failed on receive in DML_orute\n"); 
+	  fprintf(stderr, "%s: QMP_start() failed on receive in DML_orute\n",myname); 
 	  return QMP_ERROR;
 	}
 
 	/* Start sending */
 	err = QMP_start(send_handle);
 	if(err != QMP_SUCCESS ) { 
-	  fprintf(stderr, "QMP_start() failed on send in QMP_route\n");
+	  fprintf(stderr, "%s: QMP_start() failed on send in QMP_route\n",myname);
 	  return QMP_ERROR;
 	}
 	
 	/* Wait for send to complete */
 	err = QMP_wait(send_handle);
 	if( err != QMP_SUCCESS ) { 
-	  fprintf(stderr, "QMP_wait() failed on send in QMP_route\n");
+	  fprintf(stderr, "%s: QMP_wait() failed on send in QMP_route\n",myname);
 	  return QMP_ERROR;
 	}
 
 	/* Wait for receive to complete */
 	err = QMP_wait(recv_handle);
 	if( err != QMP_SUCCESS ) { 
-	  fprintf(stderr, "QMP_wait() recv on send in QMP_route\n");
+	  fprintf(stderr, "%s: QMP_wait() recv on send in QMP_route\n",myname);
 	  return QMP_ERROR;
 	}
 
@@ -289,10 +290,11 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   int on_path, path_leg;
   QMP_mem_t *mem;
   QMP_msgmem_t msgmem;
+  char myname[] = "DML_grid_route";
 
   /* Check to see if the logical topology is declared or not */
   if(QMP_logical_topology_is_declared() == QMP_FALSE) {
-    QMP_fprintf(stderr, "%s: QMP logical topology not declared\n", __func__);
+    QMP_fprintf(stderr, "%s: QMP logical topology not declared\n", myname);
     return QMP_TOPOLOGY_EXISTS;
   }
 
@@ -309,19 +311,19 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
   /* Must free these later */
   src_coords = QMP_get_logical_coordinates_from(src);
   if( src_coords == NULL ) { 
-    QMP_fprintf(stderr, "%s: QMP_get_logical_coordinates_from failed\n", __func__);
+    QMP_fprintf(stderr, "%s: QMP_get_logical_coordinates_from failed\n", myname);
     return QMP_NOMEM_ERR;
   }
 
   dst_coords = QMP_get_logical_coordinates_from(dest);
   if( dst_coords == NULL ) { 
-    QMP_fprintf(stderr, "%s: QMP_get_logical_coordinates_from failed\n", __func__);
+    QMP_fprintf(stderr, "%s: QMP_get_logical_coordinates_from failed\n", myname);
     return QMP_NOMEM_ERR;
   }
 
   my_coords = QMP_get_logical_coordinates_from(me);
   if( my_coords == NULL ) { 
-    QMP_fprintf(stderr, "%s: QMP_get_logical_coordinates_from failed\n", __func__);
+    QMP_fprintf(stderr, "%s: QMP_get_logical_coordinates_from failed\n", myname);
     return QMP_NOMEM_ERR;
   }
 
@@ -399,19 +401,19 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 
       mh = QMP_declare_receive_relative(msgmem, recv_axis, recv_dir, 0);
       if(mh == NULL) { 
-	QMP_fprintf(stderr, "QMP_declare_receive_relative returned NULL\n");
+	QMP_fprintf(stderr, "%s: QMP_declare_receive_relative returned NULL\n",myname);
 	return QMP_BAD_MESSAGE;
       }
 
       err = QMP_start(mh);
       if(err != QMP_SUCCESS) { 
-	QMP_fprintf(stderr, "QMP_start() failed on receive in DML_route\n"); 
+	QMP_fprintf(stderr, "%s: QMP_start() failed on receive in DML_route\n",myname); 
 	return QMP_ERROR;
       }
 
       err = QMP_wait(mh);
       if( err != QMP_SUCCESS ) { 
-	QMP_fprintf(stderr, "QMP_wait() recv on send in DML_route\n");
+	QMP_fprintf(stderr, "%s: QMP_wait() recv on send in DML_route\n",myname);
 	return QMP_ERROR;
       }
 
@@ -425,19 +427,19 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 
       mh = QMP_declare_send_relative(msgmem, send_axis, send_dir, 0);
       if(mh == NULL) { 
-	QMP_fprintf(stderr, "QMP_declare_receive_relative returned NULL\n");
+	QMP_fprintf(stderr, "%s: QMP_declare_receive_relative returned NULL\n",myname);
 	return QMP_BAD_MESSAGE;
       }
 
       err = QMP_start(mh);
       if(err != QMP_SUCCESS) { 
-	QMP_fprintf(stderr, "QMP_start() failed on receive in DML_route\n"); 
+	QMP_fprintf(stderr, "%s: QMP_start() failed on receive in DML_route\n",myname); 
 	return QMP_ERROR;
       }
 
       err = QMP_wait(mh);
       if( err != QMP_SUCCESS ) { 
-	QMP_fprintf(stderr, "QMP_wait() recv on send in DML_route\n");
+	QMP_fprintf(stderr, "%s: QMP_wait() recv on send in DML_route\n",myname);
 	return QMP_ERROR;
       }
 

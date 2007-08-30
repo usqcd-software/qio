@@ -38,6 +38,7 @@ void QIO_string_destroy(QIO_String *qs)
 /* set String */
 void QIO_string_set(QIO_String *qs, const char *const string)
 {
+  char myname[] = "QIO_string_set";
   if(qs != NULL) {
  
     /* If a NULL string is passed in set qs to be its default
@@ -56,7 +57,7 @@ void QIO_string_set(QIO_String *qs, const char *const string)
       if( qs->string!=NULL ) { free(qs->string); }
       qs->string = (char *)malloc(len);
       if( qs->string == NULL ) {
-	fprintf(stderr, "Oops Malloc failed\n");
+	fprintf(stderr, "%s: Oops Malloc failed\n",myname);
 	exit(-1);
       }
 #else
@@ -67,7 +68,7 @@ void QIO_string_set(QIO_String *qs, const char *const string)
     }
   }
   else { 
-    fprintf(stderr,"Attempt to set NULL QIO_String\n");
+    fprintf(stderr,"%s: Attempt to set NULL QIO_String\n",myname);
     fflush(stderr);
     exit(-1);
   }
@@ -76,11 +77,12 @@ void QIO_string_set(QIO_String *qs, const char *const string)
 /* Size of string */
 size_t QIO_string_length(const QIO_String *const qs)
 {
+  char myname[] = "QIO_string_length";
   if( qs != NULL ) {
     return qs->length;
   }
   else { 
-    fprintf(stderr, "Attempt to get length of NULL QIO_String*\n");
+    fprintf(stderr, "%s: Attempt to get length of NULL QIO_String*\n",myname);
     fflush(stderr);
     exit(-1);
   }
@@ -93,7 +95,7 @@ char *QIO_string_ptr(QIO_String *qs)
     return qs->string;
   }
   else { 
-    fprintf(stderr, "Attempt to get length of NULL QIO_String*\n");
+    fprintf(stderr, "QIO_string_ptr: Attempt to get length of NULL QIO_String*\n");
     fflush(stderr);
     exit(-1);
   }
@@ -111,7 +113,7 @@ void QIO_string_copy(QIO_String *dest, QIO_String *src)
     if( dest->string ) { free(dest->string); }
     dest->string = (char *)malloc(len);
     if(dest->string == NULL ) {
-      fprintf(stderr, "Bugger\n");
+      fprintf(stderr, "QIO_string_copy: Bugger\n");
       fflush(stderr);
       exit(-1);
     }

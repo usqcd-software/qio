@@ -698,7 +698,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 	
       /* Check that input byte count matches total expected */
       if(total_bytes != totnbytes_in){
-	printf("Input byte count %llu does not match expected %llu\n",
+	printf("%s: Input byte count %llu does not match expected %llu\n",
+	       myname,
 	       (unsigned long long)totnbytes_in, 
 	       (unsigned long long)total_bytes);
 	return QIO_ERR_BAD_READ_BYTES;
@@ -706,7 +707,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       
       /* Check that input byte and output byte counts match */
       if(totnbytes_out != totnbytes_in){
-	printf("Input byte count %llu does not match output %llu\n",
+	printf("%s: Input byte count %llu does not match output %llu\n",
+	       myname,
 	       (unsigned long long)totnbytes_in, 
 	       (unsigned long long)totnbytes_out);
 	return QIO_ERR_BAD_READ_BYTES;
@@ -742,8 +744,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       status = QIO_write_checksum(outfile, &checksum_out);
       
       if(QIO_verbosity() >= QIO_VERB_LOW){
-	if(recordtype == QIO_GLOBAL)printf("Global data\n");
-	else printf("Field data\n");
+	if(recordtype == QIO_GLOBAL)printf("%s: Global data\n",myname);
+	else printf("%s: Field data\n",myname);
 	printf("  %s\n  Datatype %s\n  precision %s colors %d spins %d count %d\n",
 	       QIO_string_ptr(xml_record_in),
 	       QIO_get_datatype(&rec_info),

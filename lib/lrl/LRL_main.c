@@ -72,6 +72,7 @@ off_t LRL_get_reader_pointer(LRL_FileReader *fr){
 LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
 {
   LRL_FileWriter *fw;
+  char myname[] = "LRL_open_write_file";
 
   fw = (LRL_FileWriter *)malloc(sizeof(LRL_FileWriter));
   if (fw == NULL)
@@ -86,14 +87,14 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
   }
 
   if (fw->file == NULL){
-    printf("LRL_open_write_file: failed to open %s for writing\n",
+    printf("%s: failed to open %s for writing\n",myname,
 	   filename);
     return NULL;
   }
 
   fw->dg = limeCreateWriter(fw->file);
   if (fw->dg == (LimeWriter *)NULL){
-    printf("LRL_open_write_file: limeCreateWriter failed\n");
+    printf("%s: limeCreateWriter failed\n",myname);
     return NULL;
   }
 
@@ -243,7 +244,7 @@ int LRL_write_record_header(LRL_RecordWriter *rw,
 
   if (status < 0)
   { 
-    printf( "%s: fatal error. LIME status is: %d\n", myname, status);
+    printf("%s: fatal error. LIME status is: %d\n", myname, status);
     return LRL_ERR_WRITE;
   }
 
@@ -416,7 +417,7 @@ uint64_t LRL_read_bytes(LRL_RecordReader *rr, char *buf,
   status = limeReaderReadData((void *)buf, &nbyt, rr->fr->dr);
   if( status != LIME_SUCCESS ) 
   { 
-    printf( "%s: LIME error %d has occurred\n", myname, status);
+    printf("%s: LIME error %d has occurred\n", myname, status);
     exit(EXIT_FAILURE);
   }
 
@@ -446,7 +447,7 @@ uint64_t LRL_write_bytes(LRL_RecordWriter *rw, char *buf,
 
   if( status != LIME_SUCCESS ) 
   { 
-    printf( "LRL_write_bytes: some error has occurred. status is: %d\n", status);
+    printf("LRL_write_bytes: some error has occurred. status is: %d\n", status);
     exit(EXIT_FAILURE);
   }
 
@@ -467,7 +468,7 @@ int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset)
 
   if( status != LIME_SUCCESS ) 
   { 
-    printf( "LRL_seek_read_record: some error has occurred. status is: %d\n", status);
+    printf("LRL_seek_read_record: some error has occurred. status is: %d\n", status);
     return LRL_ERR_SEEK;
   }
   return LRL_SUCCESS;
@@ -480,13 +481,14 @@ int LRL_seek_read_record(LRL_RecordReader *rr, off_t offset)
 int LRL_seek_write_record(LRL_RecordWriter *rw, off_t offset)
 {
   int status;
+  char myname[] = "LRL_seek_write_record";
 
   if (rw == NULL){
-    printf("LRL_seek_write_record: null record writer\n");
+    printf("%s: null record writer\n",myname);
     return LRL_ERR_SEEK;
   }
   if(rw->fw == NULL){
-    printf("LRL_seek_write_record: null file writer\n");
+    printf("%s: null file writer\n",myname);
     return LRL_ERR_SEEK;
   }
 
@@ -494,7 +496,7 @@ int LRL_seek_write_record(LRL_RecordWriter *rw, off_t offset)
 
   if( status != LIME_SUCCESS ) 
   { 
-    printf("LRL_seek_write_record: LIME error %d\n", status);
+    printf("%s: LIME error %d\n", myname,status);
     return LRL_ERR_SEEK;
   }
   return LRL_SUCCESS;
@@ -506,16 +508,17 @@ int LRL_next_message(LRL_FileReader *fr)
 {
   int status;
   int msg_end = 0;
+  char myname[] = "LRL_next_message";
 
   if(fr == NULL)return LRL_ERR_SKIP;
   while(msg_end == 0){
     status = limeReaderNextRecord(fr->dr);
     msg_end = limeReaderMEFlag(fr->dr);
-    printf("LRL_next_message skipping msg_end %d status %d\n",
-	   msg_end, status);
+    printf("%s: skipping msg_end %d status %d\n",
+	   myname, msg_end, status);
     if( status != LIME_SUCCESS ) 
       { 
-	printf( "LRL_next_message: LIME error %d\n", status);
+	printf("%s: LIME error %d\n", myname,status);
 	return LRL_ERR_SKIP;
       }
   }
@@ -536,7 +539,7 @@ int LRL_next_record(LRL_RecordReader *rr)
 
   if( status != LIME_SUCCESS ) 
   { 
-    printf( "LRL_next_record: LIME error %d\n", status);
+    printf("LRL_next_record: LIME error %d\n", status);
     return LRL_ERR_SKIP;
   }
   return LRL_SUCCESS;
