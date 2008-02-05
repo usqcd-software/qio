@@ -11,7 +11,7 @@
 
 \begin{document}
 \title{
-   Input/Output for QCD \\{\large Version 2.2}
+   Input/Output for QCD \\{\large Version 2.3}
 }
 \author{ SciDAC Software Coordinating Committee}
 
@@ -1639,6 +1639,297 @@ Prototype      & \verb|char *QIO_get_usqcd_proprecord_info|\\
 For the private record information structure, the following fields are
 used: The data type is either \verb|"USQCD_F3_DiracFermion"| or
 \verb|"USQCD_D3_DiracFermion"| for single or double precision,
+respectively, and the precision is likewise either \verb|"F"| or
+\verb|"D"|.
+
+\subsection{USQCD Staggered Propagator Format}
+
+The staggered propagator formats follow the same pattern as the first
+three Dirac propagator formats.  Each file includes the source field
+or fields as a complex scalar or color vector field as well as the
+solution fields.
+%
+\begin{enumerate}
+\item \verb|C1V3|: One complex scalar source record and three
+  solution records, one for each source color.  The solution records
+  correspond to each source color.
+\item \verb|CV_PAIRS|: Alternating source and solution for any number
+  of pairs.  The source in each case is a complex field.
+\item \verb|VV_PAIRS|: Alternating source and solution for any number
+  of pairs.  The source in each case is a color vector field.
+\end{enumerate}
+%
+In all cases the source can be specified either on a time slice or as
+a full field.  The \verb|CV_PAIRS| and \verb|VV_PAIRS| formats could
+be used for a series of random source/solution pairs, or they could be
+used for a series of sequential sources plus their solutions.  Thus in
+some, but not all cases, the file contains sets of three solutions,
+one for each source color.
+
+\subsubsection{File information}
+
+In all cases the user file information is prescribed as follows.  It
+is passed as the \verb|xml_file| parameter to \verb|QIO_open_write| and
+returned as the \verb|xml_file| parameter by \verb|QIO_open_read|.
+
+\begin{verbatim}
+<?xml version="1.0" encoding="UTF-8"?>
+   <usqcdKSPropFile>
+      <version>1.0</version>
+      <type>(type string)</type>
+      <info>(information)</info>
+   </usqcdKSPropFile>
+\end{verbatim}
+%
+where the file type string is one of
+%
+\begin{verbatim}
+"USQCD_ColorVector_ScalarSource_ThreeSink"
+"USQCD_ColorVector_Source_Sink_Pairs"
+"USQCD_ColorVector_ScalarSource_Sink_Pairs"
+\end{verbatim}
+%
+and the information field is at the user's discretion.
+
+As with the Dirac propagator, there are convenience function for
+constructing this string.  The first step is to create the file info
+data structure:
+
+\paragraph{Creating the USQCD propagator file information data structure}
+%
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|QIO_USQCDKSPropFileInfo *QIO_create_usqcd_kspropfile_info|\\
+                 & \verb|(int type, char *info);|\\
+\hline
+  Example  & \verb|file_info = QIO_create_usqcd_kspropfile_info |\\
+           & \verb|(QIO_USQCDKSPROPFILETYPE_C1V3, myXML);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+The type parameter is an integer (not a string) taking on one of these
+values:
+%
+\begin{verbatim}
+   QIO_USQCDKSPROPFILETYPE_C1V3
+   QIO_USQCDKSPROPFILETYPE_VV_PAIRS
+   QIO_USQCDKSPROPFILETYPE_CV_PAIRS
+\end{verbatim}
+%
+
+The data structure for the file information is then converted to an
+XML string:
+
+\paragraph{Encoding the file information}
+
+%
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|void QIO_encode_usqcd_kspropfile_info(QIO_String *file_string,|\\
+                 & \verb| QIO_USQCDKSPropFileInfo *file_info);|\\
+\hline
+  Example  & \verb|QIO_encode_usqcd_kspropfile_info(file_string, file_info);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+The resulting string is then passed to \verb|QIO_open_write|.
+
+%
+\paragraph{Destroying the file information structure}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|void QIO_destroy_usqcd_kspropfile_info(QIO_USQCDKSPropFileInfo *file_info);|\\
+    \hline
+  Purpose        & Frees storage. \\
+   \hline
+  Example        & \verb|QIO_destroy_usqcd_kspropfile_info(file_info);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+Conversely, after obtaining the string from \verb|QIO_open_read|, it can be
+decoded (converted to a data structure) as follows:
+
+%
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_decode_usqcd_kspropfile_info(QIO_USQCDKSPropfileInfo *file_info,|\\
+                 & \verb| QIO_String *file_string);|\\
+\hline
+  Example  & \verb|status = QIO_decode_usqcd_kspropfile_info(file_info, file_string);|\\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+after which the information can be extracted with the accessors.
+
+\paragraph{Determining whether the field occurs}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_defined_kspropfile_type(QIO_USQCDKSPropFileInfo *file_info);|\\
+  Prototype      & \verb|int QIO_defined_kspropfile_info(QIO_USQCDKSPropFileInfo *file_info);|\\
+    \hline
+  Purpose        & Returns 1 if the field was found and 0 if not. \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+\paragraph{Accessing the values}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \verb|int QIO_get_kspropfile_type(QIO_USQCDKSPropFileInfo *file_info);|\\
+    \hline
+  Prototype      & \verb|char *QIO_get_kspropfile_info(QIO_USQCDKSPropFileInfo *file_info);|\\
+  \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+The returned integer file type is one of the values listed above for
+creating the file info data structure or \verb|QIO_ERR_FILE_INFO| if
+the type is unrecognized.
+
+\subsubsection{Source information}
+
+For each of the formats there are one or more source records.  The user
+record XML is prescribed as follows.
+
+The record information string for the source record is also
+prescribed.
+
+\begin{verbatim}
+<?xml version="1.0" encoding="UTF-8"?>
+<usqcdSourceInfo>
+  <version>1.0</version>
+  <info> collaboration use </info>
+</usqcdSourceInfo>
+\end{verbatim}
+
+The operations for creating, encoding, decoding, and accessing values
+follow the same pattern as with the file information, so we simply
+list them:
+
+\paragraph{Convenience functions for the kspropagator source record}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+Prototype      & \verb|QIO_USQCDKSPropSourceInfo *QIO_create_usqcd_kspropsource_info|\\
+               & \verb|(char *info);|\\
+Prototype      & \verb|void QIO_destroy_usqcd_kspropsource_info|\\
+               & \verb|(QIO_USQCDKSPropSourceInfo *rec_info);|\\
+Prototype      & \verb|void QIO_encode_usqcd_kspropsource_info|\\
+               & \verb|(QIO_String *record_string, |\\
+               & \verb| QIO_USQCDKSPropSourceInfo *record_info);|\\
+Prototype      & \verb|int QIO_decode_usqcd_kspropsource_info|\\
+               & \verb|(QIO_USQCDKSPropSourceInfo *record_info,|\\
+               & \verb| QIO_String *record_string);|\\
+Prototype      & \verb|char *QIO_get_usqcd_kspropsource_info|\\
+               & \verb|(QIO_USQCDKSPropSourceInfo *record_info);|\\
+Prototype      & \verb|int QIO_defined_usqcd_kspropsource_info|\\
+               & \verb|(QIO_USQCDKSPropSourceInfo *record_info);|\\
+ \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+As with all QIO records, in addition to providing the user record
+information, it is necessary to supply the private record information.
+The following parameters are passed to \verb|QIO_create_record_info|
+before writing the record:
+%
+\begin{verbatim}
+QIO_RecordInfo *QIO_create_record_info(int recordtype, int lower[],
+				       int upper[], int n,
+				       char *datatype, char *precision, 
+				       int colors, int spins, int typesize, 
+				       int datacount);
+\end{verbatim}
+%
+The record type field is \verb|QIO_FIELD| or \verb|QIO_HYPER|. In the
+former case it is permissible to pass null pointers for \verb|lower|
+and \verb|upper| and a zero value for \verb|n|.  For a source
+specified on a single time slice, these arrays specify the bounds of
+the time slice, as illustrated in Sec.~\ref{sec:recordinfo} above.
+For complex source fields, the data type field is
+\verb|"USQCD_F_Complex"| or \verb|"USQCD_D_Complex"| and for color
+vector source fields, the data type field is
+\verb|"USQCD_F3_ColorVector"| or \verb|"USQCD_D3_ColorVector"|.  The
+precision field in either case is \verb|"F"| or \verb|"D"|.  The spins
+parameter is zero. The colors parameter applies to a color vector
+field and should be zero for a complex source field.  The type size
+specifies the byte count for the site data, and the data count field
+should always be 1.
+
+\subsubsection{Dirac solution fields}
+
+For each of the above file formats there are Dirac solution fields.
+The user record information is prescribed as follows:
+
+\begin{verbatim}
+<?xml version="1.0" encoding="UTF-8"?>
+   <usqcdKSPropInfo>
+      <version>1.0</version>
+      <color>(color)</color>
+      <info>(information)</info>
+   </usqcdKSPropInfo>
+\end{verbatim}
+%
+The color value is required for the \verb|C1V3| format and is
+optional for the other formats.  QIO does not enforce this
+requirement, but provides two convenience functions for creating the
+data structure for this string depending on whether the color
+is to be encoded.
+
+\paragraph{Convenience functions for the propagator source record}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+Prototype      & \verb|QIO_USQCDKSPropRecordInfo *QIO_create_usqcd_ksproprecord_info|\\
+                 & \verb| (char *info);|\\
+Prototype      & \verb|QIO_USQCDKSPropRecordInfo *QIO_create_usqcd_ksproprecord_c_info|\\
+                 & \verb|(int color, char *info);|\\
+Prototype      & \verb|void QIO_destroy_usqcd_ksproprecord_info|\\
+               & \verb| (QIO_USQCDKSPropRecordInfo *rec_info);|\\
+Prototype      & \verb|void QIO_encode_usqcd_ksproprecord_info|\\
+               & \verb| (QIO_String *record_string, |\\
+               & \verb| QIO_USQCDKSPropRecordInfo *record_info);|\\
+Prototype      & \verb|int QIO_decode_usqcd_ksproprecord_info|\\
+               & \verb| (QIO_USQCDKSPropRecordInfo *record_info,|\\
+               & \verb| QIO_String *record_string);|\\
+               & \verb| (QIO_USQCDKSPropRecordInfo *record_info);|\\
+Prototype      & \verb|int QIO_defined_usqcd_ksproprecord_color|\\
+               & \verb|(QIO_USQCDKSPropRecordInfo *record_info);|\\
+Prototype      & \verb|int QIO_defined_usqcd_ksproprecord_info|\\
+               & \verb|(QIO_USQCDKSPropRecordInfo *record_info);|\\
+               & \verb|(QIO_USQCDKSPropRecordInfo *record_info);|\\
+Prototype      & \verb|int QIO_get_usqcd_ksproprecord_color|\\
+               & \verb|(QIO_USQCDKSPropRecordInfo *record_info);|\\
+Prototype      & \verb|char *QIO_get_usqcd_ksproprecord_info|\\
+               & \verb|(QIO_USQCDKSPropRecordInfo *record_info);|\\
+  \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+For the private record information structure, the following fields are
+used: The data type is either \verb|"USQCD_F3_ColorVector"| or
+\verb|"USQCD_D3_ColorVector"| for single or double precision,
 respectively, and the precision is likewise either \verb|"F"| or
 \verb|"D"|.
 

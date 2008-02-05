@@ -6,7 +6,7 @@ DOCSRCDIR=@top_srcdir@/doc
 
 LATEX = latex
 
-VER     = 2p2
+VER     = 2p3
 HTMLDIR = html
 PS      = qio_${VER}.ps
 SRC     = qio_${VER}.tex
