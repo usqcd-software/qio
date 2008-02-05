@@ -1596,6 +1596,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   scratch_buf = DML_allocate_buf(4,1);
   if(!scratch_buf){
     printf("%s(%d) can't malloc scratch_buf\n",myname,this_node);
+    free(outbuf);
     return 0;
   }
   memset(scratch_buf,0,4);
