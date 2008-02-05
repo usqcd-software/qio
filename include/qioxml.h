@@ -15,6 +15,7 @@
 #include <qioxml_private.h>
 #include <qioxml_ildg_record.h>
 #include <qioxml_usqcd_prop.h>
+#include <qioxml_usqcd_ksprop.h>
 #include <qioxml_usqcd_gauge.h>
 
 #endif /* QIOXML_H */

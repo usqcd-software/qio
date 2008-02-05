@@ -339,8 +339,9 @@ char *QIO_encode_as_intlist(char *buf,
 
 int QIO_check_string_occur(QIO_TagCharValue *tag_value){
   if(tag_value->occur != 1){
-    printf("QIO_check_string_occur: error %s tag count %d\n",
-	   tag_value->tag, tag_value->occur);
+    if(QIO_verbosity() >= QIO_VERB_DEBUG)
+      printf("QIO_check_string_occur: error %s tag count %d\n",
+	     tag_value->tag, tag_value->occur);
     return 1;
   }
   return 0;

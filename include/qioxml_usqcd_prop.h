@@ -182,6 +182,10 @@ int QIO_insert_usqcd_proprecord_info( QIO_USQCDPropRecordInfo *record_info, char
 int QIO_insert_usqcd_proprecord_tag_string(QIO_USQCDPropRecordInfoWrapper *wrapper,
 					char *recordinfo_tags);
 
+/* added EES (these two functions were present in QIO_info_usqcd_prop.c but not in this header file) */
+int QIO_insert_usqcd_proprecord_spin( QIO_USQCDPropRecordInfo *record_info, int spin);
+int QIO_insert_usqcd_proprecord_color( QIO_USQCDPropRecordInfo *record_info, int color);
+
 char *QIO_get_usqcd_propfile_info_tag_string(QIO_USQCDPropFileInfoWrapper *wrapper);
 int QIO_get_usqcd_propfile_type(QIO_USQCDPropFileInfo *file_info);
 char *QIO_get_usqcd_propfile_info(QIO_USQCDPropFileInfo *file_info);
@@ -197,6 +201,10 @@ char *QIO_get_usqcd_proprecord_info(QIO_USQCDPropRecordInfo *record_info);
 int QIO_get_usqcd_proprecord_spin(QIO_USQCDPropRecordInfo *record_info);
 int QIO_get_usqcd_proprecord_color(QIO_USQCDPropRecordInfo *record_info);
 int QIO_defined_usqcd_proprecordinfo(QIO_USQCDPropRecordInfo *record_info);
+
+/* added EES (two new functions in QIO_info_usqcd_prop.c)*/
+int QIO_defined_usqcd_proprecord_spin(QIO_USQCDPropRecordInfo *record_info);
+int QIO_defined_usqcd_proprecord_color(QIO_USQCDPropRecordInfo *record_info);
 
 QIO_USQCDPropFileInfo *QIO_create_usqcd_propfile_info(int type, char *info);
 void QIO_destroy_usqcd_propfile_info(QIO_USQCDPropFileInfo *file_info);

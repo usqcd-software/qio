@@ -221,6 +221,8 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
   DML_SiteList *sites = out->sites;
   char myname[] = "QIO_open_write_field";
 
+  out->layout->recordtype = recordtype;
+
   /* Compute record size */
   if(recordtype == QIO_GLOBAL){
     /* Global data */
@@ -351,6 +353,8 @@ int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   int do_output;
   int status;
   char myname[] = "QIO_init_write_field";
+
+  out->layout->recordtype = recordtype;
 
   /* NOTE: we aren't currently returning do_output */
   lrl_record_out = QIO_open_write_field(out, msg_begin, msg_end,
@@ -688,6 +692,9 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int recordtype,
   char myname[] = "QIO_open_read_field";
 
   *status = QIO_SUCCESS;
+
+  /* Not the best way to handle this parameter */
+  in->layout->recordtype = recordtype;
 
   /* Will we read the data?
      For field or hypercube data all nodes with readers will read.
