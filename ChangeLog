@@ -1,3 +1,21 @@
+2008-02-05 16:58  detar
+
+	* lib/: qio/QIO_info.c, qio/QIO_info_usqcd_ksprop.c,
+	  qio/QIO_info_usqcd_prop.c, qio/QIO_utils.c, qio/QIO_write.c,
+	  Makefile.am: Add USQCD staggered propagator support
+
+2008-02-05 16:57  detar
+
+	* lib/dml/DML_utils.c: Free outbuf on one of the error exits.
+
+2008-02-05 16:55  detar
+
+	* other_libs/c-lime/examples/lime_extract_record.c: Bug fix.
+
+2008-02-05 16:51  detar
+
+	* other_libs/c-lime/lib/lime_reader.c: Complain about premature EOF
+
 2007-10-27 17:19  tag adat1-35-0
 
 2007-10-27 17:19  tag adat1-36-0
