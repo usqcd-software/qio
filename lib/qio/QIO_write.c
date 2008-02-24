@@ -8,6 +8,26 @@
 #include <stdio.h>
 #include <string.h>
 
+/* Update the record type and hypercube information */
+int QIO_writer_insert_hypercube_data(QIO_Writer *out, 
+				     QIO_RecordInfo *record_info)
+{
+
+  int status;
+
+  /* Copy subset data from record_info structure to layout structure
+     and check it */
+
+  status = DML_insert_subset_data(out->layout, 
+				  QIO_get_recordtype(record_info),
+				  QIO_get_hyperlower(record_info),
+				  QIO_get_hyperupper(record_info),
+				  QIO_get_hyper_spacetime(record_info));
+  if(status != 0) return QIO_ERR_BAD_SUBSET;
+
+  return QIO_SUCCESS;
+}
+
 /* Write the record metadata for a lattice field. */
 
 /* Handles the write operation on the compute nodes as well as the host */
@@ -36,6 +56,10 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
 	     QIO_get_datacount(record_info));
       return QIO_ERR_BAD_WRITE_BYTES;
     }
+
+  /* Copy hypercube data from record_info structure to writer */
+  status = QIO_writer_insert_hypercube_data(out, record_info);
+  if(status != QIO_SUCCESS)return status;
 
   /* A message consists of the XML, binary payload, and checksums */
   /* An ILDG lattice message includes an ILDG metadata record */
@@ -178,15 +202,11 @@ int QIO_write_record_data(QIO_Writer *out, QIO_RecordInfo *record_info,
   int this_node = out->layout->this_node;
   int master_io_node = out->layout->master_io_node;
   int status;
-  int recordtype;
   int count = QIO_get_datacount(record_info);
   char scidac_type[] = QIO_LIMETYPE_BINARY_DATA;
   char ildg_type[] = QIO_LIMETYPE_ILDG_BINARY_DATA;
   LIME_type lime_type;
   char myname[] = "QIO_write_record_data";
-
-  recordtype = QIO_get_recordtype(record_info);
-  out->layout->recordtype = recordtype;
 
   /* Next one is last record in message for all but master node */
   /* But if we are writing in parallel mode all nodes think they
@@ -200,7 +220,7 @@ int QIO_write_record_data(QIO_Writer *out, QIO_RecordInfo *record_info,
   else lime_type = scidac_type;
 
   status = 
-    QIO_write_field(out, *msg_begin, *msg_end, recordtype,
+    QIO_write_field(out, *msg_begin, *msg_end, 
 		    get, count, datum_size, word_size, arg, 
 		    checksum, nbytes, lime_type);
   if(status != QIO_SUCCESS){
@@ -237,18 +257,7 @@ int QIO_generic_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   size_t subsetvolume;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
-  int recordtype;
   int this_node = layout->this_node;
-
-  /* Add subset data to layout structure and check it */
-  recordtype = QIO_get_recordtype(record_info);
-  layout->recordtype = recordtype;
-  status = DML_insert_subset_data(layout, 
-				  QIO_get_hyperlower(record_info),
-				  QIO_get_hyperupper(record_info),
-				  QIO_get_hyper_spacetime(record_info));
-  if(status != 0)
-    return QIO_ERR_BAD_SUBSET;
 
   status = QIO_write_record_info(out, record_info, datum_size, word_size, 
 				 xml_record, msg_begin, msg_end);
@@ -307,19 +316,18 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   int this_node = out->layout->this_node;
   int msg_begin, msg_end;
   int status;
+  int recordtype;
   uint64_t total_bytes;
   size_t volume;
-  int recordtype;
   char myname[] = "QIO_write";
-
-  recordtype = QIO_get_recordtype(record_info);
-  out->layout->recordtype = recordtype;
 
   status = QIO_generic_write(out, record_info, xml_record, get, datum_size, 
 			     word_size, arg, &checksum, &nbytes, 
 			     &msg_begin, &msg_end);
 
-  if(status != QIO_SUCCESS)return status;
+ if(status != QIO_SUCCESS)return status;
+
+  recordtype = out->layout->recordtype;
 
   /* Combine checksums over all nodes */
   DML_checksum_combine(&checksum);

@@ -12,6 +12,26 @@
 #include <malloc.h>
 #endif
 
+/* Update the record type and hypercube information */
+int QIO_reader_insert_hypercube_data(QIO_Reader *in, 
+				     QIO_RecordInfo *record_info)
+{
+
+  int status;
+
+  /* Copy subset data from record_info structure to layout structure
+     and check it */
+
+  status = DML_insert_subset_data(in->layout, 
+				  QIO_get_recordtype(record_info),
+				  QIO_get_hyperlower(record_info),
+				  QIO_get_hyperupper(record_info),
+				  QIO_get_hyper_spacetime(record_info));
+  if(status != 0) return QIO_ERR_BAD_SUBSET;
+
+  return QIO_SUCCESS;
+}
+
 /* Read user record XML */
 /* Can be called separately from QIO_read for discovering the record
    contents without reading the field itself */
@@ -56,7 +76,7 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
 	/* Decode the private record XML */
 	status = QIO_decode_record_info(&(in->record_info), xml_record_private);
 	if(status != 0)return QIO_ERR_PRIVATE_REC_INFO;
-	
+
 	/* Free storage */
 	QIO_string_destroy(xml_record_private);
       }
@@ -86,6 +106,10 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
   /* Copy record info on all calls */
   /*  *record_info = in->record_info; */
   memcpy(record_info, &(in->record_info), sizeof(QIO_RecordInfo));
+  
+  /* Copy hypercube data into reader */
+  status = QIO_reader_insert_hypercube_data(in, record_info);
+  if(status != QIO_SUCCESS)return status;
 
   return QIO_SUCCESS;
 }
@@ -250,7 +274,11 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 		      sizeof(QIO_RecordInfo), this_node, 
 		      in->layout->master_io_node);
   
+  /* Return the record info to caller */
   memcpy(record_info, &(in->record_info), sizeof(QIO_RecordInfo));
+
+  /* Add record type and subset data to layout structure */
+  QIO_reader_insert_hypercube_data(in, record_info);
 
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d): Done broadcasting private record info\n",

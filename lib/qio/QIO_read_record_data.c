@@ -58,7 +58,6 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   DML_Layout *layout = in->layout;
   int this_node = layout->this_node; 
   int status;
-  int recordtype; 
   int latdim;
   QIO_RecordInfo *record_info = &in->record_info;
 
@@ -81,16 +80,6 @@ int QIO_generic_read_record_data(QIO_Reader *in,
     printf("%s(%d): Bad read state %d\n",myname,this_node,in->read_state);
     return QIO_ERR_INFO_MISSED;
   }
-
-  /* Add record type and subset data to layout structure */
-  recordtype = QIO_get_recordtype(record_info);
-  layout->recordtype = recordtype;
-  status = DML_insert_subset_data(layout, 
-				  QIO_get_hyperlower(record_info),
-				  QIO_get_hyperupper(record_info),
-				  QIO_get_hyper_spacetime(record_info));
-  if(status != 0)
-    return QIO_ERR_BAD_SUBSET;
 
   /* Require consistency between the byte count obtained from the
      private record metadata and the datum_size and count parameters
@@ -128,7 +117,7 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   /* Nodes read the field */
 
   /* Scan ahead and open the record with one of the listed LIME types */
-  lrl_record_in = QIO_open_read_field(in, recordtype, datum_size, 
+  lrl_record_in = QIO_open_read_field(in, datum_size, 
          lime_type_list, ntypes, &lime_type, &status);
   if(status != QIO_SUCCESS)return status;
 
@@ -138,7 +127,7 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   }
 
   /* Then read the data and close the record */
-  status = QIO_read_field_data(in, lrl_record_in, recordtype, 
+  status = QIO_read_field_data(in, lrl_record_in, 
 			       put, count, datum_size, word_size, 
 			       arg, checksum, nbytes);
   if(status != QIO_SUCCESS){

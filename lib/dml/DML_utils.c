@@ -188,10 +188,14 @@ DML_SiteList *DML_init_sitelist(int volfmt, int serpar, DML_Layout *layout){
   }
   sites->list               = NULL;
   sites->use_list           = 0;
-  sites->number_of_io_sites = 0;
   sites->first              = 0;
+  sites->current_rank       = 0;
+  sites->number_of_io_sites = 0;
+  sites->number_of_my_ionodes = 0;
+  sites->current_index      = 0;
   sites->use_subset         = 0;
   sites->subset_rank        = NULL;
+  sites->subset_io_sites    = 0;
 
   /* Initialize number of I/O sites */
 
@@ -577,7 +581,7 @@ int DML_next_site(DML_SiteRank *rank, DML_SiteList *sites)
 /*------------------------------------------------------------------*/
 /* Copy subset data into DML layout structure                       */
 /* return 1 for failure (bad hypercube bounds) and 0 for success */
-int DML_insert_subset_data(DML_Layout *layout, 
+int DML_insert_subset_data(DML_Layout *layout, int recordtype,
 			   int *lower, int *upper, int n)
 {
   int i;
@@ -588,7 +592,11 @@ int DML_insert_subset_data(DML_Layout *layout,
   int this_node = layout->this_node;
   size_t subsetvolume;
 
-  if(layout->recordtype != DML_HYPER){
+
+  /* Insert record type */
+  layout->recordtype = recordtype;
+
+  if(recordtype != DML_HYPER){
 
     /* Not a hypercube record, so the subset includes everything */
     layout->subsetvolume = layout->volume;
@@ -1572,7 +1580,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   int status;
   DML_SiteRank snd_coords, subset_rank;
   uint64_t nbytes = 0;
-  char myname[] = "DML_partition_out_old";
+  char myname[] = "DML_partition_out";
 
   /* Get my I/O node */
   my_io_node = DML_my_ionode(volfmt, serpar, layout);

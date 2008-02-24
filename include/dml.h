@@ -167,7 +167,7 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
 		      LIME_type *lime_type);
 int DML_compare_sitelists(DML_SiteRank *lista, DML_SiteRank *listb, size_t n);
-int DML_insert_subset_data(DML_Layout *layout, 
+int DML_insert_subset_data(DML_Layout *layout, int recordtype,
 			   int *lower, int *upper, int n);
 void DML_checksum_init(DML_Checksum *checksum);
 void DML_checksum_accum(DML_Checksum *checksum, DML_SiteRank rank, 

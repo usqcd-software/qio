@@ -28,9 +28,7 @@ void QIO_reset_writer_ILDG_flags(QIO_Writer *out, QIO_Oflag *oflag){
 }
 
 /* Opens a file for writing, whether in MPP mode or on host */
-/* Writes the private file XML record */
-/* Writes the site list if multifile format */
-/* Writes the user file XML record */
+/* Constructs the site list if multifile format */
 
 QIO_Writer *QIO_generic_open_write(const char *filename, 
 				   int volfmt, QIO_Layout *layout, 
@@ -81,9 +79,9 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   dml_layout->number_of_nodes    = layout->number_of_nodes;
   dml_layout->discover_dims_mode = 0;
   
-  dml_layout->hyperlower           = lower;
-  dml_layout->hyperupper           = upper;
-  dml_layout->subsetvolume         = layout->volume;
+  dml_layout->hyperlower         = lower;
+  dml_layout->hyperupper         = upper;
+  dml_layout->subsetvolume       = layout->volume;
 
   dml_layout->ionode             = io_node;
   dml_layout->master_io_node     = master_io_node();
@@ -190,6 +188,10 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
 
   return qio_out;
 }
+
+/* Writes the private file XML record */
+/* Writes the site list if multifile format */
+/* Writes the user file XML record */
 
 int QIO_write_file_header(QIO_Writer* qio_out, QIO_String *xml_file)
 {
@@ -300,6 +302,11 @@ int QIO_write_file_header(QIO_Writer* qio_out, QIO_String *xml_file)
   return QIO_SUCCESS;
 }
  
+/* Opens a file for writing, whether in MPP mode or on host */
+/* Writes the private file XML record */
+/* Writes the site list if multifile format */
+/* Writes the user file XML record */
+
 QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename, 
 			   int volfmt, QIO_Layout *layout, 
 			   QIO_Filesystem *fs, QIO_Oflag *oflag)

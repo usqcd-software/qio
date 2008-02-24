@@ -159,7 +159,6 @@ QIO_Reader *QIO_create_reader(const char *filename,
   return qio_in;
 }
 
-
 /* Used during file conversion on a scalar machine */
 void QIO_suppress_global_broadcast(QIO_Reader *qio_in){
   qio_in->layout->broadcast_globaldata = 0;

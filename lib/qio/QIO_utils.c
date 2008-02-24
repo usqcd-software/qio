@@ -211,17 +211,15 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 /*------------------------------------------------------------------*/
 
 LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out, 
-	    int msg_begin, int msg_end, int recordtype,
-	    size_t datum_size,
+	    int msg_begin, int msg_end, size_t datum_size,
 	    const LIME_type lime_type, int *do_output, int *status){
   
   LRL_RecordWriter *lrl_record_out = NULL;
   uint64_t planned_rec_size;
   int this_node = out->layout->this_node;
+  int recordtype = out->layout->recordtype;
   DML_SiteList *sites = out->sites;
   char myname[] = "QIO_open_write_field";
-
-  out->layout->recordtype = recordtype;
 
   /* Compute record size */
   if(recordtype == QIO_GLOBAL){
@@ -343,22 +341,19 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
 /* Opens the field and initializes data movement */
 
 int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
-	    int recordtype,
 	    size_t datum_size, DML_Checksum *checksum,
 	    const LIME_type lime_type){
   
   LRL_RecordWriter *lrl_record_out;
   DML_RecordWriter *dml_record_out;
   int this_node = out->layout->this_node;
+  int recordtype = out->layout->recordtype;
   int do_output;
   int status;
   char myname[] = "QIO_init_write_field";
 
-  out->layout->recordtype = recordtype;
-
   /* NOTE: we aren't currently returning do_output */
-  lrl_record_out = QIO_open_write_field(out, msg_begin, msg_end,
-					recordtype, datum_size,
+  lrl_record_out = QIO_open_write_field(out, msg_begin, msg_end, datum_size,
 					lime_type, &do_output, &status);
 
   if(lrl_record_out == NULL)
@@ -444,12 +439,12 @@ int QIO_close_write_field(QIO_Writer *out, uint64_t *nbytes)
 /* Write the whole binary lattice field or global data at once */
 
 int QIO_write_field_data(QIO_Writer *out, LRL_RecordWriter *lrl_record_out,
-	    int recordtype,
 	    void (*get)(char *buf, size_t index, int count, void *arg),
 	    int count, size_t datum_size, int word_size, void *arg, 
 	    DML_Checksum *checksum, uint64_t *nbytes)
 {
   int this_node = out->layout->this_node;
+  int recordtype = out->layout->recordtype;
   char myname[] = "QIO_write_field_data";
 
   /* Initialize byte count and checksum */
@@ -486,18 +481,18 @@ int QIO_write_field_data(QIO_Writer *out, LRL_RecordWriter *lrl_record_out,
 /* Write the whole binary lattice field or global data at once */
 
 int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
-	    int recordtype,
 	    void (*get)(char *buf, size_t index, int count, void *arg),
 	    int count, size_t datum_size, int word_size, void *arg, 
 	    DML_Checksum *checksum, uint64_t *nbytes,
 	    const LIME_type lime_type){
   
   LRL_RecordWriter *lrl_record_out = NULL;
+  int recordtype = out->layout->recordtype;
   int do_output;
   int status;
 
   lrl_record_out = QIO_open_write_field(out, msg_begin, msg_end, 
-		       recordtype, datum_size, lime_type, &do_output, &status);
+		       datum_size, lime_type, &do_output, &status);
 
   if(status != QIO_SUCCESS)
     return status;
@@ -509,7 +504,7 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 
   /* Write data and close LRL record writer */
   if(do_output)
-    status = QIO_write_field_data(out, lrl_record_out, recordtype,
+    status = QIO_write_field_data(out, lrl_record_out, 
 			 get, count, datum_size, word_size, arg,
 			 checksum, nbytes);
 
@@ -677,8 +672,7 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type){
 /*------------------------------------------------------------------*/
 /* Open field data record */
 
-LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int recordtype,
-               size_t datum_size, 
+LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size, 
   	       LIME_type *lime_type_list, int ntypes,
                LIME_type *lime_type, int *status)
 {
@@ -686,15 +680,13 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int recordtype,
   DML_SiteList *sites = in->sites;
   uint64_t announced_rec_size, expected_rec_size;
   int this_node = in->layout->this_node;
+  int recordtype = in->layout->recordtype;
   int do_open, do_read;
   int lrl_status;
   int open_fail, open_eof;
   char myname[] = "QIO_open_read_field";
 
   *status = QIO_SUCCESS;
-
-  /* Not the best way to handle this parameter */
-  in->layout->recordtype = recordtype;
 
   /* Will we read the data?
      For field or hypercube data all nodes with readers will read.
@@ -835,17 +827,18 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, int recordtype,
 
 /* Start reading a field */
 
-int QIO_init_read_field(QIO_Reader *in, int recordtype, size_t datum_size, 
+int QIO_init_read_field(QIO_Reader *in, size_t datum_size, 
 			LIME_type *lime_type_list, int ntypes,
 			DML_Checksum *checksum, LIME_type *lime_type)
 {
   LRL_RecordReader *lrl_record_in = NULL;
   DML_RecordReader *dml_record_in;
   int status;
+  int recordtype = in->layout->recordtype;
   int this_node = in->layout->this_node;
   char myname[] = "QIO_init_read_field";
 
-  lrl_record_in = QIO_open_read_field(in, recordtype, datum_size, 
+  lrl_record_in = QIO_open_read_field(in, datum_size, 
               lime_type_list, ntypes, lime_type, &status);
 
   if(lrl_record_in == NULL){
@@ -932,12 +925,12 @@ int QIO_close_read_field(QIO_Reader *in, uint64_t *nbytes)
    Close record when done. */
 
 int QIO_read_field_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
-	   int recordtype,
 	   void (*put)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t datum_size, int word_size, void *arg, 
  	   DML_Checksum *checksum, uint64_t* nbytes){
 
   int this_node = in->layout->this_node;
+  int recordtype = in->layout->recordtype;
   char myname[] = "QIO_read_field_data";
 
   /* Initialize byte count and checksum */
@@ -987,7 +980,7 @@ int QIO_read_field_data(QIO_Reader *in, LRL_RecordReader *lrl_record_in,
 /*------------------------------------------------------------------*/
 /* Read binary data for a lattice field */
 
-int QIO_read_field(QIO_Reader *in, int recordtype,
+int QIO_read_field(QIO_Reader *in, 
 	   void (*put)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t datum_size, int word_size, void *arg, 
 	   DML_Checksum *checksum, uint64_t* nbytes,
@@ -996,10 +989,10 @@ int QIO_read_field(QIO_Reader *in, int recordtype,
   LRL_RecordReader *lrl_record_in = NULL;
   int status;
 
-  lrl_record_in = QIO_open_read_field(in, recordtype, datum_size, NULL, 0, 
+  lrl_record_in = QIO_open_read_field(in, datum_size, NULL, 0, 
 				      lime_type, &status);
 
-  status = QIO_read_field_data(in, lrl_record_in, recordtype,
+  status = QIO_read_field_data(in, lrl_record_in, 
 			       put, count, datum_size, word_size, arg,
 			       checksum, nbytes);
   return status;

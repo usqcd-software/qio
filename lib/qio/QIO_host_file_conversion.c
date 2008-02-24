@@ -519,7 +519,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
       QIO_close_write(outfile);
     }
   
-  /***** iterate on field/globaldata records up to EOF ***********/
+  /***** iterate on field/hypercube/globaldata records up to EOF *******/
   /* We assume the canonical order of SciDAC records */
   while (1)
     {
@@ -625,12 +625,12 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 
       else{
 
-	/* Write the field data. */
+	/* Write the field or hypercube data. */
 	
 	/* Prepare the input file for reading the site data via random
 	   access */
 	
-	status = QIO_init_read_field(infile, QIO_FIELD, datum_size, 
+	status = QIO_init_read_field(infile, datum_size, 
 				     lime_type_list, ntypes, &checksum_in, 
 				     &lime_type);
 	if(status != QIO_SUCCESS)return status;
@@ -663,8 +663,13 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 
 	  /* Prepare part file output */
 	  QIO_init_read_seek_arg(&arg_seek, &arg, infile,
-				    ionode_layout->this_node,
-				    master_io_node);
+				 ionode_layout->this_node,
+				 master_io_node);
+	  
+	  /* Copy hypercube data from record_info structure to writer */
+	  status = QIO_writer_insert_hypercube_data(outfile, &rec_info);
+	  
+	  if(status != QIO_SUCCESS)return status;
 	  
 	  /* Write the data.  The factory function QIO_scalar_get
 	     seeks and reads from the input file */
@@ -694,7 +699,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 					  filename, ionode_layout, layout, fs);
 	if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
 
-      } /* field data */
+      } /* field or hypercube data */
 	
       /* Check that input byte count matches total expected */
       if(total_bytes != totnbytes_in){
@@ -1037,7 +1042,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 	}
       else
 	{
-	  /* Write the field data */
+	  /* Write the field or hypercube data */
 
 	  /* We need the LIME type for the record data. So we peek at
 	     the header for LIME record for the binary data in the
@@ -1045,10 +1050,13 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 	     We may need to search ahead for this record, since
 	     there may be an intervening ILDG format and LFN record. */
 	  
-	  status = QIO_init_read_field(infile, QIO_FIELD, datum_size, 
+	  status = QIO_init_read_field(infile, datum_size, 
 				       lime_type_list, ntypes,
 				       &checksum_in, &lime_type_in);
 	  if(status != QIO_SUCCESS)return status;
+
+	  /* Expected byte count */
+	  total_bytes = ((uint64_t)infile->layout->subsetvolume) * datum_size;
 
 	  /* Copy LIME type */
 	  lime_type_out = (char *)malloc(strlen(lime_type_in)+1);
@@ -1061,14 +1069,13 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 
 	  /* Prepare to write the output field to the host single file */
 	  status = QIO_init_write_field(outfile, msg_begin, msg_end,
-					QIO_FIELD, datum_size, &checksum_out,
+					datum_size, &checksum_out,
 					lime_type_out);
 	  if(status != QIO_SUCCESS)return status;
 	  free(lime_type_out);
 	  lime_type_out = NULL;
 
 	  /* Input byte counting and checksums */
-	  total_bytes = ((uint64_t)infile->layout->subsetvolume) * datum_size;
 	  totnbytes_in = 0;
 	  DML_checksum_init(&checksum_in);
 
