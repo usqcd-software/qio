@@ -666,6 +666,62 @@ int DML_inside_subset(DML_SiteRank rank, DML_Layout *layout){
 
 
 /*------------------------------------------------------------------*/
+/* Table lookup for sorted table.  Return index if found and -1 if not
+   found. Binary search for exact match. */
+
+int DML_table_lookup(DML_SiteRank list[], size_t n, DML_SiteRank r)
+{
+  int ju,jm,jl;
+  
+  if ( n == 0) return -1;
+  if ( r < list[0] || r > list[n-1] ) return -1;
+  if ( r == list[0] ) return 0;
+  if ( n == 1 ) return -1;
+  if ( r == list[n-1] ) return n-1;
+  if ( n == 2 ) return -1;
+
+  jl=0;
+  ju=n-1;
+  while (ju-jl > 1) {
+    jm=(ju+jl)/2;
+    if ( r == list[jm] ) return jm;
+    if ( r > list[jm]  ) jl=jm;
+    else                 ju=jm;
+  }
+  return -1;
+}
+
+/*------------------------------------------------------------------*/
+/* Find the physical location in the record of the site with
+   lexicographic index "rank".  Returns 1 on error.  0 for success. */
+
+int DML_lookup_subset_rank(DML_SiteRank *seek, DML_SiteRank rank, 
+			   DML_SiteList *sites)
+{
+  int current_index;
+  int status;
+
+  if(sites->use_list){
+    current_index = DML_table_lookup(sites->list, sites->number_of_io_sites, 
+				     rank);
+    if(current_index < 0)
+      return 1;
+  }
+  else{
+    current_index = rank;
+  }
+
+  if(sites->use_subset){
+    status = sites->subset_rank[current_index];
+    if(status < 0)return 1;
+    *seek = status;
+  } else {
+    *seek = current_index;
+  }
+  return 0;
+}
+
+/*------------------------------------------------------------------*/
 /* Iterator for I/O sites in subset */
 /* Returns 0 when iteration is complete. 1 when not and updates rank. */
 int DML_next_subset_site(DML_SiteRank *rank, DML_SiteList *sites)
@@ -683,6 +739,8 @@ int DML_next_subset_site(DML_SiteRank *rank, DML_SiteList *sites)
  
 /*------------------------------------------------------------------*/
 /* Return position of site in record - same as subset rank          */
+/* Note: this routine is used only in conjunction with the
+   DML_next_subset_site iterator.  */
 int DML_subset_rank(DML_SiteRank rank, DML_SiteList *sites){
   if(sites->use_subset)
     return sites->subset_rank[sites->current_index];
@@ -1129,14 +1187,15 @@ DML_RecordWriter *DML_partition_open_out(
 
 /*------------------------------------------------------------------*/
 /* See DML_partition_out below for a description */
-/* This procedure writes one site's worth of data to an open record at
-   a position specified by the site rank "seeksite" relative to the
-   beginning of the binary data */
+/* This procedure writes one site's worth of data with lexicographic
+   rank snd_coords to an open record at a position specified by the
+   site rank "seeksite" relative to the beginning of the binary
+   data */
 
-int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
+int DML_partition_subset_sitedata_out(DML_RecordWriter *dml_record_out,
 	   void (*get)(char *buf, size_t index, int count, void *arg),
-	   DML_SiteRank snd_coords, int count, size_t size, int word_size, 
-	   void *arg, DML_Layout *layout)
+           DML_SiteRank subset_rank, DML_SiteRank snd_coords, int count, 
+	   size_t size, int word_size, void *arg, DML_Layout *layout)
 {
 
   LRL_RecordWriter *lrl_record_out = dml_record_out->lrl_rw;
@@ -1159,7 +1218,7 @@ int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
   int new_node;
   int status;
   char scratch_buf[4];
-  char myname[] = "DML_partition_sitedata_out";
+  char myname[] = "DML_partition_subset_sitedata_out";
 
   scratch_buf[0] = scratch_buf[1] = scratch_buf[2] = scratch_buf[3] = '\0';
 
@@ -1227,7 +1286,7 @@ int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
 
       if( (buf_sites >= max_buf_sites) || (isite >= max_dest_sites-1) )
 	{
-	  status = DML_write_buf_seek(lrl_record_out, snd_coords,
+	  status = DML_write_buf_seek(lrl_record_out, subset_rank,
 				      outbuf, buf_sites, size, &nbytes,
 				      myname, this_node);
 	  buf_sites = 0;
@@ -1246,6 +1305,32 @@ int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
   return 0;
 }
   
+/*------------------------------------------------------------------*/
+/* Write one site's worth of data with lexicographic rank snd_coords */
+
+int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
+	   void (*get)(char *buf, size_t index, int count, void *arg),
+           DML_SiteRank snd_coords, int count, size_t size, int word_size, 
+           void *arg, DML_Layout *layout, DML_SiteList *sites){
+  DML_SiteRank subset_rank;
+  int status;
+  int this_node = layout->this_node;
+  char myname[] = "DML_partition_sitedata_out";
+
+  /* Convert lexicographic index for this partition to the physical
+     rank in the record */
+  if(DML_lookup_subset_rank(&subset_rank, snd_coords, sites)!= 0){
+    printf("%s(%d) Request to write a site %d not planned for the record.\n",
+	   myname, this_node, snd_coords);
+    return 1;
+  }
+  if(DML_partition_subset_sitedata_out(dml_record_out, get, subset_rank, 
+            snd_coords, count, size, word_size, arg, layout) != 0)
+    return 1;
+
+  return 0;
+}
+
 /*------------------------------------------------------------------*/
 /* See DML_partition_out below for a description */
 /* This routine closes an open record and cleans up */
@@ -1267,9 +1352,8 @@ int DML_partition_allsitedata_out(DML_RecordWriter *dml_record_out,
   if(DML_init_subset_site_loop(&snd_coords, sites)==0)
     return 0;
   do {
-    subset_rank = (DML_SiteRank)DML_subset_rank(snd_coords, sites);
-    if(DML_partition_sitedata_out(dml_record_out, get,
-		  subset_rank, count, size, word_size, arg, layout) != 0)
+    if(DML_partition_sitedata_out(dml_record_out, get, snd_coords, 
+		  count, size, word_size, arg, layout, sites) != 0)
       return 1;
     
   } while(DML_next_subset_site(&snd_coords, sites));
@@ -2043,12 +2127,12 @@ DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in,
 
 /*------------------------------------------------------------------*/
 /* See DML_partition_in below for a description */
-/* This routine opens a record and prepares to read a field */
-
-int DML_partition_sitedata_in(DML_RecordReader *dml_record_in, 
+/* Seek within the record to a given linear index subset_rank 
+   and read one site's worth of data */
+int DML_partition_subset_sitedata_in(DML_RecordReader *dml_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
-	  DML_SiteRank rcv_coords, int count, size_t size, int word_size, 
-	  void *arg, DML_Layout *layout)
+          DML_SiteRank subset_rank, DML_SiteRank rcv_coords, int count, 
+          size_t size, int word_size,  void *arg, DML_Layout *layout)
 {
 
   LRL_RecordReader *lrl_record_in  = dml_record_in->lrl_rr;
@@ -2071,7 +2155,7 @@ int DML_partition_sitedata_in(DML_RecordReader *dml_record_in,
 
   int dest_node;
   int err;
-  char myname[] = "DML_partition_sitedata_in";
+  char myname[] = "DML_partition_subset_sitedata_in";
 
   /* Convert lexicographic rank to coordinates */
   DML_lex_coords(coords, latdim, latsize, rcv_coords);
@@ -2081,7 +2165,7 @@ int DML_partition_sitedata_in(DML_RecordReader *dml_record_in,
   
   if(this_node == my_io_node){
     /* I/O node reads the next value */
-    buf_sites = DML_seek_read_buf(lrl_record_in, rcv_coords, size,
+    buf_sites = DML_seek_read_buf(lrl_record_in, subset_rank, size,
 				  inbuf, &buf_extract, buf_sites,
 				  max_buf_sites, isite, 
 				  max_send_sites, &nbytes,
@@ -2143,8 +2227,33 @@ int DML_partition_sitedata_in(DML_RecordReader *dml_record_in,
 }
 
 /*------------------------------------------------------------------*/
+int DML_partition_sitedata_in(DML_RecordReader *dml_record_in, 
+	  void (*put)(char *buf, size_t index, int count, void *arg),
+	  DML_SiteRank rcv_coords, int count, size_t size, int word_size, 
+          void *arg, DML_Layout *layout, DML_SiteList *sites)
+{
+  DML_SiteRank subset_rank;
+  int status;
+  int this_node = layout->this_node;
+  char myname[] = "DML_partition_sitedata_in";
+
+  /* Convert lexicographic index for this partition to the physical
+     rank in the record */
+  if(DML_lookup_subset_rank(&subset_rank, rcv_coords, sites)!= 0){
+    printf("%s(%d) Request for a site %d not found in the record.\n",
+	   myname, this_node, rcv_coords);
+  return 1;
+  }
+  if(DML_partition_subset_sitedata_in(dml_record_in, put, subset_rank,
+	      rcv_coords, count, size, word_size, arg, layout) != 0)
+    return 1;
+
+  return 0;
+}
+
+/*------------------------------------------------------------------*/
 /* See DML_partition_in below for a description */
-/* This routine opens a record and prepares to read a field */
+/* This routine reads all sites in the record */
 
 int DML_partition_allsitedata_in(DML_RecordReader *dml_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
@@ -2159,9 +2268,8 @@ int DML_partition_allsitedata_in(DML_RecordReader *dml_record_in,
   if(DML_init_subset_site_loop(&rcv_coords, sites) == 0)
     return 0;
   do {
-    subset_rank = (DML_SiteRank)DML_subset_rank(rcv_coords, sites);
-    if(DML_partition_sitedata_in(dml_record_in, put, subset_rank,
-		  count, size, word_size, arg, layout) != 0)
+    if(DML_partition_sitedata_in(dml_record_in, put, rcv_coords,
+		count, size, word_size, arg, layout, sites) != 0)
       return 1;
 
   }  while(DML_next_subset_site(&rcv_coords, sites));

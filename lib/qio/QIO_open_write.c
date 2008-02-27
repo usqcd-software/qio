@@ -67,24 +67,25 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   /* Force single file format if there is only one node */
   if(layout->number_of_nodes==1) volfmt = QIO_SINGLEFILE;
   
-  dml_layout->node_number        = layout->node_number;
-  dml_layout->node_index         = layout->node_index;
-  dml_layout->get_coords         = layout->get_coords;
-  dml_layout->num_sites          = layout->num_sites;
-  dml_layout->latsize            = latsize;
-  dml_layout->latdim             = layout->latdim;
-  dml_layout->volume             = layout->volume;
-  dml_layout->sites_on_node      = layout->sites_on_node;
-  dml_layout->this_node          = layout->this_node;
-  dml_layout->number_of_nodes    = layout->number_of_nodes;
-  dml_layout->discover_dims_mode = 0;
-  
-  dml_layout->hyperlower         = lower;
-  dml_layout->hyperupper         = upper;
-  dml_layout->subsetvolume       = layout->volume;
-
-  dml_layout->ionode             = io_node;
-  dml_layout->master_io_node     = master_io_node();
+  dml_layout->node_number          = layout->node_number;
+  dml_layout->node_index           = layout->node_index;
+  dml_layout->get_coords           = layout->get_coords;
+  dml_layout->num_sites            = layout->num_sites;
+  dml_layout->latsize              = latsize;
+  dml_layout->latdim               = layout->latdim;
+  dml_layout->volume               = layout->volume;
+  dml_layout->sites_on_node        = layout->sites_on_node;
+  dml_layout->this_node            = layout->this_node;
+  dml_layout->number_of_nodes      = layout->number_of_nodes;
+  dml_layout->broadcast_globaldata = 0; /* Not applicable for writing */
+  dml_layout->discover_dims_mode   = 0;
+  				   
+  dml_layout->hyperlower           = lower;
+  dml_layout->hyperupper           = upper;
+  dml_layout->subsetvolume         = layout->volume;
+				   
+  dml_layout->ionode               = io_node;
+  dml_layout->master_io_node       = master_io_node();
   
   /* Construct the writer handle */
   qio_out = (QIO_Writer *)malloc(sizeof(QIO_Writer));

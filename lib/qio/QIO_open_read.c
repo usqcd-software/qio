@@ -63,6 +63,7 @@ QIO_Reader *QIO_create_reader(const char *filename,
   dml_layout->sites_on_node        = layout->sites_on_node;
   dml_layout->this_node            = layout->this_node;
   dml_layout->number_of_nodes      = layout->number_of_nodes;
+  dml_layout->broadcast_globaldata = 1;
   dml_layout->discover_dims_mode   = (layout->latdim == 0);
 
   dml_layout->hyperlower           = lower;
@@ -71,7 +72,6 @@ QIO_Reader *QIO_create_reader(const char *filename,
 
   dml_layout->ionode               = io_node;
   dml_layout->master_io_node       = master_io_node();
-  dml_layout->broadcast_globaldata = 1;
 
   /* Construct the reader handle */
   qio_in = (QIO_Reader *)malloc(sizeof(QIO_Reader));

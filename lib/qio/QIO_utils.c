@@ -393,7 +393,7 @@ int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 */
 
 int QIO_seek_write_field_datum(QIO_Writer *out, 
-	      DML_SiteRank seeksite,
+	      DML_SiteRank snd_coords,
 	      void (*get)(char *buf, size_t index, int count, void *arg),
 	      int count, size_t datum_size, int word_size, void *arg)
 {
@@ -402,8 +402,8 @@ int QIO_seek_write_field_datum(QIO_Writer *out,
   int status;
   char myname[] = "QIO_seek_write_site_data";
 
-  status = DML_partition_sitedata_out(dml_record_out, get, seeksite, 
-		      count, datum_size, word_size, arg, out->layout);
+  status = DML_partition_sitedata_out(dml_record_out, get, snd_coords, 
+	      count, datum_size, word_size, arg, out->layout, out->sites);
 
   if(status != QIO_SUCCESS){
     printf("%s(%d): Error writing site datum\n",myname,this_node);
@@ -874,8 +874,7 @@ int QIO_init_read_field(QIO_Reader *in, size_t datum_size,
 
 */
 
-int QIO_seek_read_field_datum(QIO_Reader *in, 
-	      DML_SiteRank seeksite,
+int QIO_seek_read_field_datum(QIO_Reader *in, DML_SiteRank rcv_coords,
 	      void (*put)(char *buf, size_t index, int count, void *arg),
 	      int count, size_t datum_size, int word_size, void *arg)
 {
@@ -885,8 +884,9 @@ int QIO_seek_read_field_datum(QIO_Reader *in,
   int status;
   char myname[] = "QIO_seek_read_field_datum";
 
-  status = DML_partition_sitedata_in(dml_record_in, put, seeksite, 
-		     count, datum_size, word_size, arg, in->layout);
+  status = DML_partition_sitedata_in(dml_record_in, put, rcv_coords, 
+				     count, datum_size, word_size, arg, 
+				     in->layout, in->sites);
 
   if(status != 0){
     printf("%s(%d): DML error %d reading site datum\n",myname,this_node,

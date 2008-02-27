@@ -204,14 +204,14 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, size_t size,
 			 uint64_t *nbytes, char *myname, int this_node,
 			 int *err);
 int DML_my_ionode(int volfmt, int serpar, DML_Layout *layout);
-DML_RecordWriter *DML_partition_open_out(
+           DML_RecordWriter *DML_partition_open_out(
 	   LRL_RecordWriter *lrl_record_out, size_t size, 
 	   size_t set_buf_sites, DML_Layout *layout, DML_SiteList *sites,
 	   int volfmt, int serpar, DML_Checksum *checksum);
 int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
 	   void (*get)(char *buf, size_t index, int count, void *arg),
-	   DML_SiteRank seeksite, int count, size_t size, int word_size, 
-           void *arg, DML_Layout *layout);
+           DML_SiteRank snd_coords, int count, size_t size, int word_size, 
+           void *arg, DML_Layout *layout, DML_SiteList *sites);
 int DML_partition_allsitedata_out(DML_RecordWriter *dml_record_out, 
 	   void (*get)(char *buf, size_t index, int count, void *arg),
 	   int count, size_t size, int word_size, void *arg, 
@@ -244,7 +244,7 @@ DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in,
 int DML_partition_sitedata_in(DML_RecordReader *dml_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  DML_SiteRank rcv_coords, int count, size_t size, int word_size, 
-          void *arg, DML_Layout *layout);
+          void *arg, DML_Layout *layout, DML_SiteList *sites);
 int DML_partition_allsitedata_in(DML_RecordReader *dml_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  int count, size_t size, int word_size, void *arg, 
