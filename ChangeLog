@@ -1,3 +1,10 @@
+2008-05-02 14:52  tag qdp1-26-0
+
+2008-05-02 14:52  bjoo
+
+	* configure, include/qioxml_usqcd_prop.h,
+	  lib/qio/QIO_info_usqcd_prop.c: everything else
+
 2008-03-04 16:53  tag qdp1-25-2
 
 2008-03-04 16:53  bjoo
