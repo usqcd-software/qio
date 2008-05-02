@@ -100,6 +100,11 @@ typedef struct {
 } QIO_USQCDPropRecordInfoWrapper;
 
 #define QIO_USQCD_PROPRECORD_INFO_WRAPPER {\
+  {"usqcdPropInfo", "", "" , 0}       \
+}
+
+  /* Backward compatibility feature */
+#define QIO_USQCD_PROPRECORD_INFO_WRAPPER_LEGACY {\
   {"usqcdInfo", "", "" , 0}       \
 }
 
