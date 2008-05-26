@@ -1,3 +1,9 @@
+05/25/2008 -- Carleton DeTar
+
+        Version 2.3.5 Corrects the record tag for the USQCD propagator
+        records, increases the size limit for the record XML,
+        adds some file conversion utilities, and fixes some minor bugs.
+
 02/24/2008 -- Carleton DeTar
 
         Version 2.3.4 Corrected file splitting/joining for hypercube records.
