@@ -265,6 +265,8 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
 				   QIO_Oflag *oflag, 
 				   int (*io_node)(int), 
 				   int (*master_io_node)());
+int QIO_reader_insert_hypercube_data(QIO_Reader *in, 
+				     QIO_RecordInfo *record_info);
 int QIO_writer_insert_hypercube_data(QIO_Writer *out, 
 				     QIO_RecordInfo *record_info);
 int QIO_write_file_header(QIO_Writer* qio_out, QIO_String *xml_file);
