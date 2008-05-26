@@ -1113,6 +1113,10 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 	    */
 	    QIO_set_record_info(infile, &rec_info_in);
 	    
+	    /* Copy hypercube data into reader (if any) */
+	    status = QIO_reader_insert_hypercube_data(infile, &rec_info_in);
+	    if(status != QIO_SUCCESS)return status;
+
 	    /* Reread the user record info or set state */
 	    status = QIO_read_user_record_info(infile, xml_record_in);
 	    if(status != QIO_SUCCESS)return status;
