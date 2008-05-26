@@ -106,7 +106,7 @@ static int init_my_io_node(){
 
 /* Map any node to its I/O node */
 static int my_io_node(int node){
-  int i,j,k; 
+  int i; 
 
   /* Get the machine coordinates for the specified node */
   lex_coords(io_node_coords, mesh->machdim, mesh->machsize, node);
@@ -132,7 +132,6 @@ static QIO_Filesystem *create_multi_ppfs(void){
   QIO_Filesystem *fs;
   int i, j, k, d, numnodes;
   int *io_part_coords;
-  struct stat dir_stat;
   mode_t dir_mode = BASE_DIRMODE;
   char myname[] = "create_multi_ppfs";
 
