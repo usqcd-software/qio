@@ -1,4 +1,4 @@
-% -*-LaTeX-*- document QIO API (C Language Binding) version 1.1
+% -*-LaTeX-*- document QIO API (C Language Binding) version 2.3
 %
 \documentclass{article}
 
@@ -957,7 +957,33 @@ following function.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{File format conversion}
+\subsection{File format conversion - utilities}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The following single-processor utilities are generated when the
+package is built for a single processor:
+
+\begin{itemize}
+  \item \verb|qio-convert-mesh-singlefs| Converts files from single file 
+        to partition file format and vice versa.  Optionally, the
+        conversion from partition file to single file is done with
+        ILDG compatibility.  The partition files are produced (found)
+        in the same directory.  There is one file per node.
+  \item \verb|qio-convert-mesh-pfs| Same as above, except that the 
+        partition files are scattered among multiple file systems,
+        so a path table must be supplied to locate them.
+  \item \verb|qio-convert-mesh-ppfs| This utility groups nodes into 
+        I/O families with one I/O node (hence one file) per family.
+  \item \verb|qio-copy-mesh-ppfs| Utility for copying files from
+        source directories to local file systems on the appropriate
+        I/O nodes.
+  \item \verb|qio-convert-nersc| Utility for converting a file in 
+        NERSC archive format to SciDAC file format.  Optionally, the
+        resulting file also made ILDG compatible.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{File format conversion - API}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 The API provides subroutines for converting between single file and
@@ -1118,6 +1144,21 @@ dimensions from the opaque structure, as described above.
   Purpose        & Change the length of the string with truncation if necessary. \\
    \hline
   Example        & \verb|QIO_string_realloc(xml,32);| \\
+   \hline
+ \end{tabular}
+\end{flushleft}
+%
+
+\paragraph{Appending to a string}
+
+\begin{flushleft}
+  \begin{tabular}{|l|l|}
+  \hline
+  Prototype      & \QIOstring \verb|*QIO_string_append(|\QIOstring \verb|*dest, const char *string);|\\
+    \hline
+  Purpose        & Append ``string'' to the end of the QIO string ``dest''. \\
+   \hline
+  Example        & \verb|QIO_string_append(xml,''<info>'';| \\
    \hline
  \end{tabular}
 \end{flushleft}
