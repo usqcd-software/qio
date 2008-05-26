@@ -100,7 +100,7 @@ typedef struct {
 } QIO_USQCDKSPropRecordInfoWrapper;
 
 #define QIO_USQCD_KSPROPRECORD_INFO_WRAPPER {\
-  {"usqcdInfo", "", "" , 0}       \
+  {"usqcdKSPropInfo", "", "" , 0}       \
 }
 
 /*******************************************************************/
