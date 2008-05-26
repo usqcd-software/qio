@@ -514,8 +514,6 @@ int LRL_next_message(LRL_FileReader *fr)
   while(msg_end == 0){
     status = limeReaderNextRecord(fr->dr);
     msg_end = limeReaderMEFlag(fr->dr);
-    printf("%s: skipping msg_end %d status %d\n",
-	   myname, msg_end, status);
     if( status != LIME_SUCCESS ) 
       { 
 	printf("%s: LIME error %d\n", myname,status);
