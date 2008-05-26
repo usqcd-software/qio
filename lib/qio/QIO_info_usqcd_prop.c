@@ -17,6 +17,7 @@
 void QIO_encode_usqcd_propfile_info(QIO_String *file_string, 
 				    QIO_USQCDPropFileInfo *file_info)
 {
+  char myname[] = "QIO_encode_usqcd_propfile_info";
   char *buf;
   int remainder,n;
   char fileinfo_tags[QIO_MAXVALUESTRING];
@@ -47,7 +48,7 @@ void QIO_encode_usqcd_propfile_info(QIO_String *file_string,
   remainder -= n;
   buf += n;
   if(remainder < 0){
-    printf("QIO_encode_usqcd_propfile_info: file_string overflow\n");
+    printf("%s: file_string overflow\n",myname);
   }
   else{
     /* Conclude by appending the wrapped tag string */
@@ -70,7 +71,7 @@ int QIO_decode_usqcd_propfile_info(QIO_USQCDPropFileInfo *file_info,
 
   /* Initialize file info structure from a template */
   memcpy(file_info, &templ, sizeof(QIO_USQCDPropFileInfo));
-  
+
   /* Start parsing file_string */
   /* Check leading tag, which is probably the info phrase "<?xml ...?>" */
   /* We ignore it if it is there */
@@ -109,7 +110,7 @@ int QIO_decode_usqcd_propfile_info(QIO_USQCDPropFileInfo *file_info,
 }
 
 void QIO_encode_usqcd_propsource_info(QIO_String *file_string, 
-				    QIO_USQCDPropSourceInfo *file_info)
+				      QIO_USQCDPropSourceInfo *file_info)
 {
   char *buf;
   int remainder,n;
@@ -251,11 +252,10 @@ int QIO_decode_usqcd_proprecord_info(QIO_USQCDPropRecordInfo *record_info,
   char value_string[QIO_MAXVALUESTRING];
   int errors = 0;
   QIO_USQCDPropRecordInfoWrapper wrapper = QIO_USQCD_PROPRECORD_INFO_WRAPPER;
-  QIO_USQCDPropRecordInfoWrapper wrapper_legacy = QIO_USQCD_PROPRECORD_INFO_WRAPPER_LEGACY;
-
+  QIO_USQCDPropRecordInfoWrapper wrapper_legacy = 
+    QIO_USQCD_PROPRECORD_INFO_WRAPPER_LEGACY;
   QIO_USQCDPropRecordInfo templ = QIO_USQCD_PROPRECORD_INFO_TEMPLATE;
   char *left_angle;
-  int legacy=0;
 
   /* Initialize record info structure from a template */
   memcpy(record_info, &templ, sizeof(QIO_USQCDPropRecordInfo));
@@ -276,53 +276,39 @@ int QIO_decode_usqcd_proprecord_info(QIO_USQCDPropRecordInfo *record_info,
 
   /* If outer wrapper has bad tag, exit with error status */
   if(QIO_check_string_occur(&wrapper.usqcdproprecordinfo_tags) == 0) {
+
     /* Otherwise start parsing the string of tags */
     parse_pt = QIO_get_usqcd_proprecord_info_tag_string(&wrapper);
-    /* Scan string until null character is reached */
-    while(*parse_pt){
-      parse_pt = QIO_get_tag_value(parse_pt, tag, value_string);
 
-      QIO_decode_as_string(tag,value_string,&record_info->version);
-      QIO_decode_as_int   (tag,value_string,&record_info->spin);
-      QIO_decode_as_int   (tag,value_string,&record_info->color);
-      QIO_decode_as_string(tag,value_string,&record_info->info);
-    }
+  } else { 
 
-    /* Check for completeness */
-    errors += QIO_check_string_occur(&record_info->version);
-    errors += QIO_check_string_occur(&record_info->info);
-
-  }
-  else { 
     /* Try to decode with the old tagname */
-    QIO_decode_as_string (tag, tags_string, &wrapper_legacy.usqcdproprecordinfo_tags);
+    QIO_decode_as_string (tag, tags_string, 
+			  &wrapper_legacy.usqcdproprecordinfo_tags);
     /* If outer wrapper has bad tag, exit with error status */
     if(QIO_check_string_occur(&wrapper_legacy.usqcdproprecordinfo_tags) ) {
       return QIO_BAD_XML;
     }
-
+    
     /* Otherwise start parsing the string of tags */
     parse_pt = QIO_get_usqcd_proprecord_info_tag_string(&wrapper_legacy);
-    /* Scan string until null character is reached */
-    while(*parse_pt){
-      parse_pt = QIO_get_tag_value(parse_pt, tag, value_string);
-
-      QIO_decode_as_string(tag,value_string,&record_info->version);
-      QIO_decode_as_int   (tag,value_string,&record_info->spin);
-      QIO_decode_as_int   (tag,value_string,&record_info->color);
-      QIO_decode_as_string(tag,value_string,&record_info->info);
-    }
-
-    /* Check for completeness */
-    errors += QIO_check_string_occur(&record_info->version);
-    errors += QIO_check_string_occur(&record_info->info);
-
   }
 
-  return errors;
+  /* Scan string until null character is reached */
+  while(*parse_pt){
+    parse_pt = QIO_get_tag_value(parse_pt, tag, value_string);
     
-    
+    QIO_decode_as_string(tag,value_string,&record_info->version);
+    QIO_decode_as_int   (tag,value_string,&record_info->spin);
+    QIO_decode_as_int   (tag,value_string,&record_info->color);
+    QIO_decode_as_string(tag,value_string,&record_info->info);
+  }
+  
+  /* Check for completeness */
+  errors += QIO_check_string_occur(&record_info->version);
+  errors += QIO_check_string_occur(&record_info->info);
 
+  return errors;
 }
 
 /********************************************************************/
