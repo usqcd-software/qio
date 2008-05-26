@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 2.3.4, detar@physics.utah.edu)
+AC_INIT(qio, 2.3.5, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
@@ -59,12 +59,12 @@ dnl This can go away if the DML_partition_out is fixed to work
 dnl on grid machines
 dnl
 AC_ARG_ENABLE(dml-output-buffering,
-  AC_HELP_STRING([--enable-dml-output-buffering],
-     [Buffering enabled in partition output],
-     [Buffering disabled in partition output]),
+  AC_HELP_STRING(
+     [--enable-dml-output-buffering],
+     [Buffering enabled in partition output]),
    [AC_MSG_NOTICE([Enabling DML output buffering])
     AC_DEFINE([QIO_USE_DML_OUT_BUFFERING],[], [Enables DML output buffering of sites])],
-   [AC_MSG_NOTICE([Disabled DML output buffering. Size only effects single site of data])]
+   [AC_MSG_NOTICE([Disabled DML output buffering. Size only affects single site of data])]
 )
 
 dnl
