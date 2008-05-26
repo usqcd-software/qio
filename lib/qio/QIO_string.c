@@ -174,3 +174,23 @@ void QIO_string_realloc(QIO_String *qs, int length)
   qs->string = tmp;
 }
 
+void QIO_string_append(QIO_String *qs, const char *const string){
+  int len, totlen;
+
+  if(qs == NULL || string == NULL)return;
+  len = strlen(string);
+  if(len == 0)return;
+
+  /* If qs string is uninitialized, set it to blank */
+  if(qs->length == 0)
+    QIO_string_set(qs, "");
+
+  /* Reallocate to the desired total length if necessary */
+  totlen = qs->length + len;
+  if(totlen > qs->length)
+    QIO_string_realloc(qs, totlen);
+
+  /* Finally, append */
+  strncat(qs->string, string, len + 1);
+}
+
