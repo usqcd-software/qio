@@ -316,7 +316,7 @@ char *QIO_set_filepath(QIO_Filesystem *fs,
     }
   else if (fs->type == QIO_SINGLE_PATH)
     {
-      newfilename = (char *) malloc(fnlength);
+      newfilename = (char *) malloc(fnlength+1);
       strncpy(newfilename,filename,fnlength+1);
     }
   
