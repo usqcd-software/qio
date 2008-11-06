@@ -1,3 +1,16 @@
+2008-11-06 13:18  tag qio2-3-7
+
+2008-11-06 13:18  detar
+
+	* NEWS, aclocal.m4, configure, configure.ac,
+	  examples/qio-convert-mesh.c, examples/qio-test.c, include/dml.h,
+	  include/qioxml_internal.h, include/qioxml_private.h,
+	  lib/dml/DML_utils.c, lib/qio/QIO_info.c, lib/qio/QIO_utils.c,
+	  lib/qio/QIO_write.c, other_libs/c-lime/aclocal.m4,
+	  other_libs/c-lime/configure,
+	  other_libs/c-lime/examples/lime_pack.c: Support </tag> in XML
+	  strings.  Bug fix for file splitting/joining with subset records
+
 2008-06-19 17:18  tag bjoo_debug_tag
 
 2008-06-19 17:18  tag qdp1-28-0
