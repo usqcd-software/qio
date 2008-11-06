@@ -55,7 +55,7 @@ char *QIO_strncat(char *s1, char *s2, int *n){
   return c;
 }
 
-/* Find the next <tag> or </tag> */
+/* Find the next <tag> or </tag> or <tag/> */
 /* On return left_angle points to open "<" and return value
    to end ">" or to end of string, whichever comes first */
 char *QIO_next_tag(char *parse_pt, char *tag, char **left_angle){
@@ -121,6 +121,7 @@ char *QIO_get_tag_value(char *parse_pt, char *tag, char *value_string){
 
   char *begin_tag_ptr;
   char *begin_value_string;
+  char *peek_pt;
   int end_tag = 0;
   int i,n;
 
@@ -131,9 +132,23 @@ char *QIO_get_tag_value(char *parse_pt, char *tag, char *value_string){
   /* Get tag */
 
   parse_pt = QIO_next_tag(parse_pt, tag, &begin_tag_ptr);
-  if(!*parse_pt)return parse_pt;
+  if(*tag == '\0')return parse_pt;
 
-  /* Parse value */
+  /* Parse the value */
+
+  /* Handle <tag/> case, signifying empty data */
+
+  /* Look for a slash that is not the first character in "tag" */
+  peek_pt = QIO_next_token(tag, "/");
+  if(*peek_pt != '\0' && peek_pt != tag ){
+    /* Replace the slash in "tag" with a terminating null */
+    *peek_pt = '\0';
+    /* At this point "value_string" is null and "parse_pt" is past the
+       closing ">", so we are finished. */
+    return parse_pt; 
+  }
+
+  /* Handle <tag>value</tag> case */
 
   /* Value starts at first nonwhite */
   parse_pt = QIO_next_nontoken(parse_pt, " \t\n\r");

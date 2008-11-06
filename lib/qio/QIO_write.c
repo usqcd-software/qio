@@ -252,12 +252,6 @@ int QIO_generic_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 	      int *msg_begin, int *msg_end){
 
   int status;
-  DML_Layout *layout= out->layout;
-  int *lower, *upper;
-  size_t subsetvolume;
-  int latdim = layout->latdim;
-  int *latsize = layout->latsize;
-  int this_node = layout->this_node;
 
   status = QIO_write_record_info(out, record_info, datum_size, word_size, 
 				 xml_record, msg_begin, msg_end);

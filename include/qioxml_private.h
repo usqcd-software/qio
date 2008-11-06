@@ -259,6 +259,7 @@ char *QIO_get_record_info_version(QIO_RecordInfo *record_info);
 char *QIO_get_record_date(QIO_RecordInfo *record_info);
 int QIO_get_globaldata(QIO_RecordInfo_v1p0 *record_info);
 int QIO_get_recordtype(QIO_RecordInfo *record_info);
+int QIO_get_hyper_spacetime(QIO_RecordInfo *record_info);
 int *QIO_get_hyperlower(QIO_RecordInfo *record_info);
 int *QIO_get_hyperupper(QIO_RecordInfo *record_info);
 char *QIO_get_datatype(QIO_RecordInfo *record_info);

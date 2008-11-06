@@ -59,6 +59,8 @@ void QIO_decode_as_int(char *tag, char *value_string,
 		       QIO_TagIntValue *tag_value);
 void QIO_decode_as_intlist(char *tag, char *value_string, 
 			   QIO_TagIntArrayValue *tag_value);
+void QIO_decode_as_hex32(char *tag, char *value_string, 
+			 QIO_TagHex32Value *tag_value);
 char *QIO_write_tag(char *buf, char *tag, char *attr, int *remainder);
 char *QIO_write_endtag(char *buf,char *tag,int *remainder);
 char *QIO_encode_as_string(char *buf, QIO_TagCharValue *tag_value,

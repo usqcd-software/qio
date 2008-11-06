@@ -149,8 +149,9 @@ uint64_t DML_stream_in(LRL_RecordReader *lrl_record_in, int recordtype,
 
 /* DML internal utilities */
 
-void DML_lex_init(int *dim, int coords[], int latdim, int latsize[]);
-int DML_lex_next(int *dim, int coords[], int latdim, int latsize[]);
+void DML_lex_init(int *dim, int coords[], int latdim, int lower[]);
+int DML_lex_next(int *dim, int coords[], int latdim, int lower[], 
+  	   int upper[]);
 void DML_lex_coords(int coords[], const int latdim, const int latsize[], 
 		    const DML_SiteRank rcv_coords);
 DML_SiteRank DML_lex_rank(const int coords[], int latdim, int latsize[]);
@@ -174,7 +175,8 @@ void DML_checksum_accum(DML_Checksum *checksum, DML_SiteRank rank,
 			char *buf, size_t size);
 void DML_checksum_combine(DML_Checksum *checksum);
 void DML_checksum_peq(DML_Checksum *total, DML_Checksum *checksum);
-int DML_create_subset_rank(DML_SiteList *sites, DML_Layout *layout);
+int DML_create_subset_rank(DML_SiteList *sites, DML_Layout *layout,
+			   int volfmt, int serpar);
 void DML_destroy_subset_rank(DML_SiteList *sites);
 void DML_global_xor(uint32_t *x);
 int DML_big_endian(void);

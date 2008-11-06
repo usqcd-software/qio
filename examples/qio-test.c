@@ -298,7 +298,7 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
   int i,volume;
   char filename[] = "binary_test";
   int dim = 4;
-  int lower[4] = {2, 0, 0, 2};
+  int lower[4] = {1, 0, 0, 2};
   int upper[4] = {2, 3, 3, 2};
   char myname[] = "qio_test";
   

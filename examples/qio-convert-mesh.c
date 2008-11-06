@@ -78,7 +78,7 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   char *stringLFN;
   QIO_String *ildgLFN;
 
-  QIO_verbose(QIO_VERB_LOW);
+  QIO_verbose(QIO_VERB_REG);
 
   /* Command line options */
 

@@ -218,6 +218,8 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
   uint64_t planned_rec_size;
   int this_node = out->layout->this_node;
   int recordtype = out->layout->recordtype;
+  int volfmt = out->volfmt;
+  int serpar = out->serpar;
   DML_SiteList *sites = out->sites;
   char myname[] = "QIO_open_write_field";
 
@@ -232,7 +234,7 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
   }
   else{
     /* Create list of sites in subset for output and count them */
-    if(DML_create_subset_rank(out->sites, out->layout) == 1){
+    if(DML_create_subset_rank(out->sites, out->layout, volfmt, serpar) == 1){
       printf("%s(%d) No room for subset rank list\n",
 	     myname,this_node);
       return NULL;
@@ -347,7 +349,6 @@ int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   LRL_RecordWriter *lrl_record_out;
   DML_RecordWriter *dml_record_out;
   int this_node = out->layout->this_node;
-  int recordtype = out->layout->recordtype;
   int do_output;
   int status;
   char myname[] = "QIO_init_write_field";
@@ -681,6 +682,8 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size,
   uint64_t announced_rec_size, expected_rec_size;
   int this_node = in->layout->this_node;
   int recordtype = in->layout->recordtype;
+  int volfmt = in->volfmt;
+  int serpar = in->serpar;
   int do_open, do_read;
   int lrl_status;
   int open_fail, open_eof;
@@ -757,7 +760,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size,
 
   /* Create list of sites in subset for output and count them */
   if(recordtype != QIO_GLOBAL){
-    if(DML_create_subset_rank(in->sites, in->layout) == 1){
+    if(DML_create_subset_rank(in->sites, in->layout, volfmt, serpar) == 1){
       printf("%s(%d) No room for subset rank list\n",
 	     myname,this_node);
       return NULL;
@@ -834,7 +837,6 @@ int QIO_init_read_field(QIO_Reader *in, size_t datum_size,
   LRL_RecordReader *lrl_record_in = NULL;
   DML_RecordReader *dml_record_in;
   int status;
-  int recordtype = in->layout->recordtype;
   int this_node = in->layout->this_node;
   char myname[] = "QIO_init_read_field";
 

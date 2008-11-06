@@ -1,3 +1,9 @@
+06/25/2008 -- Carleton DeTar
+
+        Version 2.3.6 corrects a memory corruption bug in the single-processor
+        file splitting and flattening utility that caused an occasional 
+        seg fault in libc/malloc.
+
 05/25/2008 -- Carleton DeTar
 
         Version 2.3.5 Corrects the record tag for the USQCD propagator
