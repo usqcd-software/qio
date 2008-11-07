@@ -1,3 +1,9 @@
+11/05/2008 -- Carleton DeTar
+
+        Version 2.3.7 corrects a bug that affected splitting
+        of subset records.  It also now supports the XML empty
+        tag </tag>.
+
 06/25/2008 -- Carleton DeTar
 
         Version 2.3.6 corrects a memory corruption bug in the single-processor
