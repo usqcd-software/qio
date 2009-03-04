@@ -72,7 +72,9 @@ void DML_broadcast_bytes(char *buf, size_t size, int this_node, int from_node)
 int DML_clear_to_send(char *scratch_buf, size_t size, 
 		      int my_io_node, int new_node) 
 {
+#ifndef HAVE_BGL
   if (QMP_get_msg_passing_type() != QMP_GRID)
+#endif
   {
     int this_node = QMP_get_node_number();
 
