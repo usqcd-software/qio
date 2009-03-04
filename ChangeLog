@@ -1,3 +1,13 @@
+2009-03-04 01:02  osborn
+
+	* NEWS: updated NEWS
+
+2009-03-04 00:56  osborn
+
+	* lib/dml/DML_parscalar.c, other_libs/c-lime/aclocal.m4,
+	  other_libs/c-lime/configure: Made it so that the "clear to send"
+	  messages are still sent when HAVE_BGL is defined.
+
 2008-11-07 15:25  tag qdp-pre-threads
 
 2008-11-07 15:25  tag qdp1-30-0
