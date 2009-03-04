@@ -1,3 +1,9 @@
+2009-03-04 01:11  tag qio2-3-8
+
+2009-03-04 01:11  osborn
+
+	* configure.ac, aclocal.m4, configure: prepare for 2.3.8
+
 2009-03-04 01:02  osborn
 
 	* NEWS: updated NEWS
