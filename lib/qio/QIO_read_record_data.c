@@ -67,10 +67,10 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   LIME_type lime_type0 = QIO_LIMETYPE_BINARY_DATA;
   LIME_type lime_type1 = QIO_LIMETYPE_ILDG_BINARY_DATA;
   LIME_type lime_type_list[2] = {lime_type0, lime_type1};
-  //  LIME_type lime_type_list[2] = {
-  //    QIO_LIMETYPE_BINARY_DATA,
-  //    QIO_LIMETYPE_ILDG_BINARY_DATA
-  //  };
+  /* LIME_type lime_type_list[2] = {
+      QIO_LIMETYPE_BINARY_DATA,
+      QIO_LIMETYPE_ILDG_BINARY_DATA
+      }; */
   LIME_type lime_type;
 
 

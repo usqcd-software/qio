@@ -17,7 +17,7 @@
 void QIO_encode_usqcd_lattice_info(QIO_String *record_string, 
 				     QIO_USQCDLatticeInfo *record_info)
 {
-  // taken from QIO_encode_record_info
+  /* taken from QIO_encode_record_info */
 
   char *buf;
   int remainder,n;
@@ -62,7 +62,7 @@ int QIO_decode_usqcd_lattice_info(QIO_USQCDLatticeInfo *record_info,
 				    QIO_String *record_string)
 {
 
-  // taken from QIO_decode_record_info
+  /* taken from QIO_decode_record_info */
 
   char *parse_pt = QIO_string_ptr(record_string);
   char *tmp_pt;
@@ -217,7 +217,7 @@ char *QIO_get_usqcd_lattice_info_tag_string(QIO_USQCDLatticeInfoWrapper *wrapper
 QIO_USQCDLatticeInfo *QIO_create_usqcd_lattice_info(char *plaq, char *linktr, char *info)
 {
   
-  // taken from QIO_create_record_info and modified
+  /* taken from QIO_create_record_info and modified */
 
   QIO_USQCDLatticeInfo templ = QIO_USQCD_LATTICE_INFO_TEMPLATE;
   QIO_USQCDLatticeInfo *record_info;

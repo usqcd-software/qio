@@ -659,12 +659,12 @@ int QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type){
      ((volfmt == QIO_PARTFILE) 
       && (this_node == in->layout->ionode(this_node)))){
     /* Time release */
-    //double lapse = 1;
-    //QIO_wait(this_node*lapse);
+    /* double lapse = 1;
+       QIO_wait(this_node*lapse); */
     status = DML_read_sitelist(in->sites, 
 			       in->lrl_file_in, in->volfmt, 
 			       in->layout, lime_type);
-    //QIO_wait((number_of_nodes - this_node)*lapse);
+    /* QIO_wait((number_of_nodes - this_node)*lapse); */
   }
 
   return status;
