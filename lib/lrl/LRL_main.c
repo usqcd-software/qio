@@ -311,7 +311,7 @@ void LRL_get_reader_state(LRL_RecordReader *rr,
     *state_size = 0;
   }
   else{
-    *spt = *(rr->fr->dr);
+    if(rr) *spt = *(rr->fr->dr);
     *state_ptr = (void *)spt;
     *state_size = sizeof(LimeReader);
   }
@@ -363,12 +363,14 @@ int LRL_set_reader_state(LRL_RecordReader *rr, void *state_ptr){
   LimeReader *rsrc = (LimeReader *)state_ptr;
   int status;
 
-  /* Set the LIME reader state to the state specified by state_ptr */
-  status = limeReaderSetState(rr->fr->dr, rsrc);
-  if(status != LIME_SUCCESS)return LRL_ERR_SETSTATE;
+  if(rr) {
+    /* Set the LIME reader state to the state specified by state_ptr */
+    status = limeReaderSetState(rr->fr->dr, rsrc);
+    if(status != LIME_SUCCESS)return LRL_ERR_SETSTATE;
 
-  status = limeReaderSeek(rr->fr->dr, 0, SEEK_SET);
-  if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+    status = limeReaderSeek(rr->fr->dr, 0, SEEK_SET);
+    if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+  }
 
   return LRL_SUCCESS;
 }

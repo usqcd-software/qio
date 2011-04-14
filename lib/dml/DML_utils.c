@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <qio_stdint.h>
+#include <sys/time.h>
 
 #undef DML_DEBUG
 
@@ -1066,11 +1067,15 @@ size_t DML_max_buf_sites(size_t size, int factor){
 }
 
 /*------------------------------------------------------------------*/
-char *DML_allocate_buf(size_t size, size_t max_buf_sites){
-  char *lbuf;
-
-  if(max_buf_sites == 0)return NULL;
-  lbuf = (char*)malloc(max_buf_sites*size);
+char *
+DML_allocate_buf(size_t size, size_t *max_buf_sites)
+{
+  char *lbuf = NULL;
+  while(*max_buf_sites>0) {
+    lbuf = (char*) malloc(*max_buf_sites*size);
+    if(lbuf!=NULL) break;
+    *max_buf_sites /= 2;
+  }
   return lbuf;
 }
 
@@ -1205,7 +1210,7 @@ int DML_my_ionode(int volfmt, int serpar, DML_Layout *layout){
     if(serpar == DML_SERIAL)
       return layout->master_io_node;
     else
-      return layout->this_node;
+      return layout->ionode(layout->this_node);
   }
   else if(volfmt == DML_MULTIFILE){
     return layout->this_node;
@@ -1295,7 +1300,7 @@ DML_RecordWriter *DML_partition_open_out(
     max_buf_sites = 1;
   }
 
-  outbuf = DML_allocate_buf(size,max_buf_sites);
+  outbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!outbuf){
     printf("%s(%d) can't malloc outbuf\n",myname,this_node);
     return 0;
@@ -1620,14 +1625,14 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 
   /* Only the I/O node has an output buffer */
   if(this_node == my_io_node){
-    outbuf = DML_allocate_buf(size,max_buf_sites);
+    outbuf = DML_allocate_buf(size, &max_buf_sites);
     if(!outbuf){
       printf("%s(%d) can't malloc outbuf\n",myname,this_node);
       return 0;
     }
   }
 
-  tbuf = DML_allocate_buf(size,max_tbuf_sites);
+  tbuf = DML_allocate_buf(size, &max_tbuf_sites);
   if(!tbuf){
     printf("%s(%d) can't malloc tbuf\n",myname,this_node);
     free(outbuf);
@@ -1635,7 +1640,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   }
 
   /* Scratch for clear-to-send signal */
-  scratch_buf = DML_allocate_buf(4,1);
+  { size_t one=1; scratch_buf = DML_allocate_buf(4, &one); }
   if(!scratch_buf){
     printf("%s(%d) can't malloc scratch_buf\n",myname,this_node);
     free(outbuf); free(tbuf);
@@ -1820,13 +1825,13 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   if(serpar == DML_PARALLEL)
     max_buf_sites = 1;
 
-  outbuf = DML_allocate_buf(size,max_buf_sites);
+  outbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!outbuf){
     printf("%s(%d) can't malloc outbuf\n",myname,this_node);
     return 0;
   }
 
-  scratch_buf = DML_allocate_buf(4,1);
+  { size_t one=1; scratch_buf = DML_allocate_buf(4, &one); }
   if(!scratch_buf){
     printf("%s(%d) can't malloc scratch_buf\n",myname,this_node);
     free(outbuf);
@@ -2026,7 +2031,7 @@ uint64_t DML_multifile_out(LRL_RecordWriter *lrl_record_out,
 
   /* Allocate buffer for writing */
   max_buf_sites = DML_max_buf_sites(size,1);
-  lbuf = DML_allocate_buf(size,max_buf_sites);
+  lbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!lbuf){
     printf("%s(%d): Can't malloc lbuf\n",myname,this_node);
     return 0;
@@ -2109,7 +2114,7 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 
   /* Allocate buffer for reading */
   max_buf_sites = DML_max_buf_sites(size,1);
-  lbuf = DML_allocate_buf(size,max_buf_sites);
+  lbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!lbuf)return 0;
 
   /* Allocate coordinate */
@@ -2231,7 +2236,7 @@ DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in,
     max_buf_sites = 1;
 
  
-  inbuf = DML_allocate_buf(size,max_buf_sites);
+  inbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!inbuf){
     printf("%s(%d) can't malloc inbuf\n",myname,this_node);
     return 0;
@@ -2448,12 +2453,22 @@ uint64_t DML_partition_close_in(DML_RecordReader *dml_record_in)
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
    PARTFILE modes. */
 
+double QIO_time2 (void)
+{
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  //if(node==0) printf("QIO_time %g %g\n", (double)tv.tv_sec, (double)tv.tv_usec);
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+}
+#define timestart(t) { double dt = QIO_time2(); /*if(this_node==0) printf("start " #t " %g\n", dt);*/ t-=dt; }
+#define timestop(t) { double dt = QIO_time2(); /*if(this_node==0) printf("stop " #t " %g\n", dt);*/ t+=dt; }
 uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  int count, size_t size, int word_size, void *arg, 
 	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
 	  int serpar, DML_Checksum *checksum)
 {
+  double dtall=0, dtread=0, dtsend=0;
   char *buf=NULL,*inbuf;
   int dest_node, my_io_node;
   DML_SiteRank rcv_coords;
@@ -2466,6 +2481,8 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
   int err;
   DML_SiteRank subset_rank;
   char myname[] = "DML_partition_in";
+
+  timestart(dtall);
 
   /* Get my I/O node */
   my_io_node = DML_my_ionode(volfmt, serpar, layout);
@@ -2480,7 +2497,7 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
   if(serpar == DML_PARALLEL)
     max_buf_sites = 1;
 
-  inbuf = DML_allocate_buf(size,max_buf_sites);
+  inbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!inbuf){
     printf("%s(%d) can't malloc inbuf\n",myname,this_node);
     return 0;
@@ -2515,29 +2532,31 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
   do {
     /* Convert lexicographic rank to coordinates */
     DML_lex_coords(coords, latdim, latsize, rcv_coords);
-    
+
     /* The node that gets the next datum */
     dest_node = layout->node_number(coords);
-    
+
     if(this_node == my_io_node){
       /* The subset_rank locates the datum for rcv_coords in the
 	 record our I/O partition is reading */
       subset_rank = (DML_SiteRank)DML_subset_rank(rcv_coords, sites);
       /* I/O node reads the next value */
-      if(serpar == DML_SERIAL)
+      timestart(dtread);
+      if(serpar == DML_SERIAL) {
 	buf_sites = DML_read_buf_next(lrl_record_in, size,
 				      inbuf, &buf_extract, buf_sites,
 				      max_buf_sites, isite, 
 				      max_send_sites, &nbytes,
 				      myname, this_node, &err);
-
-      else
+      } else {
 	buf_sites = DML_read_buf_seek(lrl_record_in, subset_rank, size,
 				      inbuf, &buf_extract, buf_sites,
 				      max_buf_sites, isite, 
 				      max_send_sites, &nbytes,
 				      myname, this_node, &err);
-      
+      }
+      timestop(dtread);
+
       if(err < 0){
         printf("%s(%d) DML_read_buf_seek returns error\n",
                myname,this_node);
@@ -2551,6 +2570,7 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 
     /* Send result to destination node. Avoid I/O node sending to itself. */
     if (dest_node != my_io_node) {
+      timestart(dtsend);
 #if 1
       DML_route_bytes(buf,size,my_io_node,dest_node);
 #else
@@ -2564,8 +2584,9 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 	DML_get_bytes(buf, size, my_io_node);
       }
 #endif
+      timestop(dtsend);
     }
-    
+
     /* Process data before inserting */
     if(this_node == dest_node){
       
@@ -2587,6 +2608,8 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 
   free(inbuf); free(coords);
 
+  timestop(dtall);
+  if(this_node==0) printf("%s times: read %.2f  send %.2f  total %.2f\n", myname, dtread, dtsend, dtall);
   /* return the number of bytes read by this node only */
   return nbytes;
 }

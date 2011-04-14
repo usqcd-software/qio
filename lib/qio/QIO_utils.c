@@ -20,7 +20,9 @@ double QIO_time (void)
 {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  return tv.tv_sec + 1e-6*tv.tv_usec;
+  double s = (double) tv.tv_sec;
+  double u = (double) tv.tv_usec;
+  return s + u*1.e-6;
 }
 
 /* Wait for "sec" seconds */
@@ -705,7 +707,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size,
     /* For serial I/O we open the record if we will actually read it. */
     do_open = do_read;
   else
-    /* For parallel I/O all nodes should have a file reader.
+    /* For parallel I/O some nodes will have a file reader.
        For field or hypercube data all nodes read.
        For global data only the master node reads but
        other nodes must also open and seek to maintain 
@@ -785,7 +787,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size,
 	   NOTE: If we later decide to read partitions in parallel,
 	   this has to be changed to the size for the partition. */
 	expected_rec_size = ((uint64_t)in->layout->subsetvolume) * datum_size;
-    }    
+    }
     if (announced_rec_size != expected_rec_size){
       printf("%s(%d): rec_size mismatch: found %llu expected %llu\n",
 	     myname, this_node, (unsigned long long)announced_rec_size, 

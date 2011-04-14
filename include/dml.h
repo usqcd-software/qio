@@ -182,7 +182,7 @@ void DML_global_xor(uint32_t *x);
 int DML_big_endian(void);
 void DML_byterevn(char *buf, size_t size, int word_size);
 size_t DML_max_buf_sites(size_t size, int factor);
-char *DML_allocate_buf(size_t size, size_t max_buf_sites);
+char *DML_allocate_buf(size_t size, size_t *max_buf_sites);
 int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out, 
 		       DML_SiteRank seeksite, 
 		       char *lbuf, size_t buf_sites, size_t size,
