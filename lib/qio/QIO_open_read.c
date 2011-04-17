@@ -16,9 +16,10 @@
 /* Build QIO_Reader and open master file */
 /*****************************************/
 
-QIO_Reader *QIO_create_reader(const char *filename, 
-			      QIO_Layout *layout, QIO_Iflag *iflag,
-			      int (*io_node)(int), int (*master_io_node)())
+QIO_Reader *
+QIO_create_reader(const char *filename, 
+		  QIO_Layout *layout, QIO_Iflag *iflag,
+		  int (*io_node)(int), int (*master_io_node)())
 {
   QIO_Reader *qio_in;
   LRL_FileReader *lrl_file_in = NULL;
@@ -27,8 +28,64 @@ QIO_Reader *QIO_create_reader(const char *filename,
   int *latsize, *upper, *lower;
   int latdim = layout->latdim;
   int this_node = layout->this_node;
+  int master_ionode = master_io_node();
   char *newfilename;
   char myname[] = "QIO_create_reader";
+
+  int serpar=QIO_SERIAL, volfmt=QIO_UNKNOWN;
+  if(iflag != NULL) {
+    serpar = iflag->serpar;
+    volfmt = iflag->volfmt;
+  }
+
+  /* First, only the global master node opens the file, regardless of
+     whether it will be read by all nodes */
+
+  if(this_node == master_ionode) {
+    /* If the format is SINGLEFILE the file name is as specified by
+       "filename".  If it is PARTFILE or MULTIFILE, the name is formed
+       by adding a volume number extension to the "filename" string.
+       If the volume format is unknown or single file, we try
+       "filename" first. */
+    if( volfmt == QIO_UNKNOWN || 
+        volfmt == QIO_SINGLEFILE ) {
+      if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	printf("%s(%d): Calling LRL_open_read_file %s\n",
+	       myname,this_node,filename);
+      lrl_file_in = LRL_open_read_file(filename);
+      /* If the open succeeded with just "filename" the format
+	 must be SINGLEFILE */
+      if(lrl_file_in != NULL) volfmt = QIO_SINGLEFILE;
+      else if( volfmt == QIO_UNKNOWN || 
+	       volfmt == QIO_SINGLEFILE ) {
+	printf("%s(%d): Can't open %s in singlefile format.\n Trying partfile or multifile.\n",
+	       myname,this_node,filename);
+      }
+    }
+    if(lrl_file_in == NULL) {
+      /* If plain filename fails, try filename with volume number suffix */
+      newfilename = QIO_filename_edit(filename, QIO_PARTFILE, this_node);
+      if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	printf("%s(%d): Calling LRL_open_read_file %s\n",
+	       myname,this_node,newfilename);
+      lrl_file_in = LRL_open_read_file(newfilename);
+      if(lrl_file_in == NULL) {
+	printf("%s(%d): Can't open %s\n",myname,this_node,newfilename);
+      }
+      /* If we split an alien ILDG file, we currently put the
+	 resulting PARTFILE volume in SciDAC format.  But if we ever
+	 do split into an alien format, alien ILDG files with volume
+	 extensions could only be PARTFILE, not MULTIFILE.  For native
+	 SciDAC files, we will get the correct volume format later
+	 when we decode the private file XML */
+      if(volfmt == QIO_UNKNOWN)
+	volfmt = QIO_PARTFILE;
+      free(newfilename);
+    }
+  }
+  int success = (lrl_file_in != NULL);
+  DML_broadcast_bytes((char *)&success, sizeof(int), this_node, master_ionode);
+  if(!success) return NULL;
 
   /* Make a local copy of lattice size */
   if(latdim != 0){
@@ -71,7 +128,7 @@ QIO_Reader *QIO_create_reader(const char *filename,
   dml_layout->subsetvolume         = layout->volume;
 
   dml_layout->ionode               = io_node;
-  dml_layout->master_io_node       = master_io_node();
+  dml_layout->master_io_node       = master_ionode;
 
   /* Construct the reader handle */
   qio_in = (QIO_Reader *)malloc(sizeof(QIO_Reader));
@@ -87,15 +144,8 @@ QIO_Reader *QIO_create_reader(const char *filename,
   qio_in->ildgLFN     = QIO_string_create();
   DML_checksum_init(&(qio_in->last_checksum));
 
-  if(iflag == NULL){
-    /* Default values */
-    qio_in->serpar = QIO_SERIAL;
-    qio_in->volfmt = QIO_UNKNOWN;
-  }
-  else{
-    qio_in->serpar = iflag->serpar;
-    qio_in->volfmt = iflag->volfmt;
-  }
+  qio_in->serpar = serpar;
+  qio_in->volfmt = volfmt;
 
   /* Force single file format if there is only one node */
   if(layout->number_of_nodes==1) qio_in->volfmt = QIO_SINGLEFILE;
@@ -106,54 +156,6 @@ QIO_Reader *QIO_create_reader(const char *filename,
   qio_in->ildgstyle = QIO_ILDGNO;
   qio_in->ildg_precision = 0;
 
-  /* First, only the global master node opens the file, regardless of
-     whether it will be read by all nodes */
-
-  if(this_node == dml_layout->master_io_node){
-    /* If the format is SINGLEFILE the file name is as specified by
-       "filename".  If it is PARTFILE or MULTIFILE, the name is formed
-       by adding a volume number extension to the "filename" string.
-       If the volume format is unknown or single file, we try
-       "filename" first. */
-    if(qio_in->volfmt == QIO_UNKNOWN || 
-       qio_in->volfmt == QIO_SINGLEFILE)
-      {
-	if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	  printf("%s(%d): Calling LRL_open_read_file %s\n",
-		 myname,this_node,filename);
-	lrl_file_in = LRL_open_read_file(filename);
-	/* If the open succeeded with just "filename" the format
-	   must be SINGLEFILE */
-	if(lrl_file_in != NULL)qio_in->volfmt = QIO_SINGLEFILE;
-	else if(qio_in->volfmt == QIO_UNKNOWN || 
-		qio_in->volfmt == QIO_SINGLEFILE){
-	  printf("%s(%d): Can't open %s in singlefile format.\n Trying partfile or multifile.\n",
-		 myname,this_node,filename);
-	}
-      }
-    if(lrl_file_in == NULL){
-      /* If plain filename fails, try filename with volume number suffix */
-      newfilename = QIO_filename_edit(filename,QIO_PARTFILE, this_node);
-      if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	printf("%s(%d): Calling LRL_open_read_file %s\n",
-	       myname,this_node,newfilename);
-      lrl_file_in = LRL_open_read_file(newfilename);
-      if(lrl_file_in == NULL){
-	printf("%s(%d): Can't open %s\n",myname,this_node,newfilename);
-	free(newfilename);
-	return NULL;
-      }
-      /* If we split an alien ILDG file, we currently put the
-	 resulting PARTFILE volume in SciDAC format.  But if we ever
-	 do split into an alien format, alien ILDG files with volume
-	 extensions could only be PARTFILE, not MULTIFILE.  For native
-	 SciDAC files, we will get the correct volume format later
-	 when we decode the private file XML */
-      if(qio_in->volfmt == QIO_UNKNOWN)
-	qio_in->volfmt = QIO_PARTFILE;
-      free(newfilename);
-    }
-  }
   qio_in->lrl_file_in = lrl_file_in;
 
   return qio_in;
