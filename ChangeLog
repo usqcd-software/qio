@@ -1,3 +1,7 @@
+2011-04-17 18:35  osborn
+
+	* lib/qio/QIO_open_read.c: exit immediately if open read fails
+
 2011-04-14 14:38  osborn
 
 	* include/dml.h, include/qio_config_internal.h.in,
