@@ -18,6 +18,17 @@
 
 #undef DML_DEBUG
 
+// duplicate hack to avoid XLC bug
+double QIO_time2 (void)
+{
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  //if(node==0) printf("QIO_time %g %g\n", (double)tv.tv_sec, (double)tv.tv_usec);
+  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+}
+#define timestart(t) { double dt = QIO_time2(); /*if(this_node==0) printf("start " #t " %g\n", dt);*/ t-=dt; }
+#define timestop(t) { double dt = QIO_time2(); /*if(this_node==0) printf("stop " #t " %g\n", dt);*/ t+=dt; }
+
 /* Iterators for lexicographic order */
 
 /* Initialize to lower bound */
@@ -1583,6 +1594,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	   DML_Layout *layout, DML_SiteList *sites, int volfmt, 
 	   int serpar, DML_Checksum *checksum)
 {
+  double dtall=0, dtwrite=0, dtsend=0;
   char *buf,*outbuf = NULL,*tbuf = NULL, *scratch_buf;
   int current_node, new_node;
   int *coords;
@@ -1598,6 +1610,8 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   uint64_t nbytes = 0;
   char myname[] = "DML_partition_out";
 
+  timestart(dtall);
+
   /* Get my I/O node */
   my_io_node = DML_my_ionode(volfmt, serpar, layout);
 
@@ -1607,6 +1621,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
      of lexicographically contiguous sites.  */
 
   max_tbuf_sites = DML_TBUF_BYTES/size;
+  if(max_tbuf_sites<1) max_tbuf_sites = 1;
 
   /* I/O node needs a large output buffer. */
   if(this_node == my_io_node){
@@ -1615,6 +1630,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     if(max_tbuf_sites > max_buf_sites)max_buf_sites = max_tbuf_sites;
   }
 
+#if 0
   /* For parallel I/O we don't try to buffer for messaging.  When each
      node can do I/O the data being written is local.  If we start
      doing PARTFILE parallel I/O we may want to buffer. */
@@ -1622,6 +1638,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     max_buf_sites = 1;
     max_tbuf_sites = 1;
   }
+#endif
 
   /* Only the I/O node has an output buffer */
   if(this_node == my_io_node){
@@ -1700,8 +1717,11 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
        snd_coords != prev_coords + 1){
       if(tbuf_sites > 0){
 	/* Node with data sends its message buffer to the I/O node's tbuf */
-	if(current_node != my_io_node)
+	if(current_node != my_io_node) {
+	  timestart(dtsend);
 	  DML_route_bytes(tbuf,size*tbuf_sites,current_node,my_io_node);
+	  timestop(dtsend);
+	}
 	/* The I/O node flushes its tbuf and accumulates the checksum */
 	if(this_node == my_io_node){
 	  DML_flush_tbuf_to_outbuf(size, outbuf, buf_sites, tbuf, tbuf_sites);
@@ -1710,8 +1730,10 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	     lexicographic order is broken */
 	  if(buf_sites > max_buf_sites - max_tbuf_sites ||
 	     snd_coords != prev_coords + 1){
+	    timestart(dtwrite);
 	    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank, 
 			     outbuf, buf_sites, size, &nbytes, this_node);
+	    timestop(dtwrite);
 	    buf_sites = 0;
 	    outbuf_coords = snd_coords;
 	    subset_rank = (DML_SiteRank)DML_subset_rank(outbuf_coords, sites);
@@ -1729,7 +1751,9 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
       
       /* CTS only if changing data source node */
       if(new_node != current_node){
+	timestart(dtsend);
 	DML_clear_to_send(scratch_buf,4,my_io_node,new_node);
+	timestop(dtsend);
 	current_node = new_node;
       }
     } /* current_node != newnode || tbuf_sites >= max_tbuf_sites */
@@ -1755,16 +1779,21 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   /* Purge any remaining data */
 
   if(tbuf_sites > 0){
-    if(current_node != my_io_node)
+    if(current_node != my_io_node) {
+      timestart(dtsend);
       DML_route_bytes(tbuf,size*tbuf_sites,current_node,my_io_node);
+      timestop(dtsend);
+    }
   }
 
   if(this_node == my_io_node){
     DML_flush_tbuf_to_outbuf(size, outbuf, buf_sites, tbuf, tbuf_sites);
     buf_sites += tbuf_sites;
     tbuf_sites = 0;
+    timestart(dtwrite);
     status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank, 
 			      outbuf, buf_sites, size, &nbytes, this_node);
+    timestop(dtwrite);
     buf_sites = 0;
     if(status !=  0) nbytes = 0;
   }
@@ -1774,6 +1803,8 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   free(outbuf);
   free(tbuf);
 
+  timestop(dtall);
+  if(this_node==0) printf("%s times: write %.2f  send %.2f  total %.2f\n", myname, dtwrite, dtsend, dtall);
   /* Number of bytes written by this node only */
   return nbytes;
 }
@@ -2453,15 +2484,6 @@ uint64_t DML_partition_close_in(DML_RecordReader *dml_record_in)
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
    PARTFILE modes. */
 
-double QIO_time2 (void)
-{
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  //if(node==0) printf("QIO_time %g %g\n", (double)tv.tv_sec, (double)tv.tv_usec);
-  return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
-}
-#define timestart(t) { double dt = QIO_time2(); /*if(this_node==0) printf("start " #t " %g\n", dt);*/ t-=dt; }
-#define timestop(t) { double dt = QIO_time2(); /*if(this_node==0) printf("stop " #t " %g\n", dt);*/ t+=dt; }
 uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in, 
 	  void (*put)(char *buf, size_t index, int count, void *arg),
 	  int count, size_t size, int word_size, void *arg, 
@@ -2502,7 +2524,6 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
     printf("%s(%d) can't malloc inbuf\n",myname,this_node);
     return 0;
   }
- 
 
   /* Allocate coordinate counter */
   coords = DML_allocate_coords(latdim, myname, this_node);

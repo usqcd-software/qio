@@ -135,7 +135,7 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   /* Open the file for writing */
   /*****************************/
   /* Which node does this depends on the user request. */
-  /* If parallel write, all nodes open.
+  /* If parallel write, ionodes open.
      If multifile, all nodes open.
      If writing by partitions, the partition I/O node does.
      In all cases, the master I/O node opens the file. */
@@ -143,8 +143,9 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   if( (qio_out->volfmt == QIO_MULTIFILE)
       || ((qio_out->volfmt == QIO_PARTFILE) 
 	  && (dml_layout->ionode(this_node) == this_node))
-      || (serpar == QIO_PARALLEL)
-      || (this_node == dml_layout->master_io_node) ){
+      || ((serpar == QIO_PARALLEL)
+	  && (dml_layout->ionode(this_node) == this_node))
+      || (this_node == dml_layout->master_io_node) ) {
     /* Modifies filename for non master nodes */
     newfilename = QIO_filename_edit(filename, volfmt, dml_layout->this_node);
     lrl_file_out = LRL_open_write_file(newfilename, mode);

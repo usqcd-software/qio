@@ -387,12 +387,14 @@ int LRL_set_writer_state(LRL_RecordWriter *rw, void *state_ptr){
   LimeWriter *wsrc = (LimeWriter *)state_ptr;
   int status;
 
-  /* Set the LIME writer state to the state specified by state_ptr */
-  status = limeWriterSetState(rw->fw->dg, wsrc);
-  if(status != LIME_SUCCESS)return LRL_ERR_SETSTATE;
+  if(rw) {
+    /* Set the LIME writer state to the state specified by state_ptr */
+    status = limeWriterSetState(rw->fw->dg, wsrc);
+    if(status != LIME_SUCCESS)return LRL_ERR_SETSTATE;
 
-  status = limeWriterSeek(rw->fw->dg, 0, SEEK_SET);
-  if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+    status = limeWriterSeek(rw->fw->dg, 0, SEEK_SET);
+    if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+  }
 
   return LRL_SUCCESS;
 }
