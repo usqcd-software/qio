@@ -103,6 +103,10 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
     in->read_state = QIO_RECORD_INFO_USER_NEXT;
   }
 
+  // broadcast just so everyone has it (possibly not needed)
+  DML_broadcast_bytes((char *)&(in->record_info), sizeof(QIO_RecordInfo),
+		      this_node, in->layout->master_io_node);
+
   /* Copy record info on all calls */
   /*  *record_info = in->record_info; */
   memcpy(record_info, &(in->record_info), sizeof(QIO_RecordInfo));
