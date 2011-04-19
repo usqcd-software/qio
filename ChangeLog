@@ -1,3 +1,13 @@
+2011-04-18 23:58  osborn
+
+	* lib/qio/QIO_utils.c: fixed hang in parallel write
+
+2011-04-18 21:53  osborn
+
+	* lib/: dml/DML_parscalar.c, dml/DML_utils.c, lrl/LRL_main.c,
+	  qio/QIO_open_write.c: enabled singlefile parallel writes with
+	  fewer than all nodes
+
 2011-04-17 18:35  osborn
 
 	* lib/qio/QIO_open_read.c: exit immediately if open read fails
