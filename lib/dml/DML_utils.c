@@ -88,7 +88,7 @@ DML_SiteRank DML_lex_rank(const int coords[], int latdim, int latsize[])
 /*------------------------------------------------------------------*/
 /* Make temporary space for coords */
 
-int *DML_allocate_coords(int latdim, char *myname, int this_node){
+int *DML_allocate_coords(int latdim, const char *myname, int this_node){
   int *coords;
 
   coords = (int *)malloc(latdim*sizeof(int));
@@ -1130,6 +1130,25 @@ int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out,
   /* Then write */
   return DML_write_buf_current(lrl_record_out, lbuf, buf_sites, size,
 			       nbytes, myname, this_node);
+}
+
+/*------------------------------------------------------------------*/
+/* Seek if requested and read buffer. */
+int
+DML_read_buf(LRL_RecordReader *lrl_record_in, char *buf,
+	     DML_SiteRank firstrank, size_t size, int num, int doseek)
+{
+  if(doseek) {
+    if(LRL_seek_read_record(lrl_record_in,(off_t)size*firstrank)
+       != LRL_SUCCESS) {
+      return -1;
+    }
+  }
+  size *= num;
+  if(LRL_read_bytes(lrl_record_in, buf, size) != size) {
+    return -1;
+  }
+  return 0;
 }
 
 /*------------------------------------------------------------------*/
@@ -2483,26 +2502,21 @@ uint64_t DML_partition_close_in(DML_RecordReader *dml_record_in)
    disjoint from the corresponding set for any other I/O node.  This
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
    PARTFILE modes. */
-
-uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in, 
-	  void (*put)(char *buf, size_t index, int count, void *arg),
-	  int count, size_t size, int word_size, void *arg, 
-	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
-	  int serpar, DML_Checksum *checksum)
+uint64_t
+DML_partition_in(LRL_RecordReader *lrl_record_in, 
+		 void (*put)(char *buf, size_t index, int count, void *arg),
+		 int count, size_t size, int word_size, void *arg, 
+		 DML_Layout *layout, DML_SiteList *sites, int volfmt,
+		 int serpar, DML_Checksum *checksum)
 {
   double dtall=0, dtread=0, dtsend=0;
-  char *buf=NULL,*inbuf;
-  int dest_node, my_io_node;
-  DML_SiteRank rcv_coords;
-  uint64_t nbytes = 0;
+  char *buf, *inbuf;
+  int my_io_node;
   int *coords;
   int this_node = layout->this_node;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
-  size_t isite, buf_sites, buf_extract, max_send_sites, max_buf_sites;
-  int err;
-  DML_SiteRank subset_rank;
-  char myname[] = "DML_partition_in";
+  size_t nbytes=0, max_buf_sites=1;
 
   timestart(dtall);
 
@@ -2511,126 +2525,97 @@ uint64_t DML_partition_in(LRL_RecordReader *lrl_record_in,
 
   /* Allocate buffer for reading or receiving data */
   /* I/O node needs a large buffer.  Others only enough for one site */
-  if(this_node == my_io_node)
-    max_buf_sites = DML_max_buf_sites(size,1);
-  else
-    max_buf_sites = 1;
-  
-  if(serpar == DML_PARALLEL)
-    max_buf_sites = 1;
+  if(this_node == my_io_node) max_buf_sites = DML_max_buf_sites(size,1);
+  if(max_buf_sites<1) max_buf_sites = 1;
 
   inbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!inbuf){
-    printf("%s(%d) can't malloc inbuf\n",myname,this_node);
+    printf("%s(%d) can't malloc inbuf\n",__func__,this_node);
     return 0;
   }
 
   /* Allocate coordinate counter */
-  coords = DML_allocate_coords(latdim, myname, this_node);
-  if(!coords){free(buf); return 0;}
-  
+  coords = DML_allocate_coords(latdim, __func__, this_node);
+  if(!coords) { free(inbuf); return 0; }
+
   /* Initialize checksum */
   DML_checksum_init(checksum);
 
 #ifdef DML_DEBUG
   if (! DML_big_endian())
-    printf("%s(%d): byte reversing %d\n",myname,this_node,word_size);
+    printf("%s(%d): byte reversing %d\n",__func__,this_node,word_size);
 #endif
 
-  /* Maximum number of sites to be sent */
-  max_send_sites = sites->subset_io_sites;
-  isite = 0;          /* Running count of sites processed */
-
   /* Loop over the receiving sites */
-  buf_extract = 0;    /* Counter for current site in read buffer */
-  buf = inbuf;        /* Address of current bytes */
-  buf_sites = 0;      /* Number of sites in current read buffer */
-  if(DML_init_subset_site_loop(&rcv_coords, sites) == 0){
+  DML_SiteRank rcv_coords;
+  if(DML_init_subset_site_loop(&rcv_coords, sites) == 0) {
     free(inbuf); free(coords);
     return 0;
   }
 
-  do {
-    /* Convert lexicographic rank to coordinates */
-    DML_lex_coords(coords, latdim, latsize, rcv_coords);
-
-    /* The node that gets the next datum */
-    dest_node = layout->node_number(coords);
-
-    if(this_node == my_io_node){
+  DML_SiteRank rcoords[max_buf_sites];
+  DML_SiteRank firstrank=0, nextrank=0;
+  int dest_node[max_buf_sites];
+  int node_index[max_buf_sites];
+  int notdone = 1;
+  while(notdone) {
+    int k = 0;
+    do { // get list of file contiguous sites
       /* The subset_rank locates the datum for rcv_coords in the
 	 record our I/O partition is reading */
-      subset_rank = (DML_SiteRank)DML_subset_rank(rcv_coords, sites);
-      /* I/O node reads the next value */
-      timestart(dtread);
-      if(serpar == DML_SERIAL) {
-	buf_sites = DML_read_buf_next(lrl_record_in, size,
-				      inbuf, &buf_extract, buf_sites,
-				      max_buf_sites, isite, 
-				      max_send_sites, &nbytes,
-				      myname, this_node, &err);
-      } else {
-	buf_sites = DML_read_buf_seek(lrl_record_in, subset_rank, size,
-				      inbuf, &buf_extract, buf_sites,
-				      max_buf_sites, isite, 
-				      max_send_sites, &nbytes,
-				      myname, this_node, &err);
-      }
-      timestop(dtread);
+      DML_SiteRank subset_rank =
+	(DML_SiteRank) DML_subset_rank(rcv_coords, sites);
+      if(k==0) firstrank = subset_rank;
+      else if(subset_rank!=firstrank+k) break;
+      /* Convert lexicographic rank to coordinates */
+      DML_lex_coords(coords, latdim, latsize, rcv_coords);
+      rcoords[k] = rcv_coords;
+      /* The node that gets the next datum */
+      dest_node[k] = layout->node_number(coords);
+      node_index[k] = layout->node_index(coords);
+      k++;
+      notdone = DML_next_subset_site(&rcv_coords, sites);
+    } while(k<max_buf_sites && notdone);
 
-      if(err < 0){
-        printf("%s(%d) DML_read_buf_seek returns error\n",
-               myname,this_node);
-        free(inbuf);free(coords);
+    /* I/O node reads the next value */
+    if(this_node == my_io_node) {
+      int doseek = (nextrank != firstrank);
+      timestart(dtread);
+      int err = DML_read_buf(lrl_record_in, inbuf, firstrank, size, k, doseek);
+      timestop(dtread);
+      nbytes += k*size;
+
+      if(err < 0) {
+        printf("%s(%d) DML_read_buf returns error\n", __func__, this_node);
+        free(inbuf); free(coords);
         return 0;
       }
-
-      /* Location of new datum on I/O node */
-      buf = inbuf + size*buf_extract;
     }
+    nextrank = firstrank + k;
 
-    /* Send result to destination node. Avoid I/O node sending to itself. */
-    if (dest_node != my_io_node) {
-      timestart(dtsend);
-#if 1
-      DML_route_bytes(buf,size,my_io_node,dest_node);
-#else
-      /* If destination elsewhere, send it */
-      if(this_node == my_io_node){
-	DML_send_bytes(buf, size, dest_node);
+    for(int i=0; i<k; i++) {
+      buf = inbuf + i*size;
+      /* Send result to destination node. Avoid I/O node sending to itself. */
+      if (dest_node[i] != my_io_node) {
+	timestart(dtsend);
+	DML_route_bytes(buf, size, my_io_node, dest_node[i]);
+	timestop(dtsend);
       }
-      
-	/* Other nodes receive from the master node */
-      if(this_node == dest_node){
-	DML_get_bytes(buf, size, my_io_node);
+      /* Process data before inserting */
+      if(this_node == dest_node[i]) {
+	/* Accumulate checksum */
+	DML_checksum_accum(checksum, rcoords[i], buf, size);
+	/* Do byte reversal if necessary */
+	if (! DML_big_endian()) DML_byterevn(buf, size, word_size);
+	/* Store the data */
+	put(buf, node_index[i], count, arg);
       }
-#endif
-      timestop(dtsend);
     }
-
-    /* Process data before inserting */
-    if(this_node == dest_node){
-      
-      /* Accumulate checksum */
-      DML_checksum_accum(checksum, rcv_coords, buf, size);
-      
-      /* Do byte reversal if necessary */
-      if (! DML_big_endian())
-	DML_byterevn(buf, size, word_size);
-      
-      /* Store the data */
-      put(buf,layout->node_index(coords),count,arg);
-    }
-
-    buf_extract++;
-    isite++;
-
-  }  while(DML_next_subset_site(&rcv_coords, sites));
-
+  }
   free(inbuf); free(coords);
 
   timestop(dtall);
-  if(this_node==0) printf("%s times: read %.2f  send %.2f  total %.2f\n", myname, dtread, dtsend, dtall);
+  if(this_node==0) printf("%s times: read %.2f  send %.2f  total %.2f\n", __func__, dtread, dtsend, dtall);
   /* return the number of bytes read by this node only */
   return nbytes;
 }
