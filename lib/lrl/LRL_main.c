@@ -6,6 +6,7 @@
 #include <malloc.h>
 #endif
 #include <stdlib.h>
+//#include <qmp.h>
 
 /** 
  * Open a file for reading 
@@ -418,6 +419,7 @@ uint64_t LRL_read_bytes(LRL_RecordReader *rr, char *buf,
   if (rr == NULL)
     return 0;
 
+  //printf("node %i pos %i reading %i bytes\n", QMP_get_node_number(), rr->fr->dr->rec_ptr, nbytes);
   status = limeReaderReadData((void *)buf, &nbyt, rr->fr->dr);
   if( status != LIME_SUCCESS ) 
   { 

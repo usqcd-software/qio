@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <qio_stdint.h>
 #include <sys/time.h>
+//#include <qmp.h>
 
 #undef DML_DEBUG
 
@@ -773,7 +774,10 @@ int DML_next_subset_site(DML_SiteRank *rank, DML_SiteList *sites)
 /* Return position of site in record - same as subset rank          */
 /* Note: this routine is used only in conjunction with the
    DML_next_subset_site iterator.  */
-int DML_subset_rank(DML_SiteRank rank, DML_SiteList *sites){
+int
+DML_subset_rank(DML_SiteRank rank, DML_SiteList *sites)
+{
+  //printf("node %i rank %i\n", QMP_get_node_number(), rank);
   if(sites->use_subset)
     return sites->subset_rank[sites->current_index];
   else
@@ -1138,6 +1142,7 @@ int
 DML_read_buf(LRL_RecordReader *lrl_record_in, char *buf,
 	     DML_SiteRank firstrank, size_t size, int num, int doseek)
 {
+  //printf("node %i firstrank %i size %li num %i doseek %i\n", QMP_get_node_number(), firstrank, size, num, doseek);
   if(doseek) {
     if(LRL_seek_read_record(lrl_record_in,(off_t)size*firstrank)
        != LRL_SUCCESS) {
@@ -2563,8 +2568,9 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
     do { // get list of file contiguous sites
       /* The subset_rank locates the datum for rcv_coords in the
 	 record our I/O partition is reading */
-      DML_SiteRank subset_rank =
-	(DML_SiteRank) DML_subset_rank(rcv_coords, sites);
+      DML_SiteRank subset_rank = nextrank;
+      if(serpar == DML_PARALLEL)
+	subset_rank = (DML_SiteRank) DML_subset_rank(rcv_coords, sites);
       if(k==0) firstrank = subset_rank;
       else if(subset_rank!=firstrank+k) break;
       /* Convert lexicographic rank to coordinates */
