@@ -1,3 +1,12 @@
+2011-07-29 00:47  osborn
+
+	* NEWS, configure.ac: updated version
+
+2011-07-29 00:46  osborn
+
+	* lib/: dml/DML_utils.c, lrl/LRL_main.c: fixed partfile reads
+	  broken by previous changes
+
 2011-04-20 01:49  osborn
 
 	* include/dml.h, lib/dml/DML_utils.c: now buffers parallel reads
