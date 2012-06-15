@@ -1,3 +1,44 @@
+2011-07-29 00:47  osborn
+
+	* NEWS, configure.ac: updated version
+
+2011-07-29 00:46  osborn
+
+	* lib/: dml/DML_utils.c, lrl/LRL_main.c: fixed partfile reads
+	  broken by previous changes
+
+2011-04-20 01:49  osborn
+
+	* include/dml.h, lib/dml/DML_utils.c: now buffers parallel reads
+
+2011-04-19 00:54  osborn
+
+	* lib/qio/QIO_read_record_info.c: fixed reference to unset memory
+
+2011-04-18 23:58  osborn
+
+	* lib/qio/QIO_utils.c: fixed hang in parallel write
+
+2011-04-18 21:53  osborn
+
+	* lib/: dml/DML_parscalar.c, dml/DML_utils.c, lrl/LRL_main.c,
+	  qio/QIO_open_write.c: enabled singlefile parallel writes with
+	  fewer than all nodes
+
+2011-04-17 18:35  osborn
+
+	* lib/qio/QIO_open_read.c: exit immediately if open read fails
+
+2011-04-14 14:38  osborn
+
+	* include/dml.h, include/qio_config_internal.h.in,
+	  lib/dml/DML_utils.c, lib/lrl/LRL_main.c, lib/qio/QIO_open_read.c,
+	  lib/qio/QIO_read.c, lib/qio/QIO_read_record_info.c,
+	  lib/qio/QIO_utils.c, other_libs/c-lime/aclocal.m4,
+	  other_libs/c-lime/configure,
+	  other_libs/c-lime/include/lime_config_internal.h.in: made
+	  SINGLEFILE PARALLEL mode use only specified io nodes
+
 2009-04-20 10:57  tag adat2-12-4
 
 2009-04-20 10:57  tag adat2-13-0

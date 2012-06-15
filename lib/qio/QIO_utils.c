@@ -20,7 +20,9 @@ double QIO_time (void)
 {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  return tv.tv_sec + 1e-6*tv.tv_usec;
+  double s = (double) tv.tv_sec;
+  double u = (double) tv.tv_usec;
+  return s + u*1.e-6;
 }
 
 /* Wait for "sec" seconds */
@@ -210,10 +212,11 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 
 /*------------------------------------------------------------------*/
 
-LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out, 
-	    int msg_begin, int msg_end, size_t datum_size,
-	    const LIME_type lime_type, int *do_output, int *status){
-  
+LRL_RecordWriter *
+QIO_open_write_field(QIO_Writer *out, 
+		     int msg_begin, int msg_end, size_t datum_size,
+		     const LIME_type lime_type, int *do_output, int *status)
+{
   LRL_RecordWriter *lrl_record_out = NULL;
   uint64_t planned_rec_size;
   int this_node = out->layout->this_node;
@@ -266,55 +269,52 @@ LRL_RecordWriter *QIO_open_write_field(QIO_Writer *out,
   /* Open record only if we have a file handle and are writing */
   /* Nodes that do not write to a file will have a NULL file handle */
   
-  if(!out->lrl_file_out || !(*do_output))
-    {
+  if(!out->lrl_file_out || !(*do_output)) {
+    if(QIO_verbosity() >= QIO_VERB_DEBUG)
+      printf("%s(%d): skipping LRL_open_write_record\n",
+	     myname,this_node);
+  } else {
+    /* For serial output, the io_nodes open their records */
+    /* For parallel output, only the master node opens its record */
+    if( ( out->serpar == DML_SERIAL && 
+	  this_node == out->layout->ionode(this_node) ) ||
+	( out->serpar == DML_PARALLEL &&
+	  this_node == out->layout->master_io_node ) ) {
       if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	printf("%s(%d): skipping LRL_open_write_record\n",
+	printf("%s(%d): calling LRL_open_write_record size %llu\n",
+	       myname,this_node,(unsigned long long)planned_rec_size);
+      lrl_record_out = 
+	LRL_open_write_record(out->lrl_file_out, msg_begin, msg_end, 
+			      planned_rec_size, lime_type);
+      if(lrl_record_out == NULL){
+	*status = QIO_ERR_OPEN_WRITE;
+	return NULL;
+      }
+    }
+    /* For field data other nodes just create the reader without
+       writing a header */
+    else if( recordtype == QIO_FIELD || recordtype == QIO_HYPER ) {
+      if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	printf("%s(%d): calling LRL_create_record_header\n",
 	       myname,this_node);
+      lrl_record_out = LRL_create_record_writer(out->lrl_file_out);
     }
-  else
-    {
-      /* For serial output, the io_nodes open their records */
-      /* For parallel output, only the master node opens its record */
-      if( ( out->serpar == DML_SERIAL && 
-	    this_node == out->layout->ionode(this_node) ) ||
-	  ( out->serpar == DML_PARALLEL &&
-	    this_node == out->layout->master_io_node ) ) {
-	if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	  printf("%s(%d): calling LRL_open_write_record size %llu\n",
-		 myname,this_node,(unsigned long long)planned_rec_size);
-	lrl_record_out = 
-	  LRL_open_write_record(out->lrl_file_out, msg_begin, msg_end, 
-				planned_rec_size, lime_type);
-	if(lrl_record_out == NULL){
-	  *status = QIO_ERR_OPEN_WRITE;
-	  return NULL;
-	}
-      }
-      /* For field data other nodes just create the reader without
-	 writing a header */
-      else if( recordtype == QIO_FIELD || recordtype == QIO_HYPER )
-	{
-	if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	  printf("%s(%d): calling LRL_create_record_header\n",
-		 myname,this_node);
-	  lrl_record_out = LRL_create_record_writer(out->lrl_file_out);
-	}
+  }
 
-      /* Then, if we are writing a field in parallel mode, we have to
-	 synchronize the writers */
-      if(out->serpar == DML_PARALLEL && (recordtype == QIO_FIELD ||
-					 recordtype == QIO_HYPER)){
-	if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	  printf("%s(%d): Doing parallel write sync\n",myname,this_node);
-	if(DML_synchronize_out(lrl_record_out,out->layout) != 0){
-	  printf("%s(%d): DML_synchronize returns error\n",
-		 myname,this_node);
-	  *status = QIO_ERR_OPEN_WRITE;
-	  return NULL;
-	}
-      }
+  /* Then, if we are writing a field in parallel mode, we have to
+     synchronize the writers */
+  // all nodes must synchronize
+  if(out->serpar == DML_PARALLEL && (recordtype == QIO_FIELD ||
+				     recordtype == QIO_HYPER)) {
+    if(QIO_verbosity() >= QIO_VERB_DEBUG)
+      printf("%s(%d): Doing parallel write sync\n",myname,this_node);
+    if(DML_synchronize_out(lrl_record_out,out->layout) != 0) {
+      printf("%s(%d): DML_synchronize returns error\n",
+	     myname,this_node);
+      *status = QIO_ERR_OPEN_WRITE;
+      return NULL;
     }
+  }
 
   if(QIO_verbosity() >= QIO_VERB_DEBUG)
     printf("%s(%d): finished\n",myname,this_node);
@@ -705,7 +705,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size,
     /* For serial I/O we open the record if we will actually read it. */
     do_open = do_read;
   else
-    /* For parallel I/O all nodes should have a file reader.
+    /* For parallel I/O some nodes will have a file reader.
        For field or hypercube data all nodes read.
        For global data only the master node reads but
        other nodes must also open and seek to maintain 
@@ -785,7 +785,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size,
 	   NOTE: If we later decide to read partitions in parallel,
 	   this has to be changed to the size for the partition. */
 	expected_rec_size = ((uint64_t)in->layout->subsetvolume) * datum_size;
-    }    
+    }
     if (announced_rec_size != expected_rec_size){
       printf("%s(%d): rec_size mismatch: found %llu expected %llu\n",
 	     myname, this_node, (unsigned long long)announced_rec_size, 

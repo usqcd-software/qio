@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 2.3.8, detar@physics.utah.edu)
+AC_INIT(qio, 2.3.9, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
@@ -287,7 +287,7 @@ AM_CONDITIONAL(ARCH_PARSCALAR, [test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX"]
 AM_CONDITIONAL(USING_QMP, [test "X${QMP_CONFIG}X" != "XX"])
 
 # pass configuration to distcheck target
-DISTCHECK_CONFIGURE_FLAGS="--enable-parallel-arch=$PARALLEL_ARCH"
+DISTCHECK_CONFIGURE_FLAGS="--enable-parallel-arch=$PARALLEL_ARCH CC=\"$CC\" CFLAGS=\"$CFLAGS\""
 if test -n "$QMP_HOME"; then
   DISTCHECK_CONFIGURE_FLAGS="$DISTCHECK_CONFIGURE_FLAGS --with-qmp=$QMP_HOME"
 fi

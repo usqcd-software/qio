@@ -6,6 +6,7 @@
 #include <malloc.h>
 #endif
 #include <stdlib.h>
+//#include <qmp.h>
 
 /** 
  * Open a file for reading 
@@ -311,7 +312,7 @@ void LRL_get_reader_state(LRL_RecordReader *rr,
     *state_size = 0;
   }
   else{
-    *spt = *(rr->fr->dr);
+    if(rr) *spt = *(rr->fr->dr);
     *state_ptr = (void *)spt;
     *state_size = sizeof(LimeReader);
   }
@@ -363,12 +364,14 @@ int LRL_set_reader_state(LRL_RecordReader *rr, void *state_ptr){
   LimeReader *rsrc = (LimeReader *)state_ptr;
   int status;
 
-  /* Set the LIME reader state to the state specified by state_ptr */
-  status = limeReaderSetState(rr->fr->dr, rsrc);
-  if(status != LIME_SUCCESS)return LRL_ERR_SETSTATE;
+  if(rr) {
+    /* Set the LIME reader state to the state specified by state_ptr */
+    status = limeReaderSetState(rr->fr->dr, rsrc);
+    if(status != LIME_SUCCESS)return LRL_ERR_SETSTATE;
 
-  status = limeReaderSeek(rr->fr->dr, 0, SEEK_SET);
-  if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+    status = limeReaderSeek(rr->fr->dr, 0, SEEK_SET);
+    if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+  }
 
   return LRL_SUCCESS;
 }
@@ -385,12 +388,14 @@ int LRL_set_writer_state(LRL_RecordWriter *rw, void *state_ptr){
   LimeWriter *wsrc = (LimeWriter *)state_ptr;
   int status;
 
-  /* Set the LIME writer state to the state specified by state_ptr */
-  status = limeWriterSetState(rw->fw->dg, wsrc);
-  if(status != LIME_SUCCESS)return LRL_ERR_SETSTATE;
+  if(rw) {
+    /* Set the LIME writer state to the state specified by state_ptr */
+    status = limeWriterSetState(rw->fw->dg, wsrc);
+    if(status != LIME_SUCCESS)return LRL_ERR_SETSTATE;
 
-  status = limeWriterSeek(rw->fw->dg, 0, SEEK_SET);
-  if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+    status = limeWriterSeek(rw->fw->dg, 0, SEEK_SET);
+    if(status != LIME_SUCCESS)return LRL_ERR_SEEK;
+  }
 
   return LRL_SUCCESS;
 }
@@ -414,6 +419,7 @@ uint64_t LRL_read_bytes(LRL_RecordReader *rr, char *buf,
   if (rr == NULL)
     return 0;
 
+  //printf("node %i pos %i reading %i bytes\n", QMP_get_node_number(), rr->fr->dr->rec_ptr, nbytes);
   status = limeReaderReadData((void *)buf, &nbyt, rr->fr->dr);
   if( status != LIME_SUCCESS ) 
   { 

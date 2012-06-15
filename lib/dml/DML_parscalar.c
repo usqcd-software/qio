@@ -131,12 +131,16 @@ void DML_global_xor(uint32_t *x){
   *x = (uint32_t)work;
 }
 
-void DML_sync(void){
-
+void
+DML_sync(void)
+{
+#if 1
+  QMP_barrier();
+#else
+  // JCO -- not sure why this was here
   int my_int=5;
-  /*  QMP_barrier(); */
   QMP_sum_int(&my_int);
-
+#endif
 }
 
 /* I/O layout */

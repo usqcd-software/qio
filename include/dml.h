@@ -155,7 +155,7 @@ int DML_lex_next(int *dim, int coords[], int latdim, int lower[],
 void DML_lex_coords(int coords[], const int latdim, const int latsize[], 
 		    const DML_SiteRank rcv_coords);
 DML_SiteRank DML_lex_rank(const int coords[], int latdim, int latsize[]);
-int *DML_allocate_coords(int latdim, char *myname, int this_node);
+int *DML_allocate_coords(int latdim, const char *myname, int this_node);
 char *DML_allocate_msg(size_t size, char *myname, int this_node);
 size_t DML_msg_sizeof(size_t size);
 char *DML_msg_datum(char *msg, size_t size);
@@ -182,7 +182,7 @@ void DML_global_xor(uint32_t *x);
 int DML_big_endian(void);
 void DML_byterevn(char *buf, size_t size, int word_size);
 size_t DML_max_buf_sites(size_t size, int factor);
-char *DML_allocate_buf(size_t size, size_t max_buf_sites);
+char *DML_allocate_buf(size_t size, size_t *max_buf_sites);
 int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out, 
 		       DML_SiteRank seeksite, 
 		       char *lbuf, size_t buf_sites, size_t size,

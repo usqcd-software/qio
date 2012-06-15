@@ -101,7 +101,11 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
     }
     /* Set state in case record is reread */
     in->read_state = QIO_RECORD_INFO_USER_NEXT;
-  }    
+  }
+
+  // broadcast just so everyone has it (possibly not needed)
+  DML_broadcast_bytes((char *)&(in->record_info), sizeof(QIO_RecordInfo),
+		      this_node, in->layout->master_io_node);
 
   /* Copy record info on all calls */
   /*  *record_info = in->record_info; */
@@ -296,7 +300,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
   length = QIO_string_length(in->xml_record);
   DML_broadcast_bytes((char *)&length, sizeof(int), this_node, 
 		      in->layout->master_io_node);
-  
+
   /* Receiving nodes resize their strings */
   /* if(this_node != in->layout->master_io_node){ */
 
@@ -306,7 +310,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
 
   DML_broadcast_bytes(QIO_string_ptr(in->xml_record),length,
 		      this_node, in->layout->master_io_node);
-  
+
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d): Done broadcasting user record info \"%s\"\n",
 	   myname,this_node,QIO_string_ptr(in->xml_record));
@@ -321,7 +325,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
   /* Broadcast the ILDG LFN to all nodes */
   if(in->ildgLFN != NULL){
     /* First broadcast length */
-    
+
     length = QIO_string_length(in->ildgLFN);
     DML_broadcast_bytes((char *)&length, sizeof(int), this_node, 
 			in->layout->master_io_node);
@@ -330,7 +334,7 @@ int QIO_read_record_info(QIO_Reader *in, QIO_RecordInfo *record_info,
       /* QIO_string_realloc is supposedly non-destructive. Can do it on
 	 all nodes */
       QIO_string_realloc(in->ildgLFN,length);
-      
+
       DML_broadcast_bytes(QIO_string_ptr(in->ildgLFN),length,
 			  this_node, in->layout->master_io_node);
       
