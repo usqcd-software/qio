@@ -6,6 +6,11 @@
 #include <dml.h>
 #include <qio_stdint.h>
 
+#ifndef HAVE_BGL
+/* Hardwire this */
+#define HAVE_BGL
+#endif
+
 /* Sum a uint64_t over all nodes (for 64 bit byte counts) */
 
 void DML_peq_uint64_t(uint64_t *subtotal, uint64_t *addend)
@@ -100,8 +105,8 @@ int DML_route_bytes(char *buf, size_t size, int fromnode, int tonode)
     Non MPI QIOs probably dont have this defined - as always check before use
     caveat emptor etc etc. Biggest danger, have BGL defined and it meant something
     else, this can be circumvented by making this a QIO define eg: QIO_HAVE_BLUEGENE 
-  */ 
-#if HAVE_BGL
+  */
+#ifdef HAVE_BGL
  int grid_route_p = QMP_SWITCH;
 #else
  int grid_route_p = QMP_get_msg_passing_type();

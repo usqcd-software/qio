@@ -15,7 +15,7 @@ typedef struct {
   size_t length;
 } QIO_String;
 
-QIO_String *QIO_string_create();
+QIO_String *QIO_string_create(void);
 void QIO_string_destroy(QIO_String *qs);
 void QIO_string_set(QIO_String *qs, const char *const string);
 size_t QIO_string_length(const QIO_String *const qs);
