@@ -94,45 +94,29 @@ static int init_my_io_node(){
 }
 
 /* Map any node to its I/O node */
-static int my_io_node(int node){
-  int i,j,k; 
-
+static int
+my_io_node(int node)
+{
   /* Get the machine coordinates for this node's IO node */
   lex_coords(io_node_coords, mesh->machdim, mesh->machsize, node);
 
   /* Round the node coordinates down to get the io_node coordinate */
-  for(i = 0; i < mesh->machdim; i++)
+  for(int i = 0; i < mesh->machdim; i++)
     io_node_coords[i] = nodes_per_ionode[i] * 
       (io_node_coords[i]/nodes_per_ionode[i]);
-  
+
   /* Return the linearized machine coordinates of the I/O node */
   return (int)lex_rank(io_node_coords, mesh->machdim, mesh->machsize);
 }
 
 static int zero_master_io_node(){return 0;}
 
-static char *errmsg(void)
+static QIO_Filesystem *
+create_abbrev_multi_ppfs(void)
 {
-  return (strerror(errno) != NULL)?
-    strerror(errno): "unknown error";
-}
-
-static QIO_Filesystem *create_abbrev_multi_ppfs(void){
-  QIO_Filesystem *fs;
-  int i, j, k, d, numnodes;
-  int *io_part_coords;
-  struct stat dir_stat;
-  mode_t dir_mode = BASE_DIRMODE;
-  char myname[] = "create_abbrev_multi_ppfs";
-
-  numnodes = mesh->numnodes;
-  char line[LINELENGTH];
-  char path[PATHLENGTH+1];
-  char *p;
-
   /* Build a lean QIO file system structure */
-  fs = (QIO_Filesystem *)malloc(sizeof(QIO_Filesystem));
-  if(!fs){
+  QIO_Filesystem *fs = (QIO_Filesystem *) malloc(sizeof(QIO_Filesystem));
+  if(fs==NULL) {
     printf("Can't malloc fs\n"); fflush(stdout);
     return NULL;
   }
@@ -142,7 +126,6 @@ static QIO_Filesystem *create_abbrev_multi_ppfs(void){
   fs->master_io_node = zero_master_io_node;
   fs->io_node = NULL;
   fs->node_path = NULL;
-
   return fs;
 }
 
@@ -162,9 +145,10 @@ static void destroy_multi_ppfs(QIO_Filesystem *fs){
   }
 }
 
-static void init_qmp(int *argc, char **argv[]){
+static void
+init_qmp(int *argc, char **argv[])
+{
   QMP_status_t status;
-  int this_node;
   QMP_thread_level_t req, prv;
 
   /* Start QMP */
@@ -191,7 +175,6 @@ static int qio_file_copy(QIO_Filesystem *fs, int *argc, char **argv[])
   double delay;
   int this_node;
   int status = 0;
-  int go;
   size_t rbytes, wbytes;
   FILE *srcfp, *dstfp;
   char *buf;
@@ -251,11 +234,11 @@ static int qio_file_copy(QIO_Filesystem *fs, int *argc, char **argv[])
       rbytes = DCAP(fread)(buf, sizeof(unsigned char), (size_t)MAXBUF, srcfp);
       if(rbytes == 0)break;
       
-      wbytes = DCAP(fwrite)(buf, sizeof(unsigned char), (size_t)rbytes, dstfp);
-
+      wbytes = DCAP(fwrite)(buf, sizeof(unsigned char), rbytes, dstfp);
 
       if(rbytes != wbytes){
-	printf("qio_file_copy: Error writing %d bytes\n",rbytes);fflush(stdout);
+	printf("qio_file_copy: Error writing %ld bytes\n",(long)rbytes);
+	fflush(stdout);
 	status = 1; 
 	break;
       }

@@ -319,7 +319,7 @@ int QIO_decode_usqcd_proprecord_info(QIO_USQCDPropRecordInfo *record_info,
 /* Return integer code or negative value for failure */
 int QIO_get_usqcd_propfile_type(QIO_USQCDPropFileInfo *file_info)
 {
-  int type;
+  //int type;
   char *string = file_info->type.value;
 
   if(strcmp(string,QIO_USQCDPROPFILETYPESTRING_C1D12) == 0)

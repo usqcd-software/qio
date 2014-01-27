@@ -40,6 +40,7 @@ void vget_M(char *buf, size_t index, int count, void *qfin);
 void vput_r(char *buf, size_t index, int count, void *qfin);
 void vget_r(char *buf, size_t index, int count, void *qfin);
 
+void vsubset_R(float *out[], float *in[], int lower[], int upper[], int count);
 int vcreate_R(float *field_out[],int count);
 int vcreate_M(suN_matrix *field[] , int count);
 void vdestroy_R(float *field[], int count);

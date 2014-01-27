@@ -89,7 +89,7 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   
   /* Construct the writer handle */
   qio_out = (QIO_Writer *)malloc(sizeof(QIO_Writer));
-  if(qio_out == NULL)return NULL;
+  if(qio_out == NULL) return NULL;
   qio_out->lrl_file_out   = NULL;
   qio_out->volfmt         = volfmt;
   qio_out->layout         = dml_layout;
@@ -315,6 +315,7 @@ QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename,
 {
   QIO_Writer *qio_out;
   int status;
+  int this_node = layout->this_node;
   DML_io_node_t my_io_node;
   DML_master_io_node_t master_io_node;
 
@@ -337,14 +338,34 @@ QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename,
   qio_out = QIO_generic_open_write(filename, volfmt, layout, oflag,
 				   my_io_node, master_io_node);
 
+#if 0
   /* Prevent premature file truncation in parallel writes */
   /* Note, the test will cause a hang if the oflag->serpar value is
      not the same for all nodes */
-  if(qio_out->serpar == QIO_PARALLEL)
-    DML_sync();
+  if(qio_out->serpar == QIO_PARALLEL) DML_sync();
+#endif
+  int fail = (qio_out==NULL);
+  DML_sum_int(&fail);
+  if(fail) {
+    if(this_node == master_io_node()) {
+      fprintf(stderr, "%s(%d): %i ranks failed to open file %s\n",
+	      __func__, this_node, fail, filename);
+    }
+    // should free qio_out if not NULL
+    return NULL;
+  }
 
   status = QIO_write_file_header(qio_out, xml_file);
-  if(status != QIO_SUCCESS)return NULL;
+  fail = (status != QIO_SUCCESS);
+  DML_sum_int(&fail);
+  if(fail) {
+    if(this_node == master_io_node()) {
+      fprintf(stderr, "%s(%d): %i ranks failed to write header to file %s\n",
+	      __func__, this_node, fail, filename);
+    }
+    // should free qio_out
+    return NULL;
+  }
 
   return qio_out;
 }

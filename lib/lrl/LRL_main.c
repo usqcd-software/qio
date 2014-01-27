@@ -17,23 +17,24 @@
  */
 LRL_FileReader *LRL_open_read_file(const char *filename)
 {
-  LRL_FileReader *fr;
-  FILE *fpt;
-
+  LRL_FileReader *fr = NULL;
   /* Open and check for a readable file */
-  fpt = DCAPL(fopen)(filename,"r");
-  if(fpt == NULL)return NULL;
-
-  /* Set up LRL_FileReader structure */
-  fr = (LRL_FileReader *)malloc(sizeof(LRL_FileReader));
-  if (fr == NULL)
-    return NULL;
-
-  fr->file = fpt;
-  fr->dr = limeCreateReader(fr->file);
-  if (fr->dr == (LimeReader *)NULL)
-    return NULL;
-
+  FILE *fpt = DCAPL(fopen)(filename,"r");
+  if(fpt != NULL) {
+    /* Set up LRL_FileReader structure */
+    fr = (LRL_FileReader *) malloc(sizeof(LRL_FileReader));
+    if(fr != NULL) {
+      fr->file = fpt;
+      fr->dr = limeCreateReader(fr->file);
+      if(fr->dr == NULL) {
+	free(fr);
+	fr = NULL;
+      }
+    }
+    if(fr == NULL) {
+      DCAP(fclose)(fpt);
+    }
+  }
   return fr;
 }
 
@@ -72,33 +73,28 @@ off_t LRL_get_reader_pointer(LRL_FileReader *fr){
  */
 LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
 {
-  LRL_FileWriter *fw;
-  char myname[] = "LRL_open_write_file";
-
-  fw = (LRL_FileWriter *)malloc(sizeof(LRL_FileWriter));
-  if (fw == NULL)
-    return NULL;
-
-  /* Open according to requested mode */
-  if(mode == LRL_APPEND){
-    fw->file = DCAPL(fopen)(filename,"a");
+  LRL_FileWriter *fw = (LRL_FileWriter *) malloc(sizeof(LRL_FileWriter));
+  if(fw != NULL) {
+    /* Open according to requested mode */
+    if(mode == LRL_APPEND) {
+      fw->file = DCAPL(fopen)(filename,"a");
+    } else {
+      fw->file = DCAPL(fopen)(filename,"w");
+    }
+    if(fw->file == NULL) {
+      printf("%s: failed to open %s for writing\n", __func__, filename);
+      free(fw);
+      fw = NULL;
+    } else {
+      fw->dg = limeCreateWriter(fw->file);
+      if(fw->dg == NULL) {
+	printf("%s: limeCreateWriter failed\n", __func__);
+	DCAP(fclose)(fw->file);
+	free(fw);
+	fw = NULL;
+      }
+    }
   }
-  else{
-    fw->file = DCAPL(fopen)(filename,"w");
-  }
-
-  if (fw->file == NULL){
-    printf("%s: failed to open %s for writing\n",myname,
-	   filename);
-    return NULL;
-  }
-
-  fw->dg = limeCreateWriter(fw->file);
-  if (fw->dg == (LimeWriter *)NULL){
-    printf("%s: limeCreateWriter failed\n",myname);
-    return NULL;
-  }
-
   return fw;
 }
 

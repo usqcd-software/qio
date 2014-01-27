@@ -2,6 +2,7 @@
 /* Utilities for DML */
 
 #include <qio_config.h>
+#include <qio.h>
 #include <lrl.h>
 #include <dml.h>
 #include <stdio.h>
@@ -1626,8 +1627,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   int my_io_node;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
-  size_t isite,buf_sites,tbuf_sites,max_buf_sites=0,max_tbuf_sites,
-    max_dest_sites;
+  size_t isite,buf_sites,tbuf_sites,max_buf_sites=0,max_tbuf_sites;
   int status;
   DML_SiteRank subset_rank;
   DML_SiteRank snd_coords,prev_coords,outbuf_coords;
@@ -1702,7 +1702,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 #endif
   
   /* Maximum number of sites to be processed */
-  max_dest_sites = sites->subset_io_sites;
+  //max_dest_sites = sites->subset_io_sites;
   isite = 0;  /* Running count of all sites */
   
   current_node = my_io_node;
@@ -1828,7 +1828,10 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   free(tbuf);
 
   timestop(dtall);
-  if(this_node==0) printf("%s times: write %.2f  send %.2f  total %.2f\n", myname, dtwrite, dtsend, dtall);
+  if(QIO_verbosity()>=QIO_VERB_LOW && this_node==layout->master_io_node) {
+    printf("%s times: write %.2f  send %.2f  total %.2f\n",
+	   myname, dtwrite, dtsend, dtall);
+  }
   /* Number of bytes written by this node only */
   return nbytes;
 }

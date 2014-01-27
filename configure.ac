@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 2.3.9, detar@physics.utah.edu)
+AC_INIT(qio, 2.4.0, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
@@ -36,10 +36,10 @@ dnl --enable-qmp-route
 dnl
 AC_ARG_ENABLE(qmp-route,
   AC_HELP_STRING([--enable-qmp-route],
-     [Enable usage of QMP_route if it exists default is on]),
+     [Enable usage of QMP_route if it exists, default is off]),
   [ac_qmp_route=$enableval
    qio_conf_opts="$qio_conf_opts --enable-qmp-route=$enableval"],
-  [ac_qmp_route="yes"] 
+  [ac_qmp_route="no"] 
 )
 
 dnl
@@ -152,7 +152,8 @@ if test "X${QMP_CONFIG}X" != "XX" ; then
   AC_MSG_NOTICE([Found QMP configuration program ${QMP_CONFIG}])
   # use the QMP CC unless it is explicitly set by the user
   if ! set | grep -q '^CC=' ; then
-    AC_SUBST(CC,  "`${QMP_CONFIG} --cc`")
+    export CC="`${QMP_CONFIG} --cc`"
+    AC_SUBST(CC,  "$CC")
     AC_MSG_NOTICE([QMP compiler: ${CC}])
   fi
   AC_SUBST(QMP_CFLAGS,  "`${QMP_CONFIG} --cflags`")

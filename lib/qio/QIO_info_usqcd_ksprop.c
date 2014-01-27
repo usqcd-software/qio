@@ -300,7 +300,7 @@ int QIO_decode_usqcd_ksproprecord_info(QIO_USQCDKSPropRecordInfo *record_info,
 /* Return integer code or negative value for failure */
 int QIO_get_usqcd_kspropfile_type(QIO_USQCDKSPropFileInfo *file_info)
 {
-  int type;
+  //int type;
   char *string = file_info->type.value;
 
   if(strcmp(string,QIO_USQCDKSPROPFILETYPESTRING_C1V3) == 0)

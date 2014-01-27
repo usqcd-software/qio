@@ -58,7 +58,6 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   DML_Layout *layout = in->layout;
   int this_node = layout->this_node; 
   int status;
-  int latdim;
   QIO_RecordInfo *record_info = &in->record_info;
 
   /* List of acceptable binary data LIME types */

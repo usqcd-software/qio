@@ -376,5 +376,3 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
       
   return status;
 }
-
-

@@ -1,3 +1,8 @@
+01/27/2014 -- James Osborn
+
+        Version 2.4.0 - export CC to c-lime if not already set,
+	added barrier after writing field, added some diagnostic output.
+
 07/28/2011 -- James Osborn
 
         Version 2.3.9 - Allowed singlefile format to use parallel I/O with

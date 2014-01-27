@@ -464,11 +464,13 @@ int QIO_write_field_data(QIO_Writer *out, LRL_RecordWriter *lrl_record_out,
   }
 
   /* Lattice field data type */
-  else
+  else {
     *nbytes = DML_partition_out(lrl_record_out, get, count, datum_size, 
 				word_size, 
 				arg, out->layout, out->sites, out->volfmt, 
 				out->serpar, checksum);
+    if(out->serpar==QIO_PARALLEL) DML_sync();
+  }
 
   /* Close record when done and clean up*/
   if(out->lrl_file_out)
@@ -644,15 +646,17 @@ int QIO_close_read_record(LRL_RecordReader *lrl_record_in){
 /*------------------------------------------------------------------*/
 /* Read site list */
 
-int QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type){
+int
+QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type)
+{
   int this_node = in->layout->this_node;
-  int number_of_nodes = in->layout->number_of_nodes;
+  //int number_of_nodes = in->layout->number_of_nodes;
   int volfmt = in->volfmt;
   /* char myname[] = "QIO_read_sitelist"; */
   int status = QIO_SUCCESS;
 
   /* SINGLEFILE format has no sitelist */
-  if(volfmt == QIO_SINGLEFILE)return QIO_SUCCESS;
+  if(volfmt == QIO_SINGLEFILE) return QIO_SUCCESS;
 
   /* Only I/O nodes read and verify the sitelist */
   if((volfmt == QIO_MULTIFILE) || 
