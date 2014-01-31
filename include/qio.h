@@ -167,7 +167,7 @@ int QIO_scalar_to_ionode_index(int scalar_node, int scalar_index);
 
 /* Verbosity */
 int QIO_verbose(int level);
-int QIO_verbosity();
+int QIO_verbosity(void);
 
 /* Enumerate in order of increasing verbosity */
 #define QIO_VERB_OFF    0
@@ -253,9 +253,9 @@ double QIO_time(void);
 void QIO_wait(double sec);
 void QIO_suppress_global_broadcast(QIO_Reader *qio_in);
 
-QIO_Reader *QIO_open_read_master(const char *filename, 
-				 QIO_Layout *layout, QIO_Iflag *iflag,
-				 int (*io_node)(int), int (*master_io_node)());
+QIO_Reader *QIO_open_read_master(const char *filename, QIO_Layout *layout,
+				 QIO_Iflag *iflag, int (*io_node)(int),
+				 int (*master_io_node)(void));
 int QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
 			    QIO_Iflag *iflag);
 int QIO_read_check_sitelist(QIO_Reader *qio_in);
@@ -264,7 +264,7 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
 				   int volfmt, QIO_Layout *layout, 
 				   QIO_Oflag *oflag, 
 				   int (*io_node)(int), 
-				   int (*master_io_node)());
+				   int (*master_io_node)(void));
 int QIO_reader_insert_hypercube_data(QIO_Reader *in, 
 				     QIO_RecordInfo *record_info);
 int QIO_writer_insert_hypercube_data(QIO_Writer *out, 
