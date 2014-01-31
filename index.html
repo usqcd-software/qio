@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>QIO by usqcd-software</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>QIO</h1>
+        <p>QIO Parallel IO Library</p>
+
+        <p class="view"><a href="https://github.com/usqcd-software/qio">View the Project on GitHub <small>usqcd-software/qio</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/usqcd-software/qio/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/usqcd-software/qio/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/usqcd-software/qio">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <p>QCD Input/Output Applications Programmer Interface developed under the auspices of the U.S. Department of Energy Scientific Discovery through Advanced Computing (SciDAC) program.</p>
+
+<p>The QIO package supports data parallel input and output for QCD applications. Although it was originally developed to support the data parallel lattice-QCD API called QDP/C and QDP++, it is designed to function independently of QDP, requiring only the lower level QMP message passing package. It has been used successfully with other higher-level software packages. Three data models are treated: full volume lattice fields, consisting of data of the same format residing on each site of a hypercubic lattice, subvolume lattice fields, consisting of data of the same format residing on a hypercubic subset of a hypercubic lattice (e.g.\ a 3D time slice), and global data constant across all lattice sites. Lattice field data is distributed among multiple nodes.</p>
+
+<p>The file format consists of a series of logical records. Each record contains user-controlled metadata and binary data. An arbitrary combination of logical records is permitted. The physical file format is based on a custom SciDAC LIME standard, (Lattice QCD Interchange Message Encapsulation), which views the file as a series of LIME messages, each, in turn, consisting of a series of LIME records. Details of the physical format are hidden from the user. The <a href="http://usqcd-software.github.io/c-lime">LIME</a> package is included with QIO.</p>
+
+<h3>
+<a name="code-releases" class="anchor" href="#code-releases"><span class="octicon octicon-link"></span></a>Code releases:</h3>
+
+<p>The current version of QIO is qio-2.3.8. It can be downloaded <a href="http://usqcd-software.github.io/downloads/qio/qio-2.3.8.tar.gz">qio-2.3.8.tar.gz</a>qio-2.3.8.tar.gz.</p>
+
+<p>Changes since version 2.3.7 are (1) Correct clear-to-send with HAVE_BGL.
+The most recent version of the manual is <a href="./qio_2p3.pdf">qio_2p3.pdf</a>.</p>
+
+<p>Current and past releases can be found <a href="http://usqcd-software.github.io/downloads/qio/">here</a></p>
+
+<p>The motivation for this development comes from the U.S. Dept. of Energy SciDAC program. See the <a href="http://www.usqcd.org">USQCD</a> home pages for more details.</p>
+
+<p>Source code:</p>
+
+<p>The latest releases of QIO and SciDAC software can be found on the the <a href="http://usqcd-software.github.io">USQCD Software page</a>. </p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/usqcd-software">usqcd-software</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
