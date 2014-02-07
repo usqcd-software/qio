@@ -174,7 +174,8 @@ int QIO_verbosity(void);
 #define QIO_VERB_LOW    1
 #define QIO_VERB_MED    2
 #define QIO_VERB_REG    3
-#define QIO_VERB_DEBUG  4
+#define QIO_VERB_HIGH   4
+#define QIO_VERB_DEBUG  5
 
 /* HostAPI */
 int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,

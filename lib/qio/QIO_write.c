@@ -282,11 +282,11 @@ int QIO_write_checksum(QIO_Writer *out, DML_Checksum *checksum)
     checksum_info = QIO_create_checksum_info(checksum->suma,checksum->sumb);
     xml_checksum = QIO_string_create();
     QIO_encode_checksum_info(xml_checksum, checksum_info);
-    
+
     if ((status = 
 	 QIO_write_string(out, msg_begin, msg_end, xml_checksum,
 			  (LIME_type)"scidac-checksum"))
-	!= QIO_SUCCESS){
+	!= QIO_SUCCESS) {
       printf("%s(%d): Error writing checksum\n",myname,this_node);
       return status;
     }
@@ -358,7 +358,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   status = QIO_write_checksum(out, &out->last_checksum);
 
   /* Some useful information */
-  if(QIO_verbosity() >= QIO_VERB_REG){
+  if(QIO_verbosity() >= QIO_VERB_REG) {
     printf("%s(%d): Wrote field. datatype %s recordtype %d \n              precision %s colors %d spins %d count %d\n",
 	   myname,this_node,
 	   QIO_get_datatype(record_info),
@@ -373,6 +373,6 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 	   QIO_get_writer_last_checksuma(out),
 	   QIO_get_writer_last_checksumb(out));
   }
-      
+
   return status;
 }

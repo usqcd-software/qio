@@ -234,7 +234,7 @@ int LRL_write_record_header(LRL_RecordWriter *rw,
   LimeRecordHeader *h;
   int status;
   char myname[] = "LRL_write_record_header";
-  
+
   /* Create and write record header */
   h = limeCreateHeader(msg_begin, msg_end, lime_type, rec_size);
   status = limeWriteRecordHeader(h, rw->fw->dg);
