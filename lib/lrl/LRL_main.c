@@ -556,7 +556,6 @@ void LRL_destroy_reader_state_copy(void *state_ptr){
   free(state_ptr);
 }
 
-
 /** 
  * Destroy the LRL writer state (copy)
  *
@@ -567,22 +566,24 @@ void LRL_destroy_writer_state_copy(void *state_ptr){
   free(state_ptr);
 }
 
-
 /**
  *
  * \param rr     LRL record reader
  *
  * return 0 for success and 1 for failure
  */
-
-int LRL_close_read_record(LRL_RecordReader *rr)
+int
+LRL_close_read_record(LRL_RecordReader *rr)
 {
-  int status;
-
-  status = limeReaderCloseRecord(rr->fr->dr);
-  free(rr);
-  if(status != LIME_SUCCESS)return LRL_ERR_CLOSE;
-  else return LRL_SUCCESS;
+  int status = LRL_SUCCESS;
+  if(rr == NULL) {
+    status = LRL_ERR_CLOSE;
+  } else {
+    if(limeReaderCloseRecord(rr->fr->dr) != LIME_SUCCESS)
+      status = LRL_ERR_CLOSE;
+    free(rr);
+  }
+  return status;
 }
 
 /**
@@ -590,16 +591,18 @@ int LRL_close_read_record(LRL_RecordReader *rr)
  * \param rw     LRL record writer
  *
  */
-
-int LRL_close_write_record(LRL_RecordWriter *rw)
+int
+LRL_close_write_record(LRL_RecordWriter *rw)
 {
-  int status;
-
-  if(rw == NULL)return LRL_ERR_CLOSE;
-  status = limeWriterCloseRecord(rw->fw->dg);
-  free(rw);
-  if(status != LIME_SUCCESS)return LRL_ERR_CLOSE;
-  else return LRL_SUCCESS;
+  int status = LRL_SUCCESS;
+  if(rw == NULL) {
+    status = LRL_ERR_CLOSE;
+  } else {
+    if(limeWriterCloseRecord(rw->fw->dg) != LIME_SUCCESS)
+      status = LRL_ERR_CLOSE;
+    free(rw);
+  }
+  return status;
 }
 
 /**
@@ -609,17 +612,16 @@ int LRL_close_write_record(LRL_RecordWriter *rw)
  *
  * \return status
  */
-int LRL_close_read_file(LRL_FileReader *fr)
+int
+LRL_close_read_file(LRL_FileReader *fr)
 {
-
-  if (fr == NULL)
-    return LRL_SUCCESS;
-
-  limeDestroyReader(fr->dr);
-  DCAP(fclose)(fr->file);
-  free(fr);
-
-  return LRL_SUCCESS;
+  int status = LRL_SUCCESS;
+  if(fr != NULL) {
+    limeDestroyReader(fr->dr);
+    if(DCAP(fclose)(fr->file)!=0) status = LRL_ERR_CLOSE;
+    free(fr);
+  }
+  return status;
 }
 
 /** 
@@ -629,14 +631,20 @@ int LRL_close_read_file(LRL_FileReader *fr)
  *
  * \return status
  */
-int LRL_close_write_file(LRL_FileWriter *fw)
+int
+LRL_close_write_file(LRL_FileWriter *fw)
 {
-  if (fw == NULL)
-    return LRL_SUCCESS;
-
-  limeDestroyWriter(fw->dg);
-  DCAP(fclose)(fw->file);
-  free(fw);
-
-  return LRL_SUCCESS;
+  int status = LRL_SUCCESS;
+  if(fw != NULL) {
+    limeDestroyWriter(fw->dg);
+    int fstatus = DCAP(fclose)(fw->file);
+    if(fstatus!=0) {
+      status = LRL_ERR_CLOSE;
+    }
+#ifdef JCO_DEBUG
+    fprintf(stderr, "%s: fclose return: %i\n", __func__, fstatus);
+#endif
+    free(fw);
+  }
+  return status;
 }

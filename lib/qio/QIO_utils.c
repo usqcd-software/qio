@@ -491,8 +491,8 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   
   LRL_RecordWriter *lrl_record_out = NULL;
   int recordtype = out->layout->recordtype;
-  int do_output;
-  int status;
+  int do_output = 0;
+  int status = QIO_SUCCESS;
 
   lrl_record_out = QIO_open_write_field(out, msg_begin, msg_end, 
 		       datum_size, lime_type, &do_output, &status);

@@ -170,7 +170,7 @@ int QIO_ionode_num_sites(int node)
 
 /* Make table of nodes in each IO family if needed */
 /* Return 0 success and 1 failure */
-int QIO_create_io_node_table(){
+int QIO_create_io_node_table(void){
   char myname[] = "QIO_create_io_node_table";
   int i,j,k,maxinit,io_node;
   int number_of_nodes = QIO_mpp_layout.number_of_nodes;
@@ -296,7 +296,7 @@ int QIO_create_io_node_table(){
   return 0;
 }
 
-void QIO_delete_io_node_table(){
+void QIO_delete_io_node_table(void){
   int number_io_nodes = QIO_mpp_fs.number_io_nodes;
   int k;
 
