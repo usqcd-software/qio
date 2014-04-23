@@ -1,4 +1,4 @@
-01/27/2014 -- James Osborn
+04/23/2014 -- James Osborn
 
         Version 2.4.0 - export CC to c-lime if not already set,
 	added barrier after writing field, added some diagnostic output.

@@ -74,7 +74,7 @@ static int *io_node_coords;
 
 /* Initialize my_io_node data */
 
-static int init_my_io_node(){
+static int init_my_io_node(void){
   int i;
   char myname[] = "init_my_io_node";
 
