@@ -1585,6 +1585,7 @@ static int DML_flush_outbuf(LRL_RecordWriter *lrl_record_out, int serpar,
   return status;
 }
 
+#if defined(QIO_USE_DML_OUT_BUFFERING)
 /*------------------------------------------------------------------*/
 /* Flush message buffer to IO buffer.  Do byte reordering if needed.
    Accumulate checksums. (tbuf_sites is not reset here)
@@ -1602,7 +1603,6 @@ static void DML_flush_tbuf_to_outbuf(size_t size,
 }
 
 /*------------------------------------------------------------------*/
-#if defined(QIO_USE_DML_OUT_BUFFERING)
 /* Each I/O node (or the master node) receives data from all of its
    nodes and writes it to its file.
    Returns the checksum and number of bytes written by this node only */
