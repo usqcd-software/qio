@@ -123,6 +123,7 @@ void QIO_encode_usqcd_kspropsource_info(QIO_String *file_string,
   /* Build inner tag string by appending tags */
   *buf = '\0';
   buf = QIO_encode_as_string(buf,&file_info->version, &remainder);
+  buf = QIO_encode_as_int   (buf,&file_info->color, &remainder);
   buf = QIO_encode_as_string(buf,&file_info->info, &remainder);
 
   /* Insert inner tag string into file wrapper structure */
@@ -188,6 +189,7 @@ int QIO_decode_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *record_info,
     parse_pt = QIO_get_tag_value(parse_pt, tag, value_string);
 
     QIO_decode_as_string(tag,value_string,&record_info->version);
+    QIO_decode_as_int   (tag,value_string,&record_info->color);
     QIO_decode_as_string(tag,value_string,&record_info->info);
   }
 
@@ -300,7 +302,6 @@ int QIO_decode_usqcd_ksproprecord_info(QIO_USQCDKSPropRecordInfo *record_info,
 /* Return integer code or negative value for failure */
 int QIO_get_usqcd_kspropfile_type(QIO_USQCDKSPropFileInfo *file_info)
 {
-  //int type;
   char *string = file_info->type.value;
 
   if(strcmp(string,QIO_USQCDKSPROPFILETYPESTRING_C1V3) == 0)
@@ -333,9 +334,19 @@ char *QIO_get_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *record_info)
   return record_info->info.value;
 }
 
-int QIO_defined_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *record_info)
+int QIO_defined_usqcd_kspropsource_color(QIO_USQCDKSPropSourceInfo *source_info)
 {
-  return record_info->info.occur;
+  return source_info->color.occur;
+}
+
+int QIO_get_usqcd_kspropsource_color(QIO_USQCDKSPropSourceInfo *source_info)
+{
+  return source_info->color.value;
+}
+
+int QIO_defined_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *source_info)
+{
+  return source_info->info.occur;
 }
 
 int QIO_defined_usqcd_ksproprecord_color(QIO_USQCDKSPropRecordInfo *record_info)
@@ -445,15 +456,46 @@ int QIO_insert_usqcdkspropsource_info( QIO_USQCDKSPropSourceInfo *record_info, c
   else return QIO_SUCCESS;
 }
 
+int QIO_insert_usqcd_kspropsource_version(QIO_USQCDKSPropSourceInfo *source_info, char *version)
+{
+  source_info->version.occur = 0;
+  if(!version)return QIO_BAD_ARG;
+  strncpy(source_info->version.value, version, QIO_MAXVALUESTRING-1);
+  source_info->version.value[QIO_MAXVALUESTRING-1] = '\0';
+  source_info->version.occur = 1;
+  if(strlen(version) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
+}
+
+int QIO_insert_usqcd_kspropsource_color( QIO_USQCDKSPropSourceInfo *source_info, int color)
+{
+  source_info->color.occur = 0;
+  if(!source_info)return QIO_BAD_ARG;
+  source_info->color.value =  color;
+  source_info->color.occur = 1;
+  return QIO_SUCCESS;
+}
+
 int QIO_insert_usqcdkspropsource_tag_string(QIO_USQCDKSPropSourceInfoWrapper *wrapper,
-                                 char *recordinfo_tags){
+                                 char *sourceinfo_tags){
   wrapper->usqcdkspropsourceinfo_tags.occur = 0;
-  if(!recordinfo_tags)return QIO_BAD_ARG;
-  strncpy(wrapper->usqcdkspropsourceinfo_tags.value, recordinfo_tags,
+  if(!sourceinfo_tags)return QIO_BAD_ARG;
+  strncpy(wrapper->usqcdkspropsourceinfo_tags.value, sourceinfo_tags,
           QIO_MAXVALUESTRING-1);
   wrapper->usqcdkspropsourceinfo_tags.value[QIO_MAXVALUESTRING-1] = '\0';
   wrapper->usqcdkspropsourceinfo_tags.occur = 1;
-  if(strlen(recordinfo_tags) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  if(strlen(sourceinfo_tags) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
+  else return QIO_SUCCESS;
+}
+
+int QIO_insert_usqcd_kspropsource_info( QIO_USQCDKSPropSourceInfo *source_info, char *info)
+{
+  source_info->info.occur = 0;
+  if(!source_info)return QIO_BAD_ARG;
+  strncpy(source_info->info.value, info, QIO_MAXVALUESTRING-1);
+  source_info->info.value[QIO_MAXVALUESTRING-1] = '\0';
+  source_info->info.occur = 1;
+  if(strlen(info) >= QIO_MAXVALUESTRING)return QIO_ERR_ALLOC;
   else return QIO_SUCCESS;
 }
 
@@ -534,21 +576,42 @@ QIO_USQCDKSPropSourceInfo *QIO_create_usqcd_kspropsource_info(char *info)
 {
   
   QIO_USQCDKSPropSourceInfo templ = QIO_USQCD_KSPROPSOURCE_INFO_TEMPLATE;
-  QIO_USQCDKSPropSourceInfo *record_info;
+  QIO_USQCDKSPropSourceInfo *source_info;
 
-  record_info = (QIO_USQCDKSPropSourceInfo *)malloc(sizeof(QIO_USQCDKSPropSourceInfo));
-  if(!record_info)return NULL;
+  source_info = (QIO_USQCDKSPropSourceInfo *)malloc(sizeof(QIO_USQCDKSPropSourceInfo));
+  if(!source_info)return NULL;
 
-  memcpy(record_info, &templ, sizeof(QIO_USQCDKSPropSourceInfo));
-  QIO_insert_usqcdkspropsource_version(record_info,QIO_USQCDKSPROPSOURCEFORMATVERSION);  
+  memcpy(source_info, &templ, sizeof(QIO_USQCDKSPropSourceInfo));
+  QIO_insert_usqcdkspropsource_version(source_info,QIO_USQCDKSPROPSOURCEFORMATVERSION);  
   
-  QIO_insert_usqcdkspropsource_info( record_info, info);
+  QIO_insert_usqcdkspropsource_info( source_info, info);
 
-  return record_info;
+  return source_info;
 }
 
-void QIO_destroy_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *record_info){
-  free(record_info);
+/* Encoding when color is required */
+
+QIO_USQCDKSPropSourceInfo *QIO_create_usqcd_kspropsource_c_info(
+     int color, char *info)
+{
+  
+  QIO_USQCDKSPropSourceInfo templ = QIO_USQCD_KSPROPSOURCE_INFO_TEMPLATE;
+  QIO_USQCDKSPropSourceInfo *source_info;
+
+  source_info = (QIO_USQCDKSPropSourceInfo *)malloc(sizeof(QIO_USQCDKSPropSourceInfo));
+  if(!source_info)return NULL;
+
+  memcpy(source_info, &templ, sizeof(QIO_USQCDKSPropSourceInfo));
+  QIO_insert_usqcd_kspropsource_version(source_info,QIO_USQCDKSPROPSOURCEFORMATVERSION);  
+  
+  QIO_insert_usqcd_kspropsource_color( source_info, color);
+  QIO_insert_usqcd_kspropsource_info( source_info, info);
+
+  return source_info;
+}
+
+void QIO_destroy_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *source_info){
+  free(source_info);
 }
 
 
