@@ -1,3 +1,8 @@
+05/04/2014 -- Carleton DeTar
+
+        Version 2.4.1 - Support color and color/spin tags in source record XML.
+        Thus the caller may require XML reparsing for backward compatibility.
+
 04/23/2014 -- James Osborn
 
         Version 2.4.0 - export CC to c-lime if not already set,

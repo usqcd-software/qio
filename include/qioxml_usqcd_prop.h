@@ -70,12 +70,16 @@ typedef struct {
    tag           member           description          
    ------------------------------------------------------------
    version       version        propsource record version number   1.0
+   spin          spin           
+   color         color          
    info          info           XML string     collaboration option
 */
 
 
 typedef struct {
   QIO_TagCharValue version ;
+  QIO_TagIntValue spin;
+  QIO_TagIntValue color;
   QIO_TagCharValue info;
 } QIO_USQCDPropSourceInfo;
 
@@ -84,6 +88,8 @@ typedef struct {
 
 #define QIO_USQCD_PROPSOURCE_INFO_TEMPLATE {\
    {"version", "", "", 0}, \
+   {"spin"   , "", 0, 0}, \
+   {"color" ,  "", 0, 0}, \
    {"info"   , "", "", 0}  \
 }
 
@@ -171,22 +177,24 @@ int QIO_decode_usqcd_proprecord_info(QIO_USQCDPropRecordInfo *record_info,
 #define QIO_USQCDPROPFILETYPE_LHPC       3
 
 
-int QIO_insert_usqcdpropfile_version(QIO_USQCDPropFileInfo *file_info, char *version);
-int QIO_insert_usqcdpropfile_type( QIO_USQCDPropFileInfo *file_info, int type);
-int QIO_insert_usqcdpropfile_info( QIO_USQCDPropFileInfo *file_info, char *info);
-int QIO_insert_usqcdpropfile_tag_string(QIO_USQCDPropFileInfoWrapper *wrapper,
+int QIO_insert_usqcd_propfile_version(QIO_USQCDPropFileInfo *file_info, char *version);
+int QIO_insert_usqcd_propfile_type( QIO_USQCDPropFileInfo *file_info, int type);
+int QIO_insert_usqcd_propfile_info( QIO_USQCDPropFileInfo *file_info, char *info);
+int QIO_insert_usqcd_propfile_tag_string(QIO_USQCDPropFileInfoWrapper *wrapper,
 					char *fileinfo_tags);
 
-int QIO_insert_usqcdpropsource_version(QIO_USQCDPropSourceInfo *record_info, char *version);
-int QIO_insert_usqcdpropsource_info( QIO_USQCDPropSourceInfo *record_info, char *info);
-int QIO_insert_usqcdpropsource_tag_string(QIO_USQCDPropSourceInfoWrapper *wrapper,
-					char *recordinfo_tags);
+int QIO_insert_usqcd_propsource_version(QIO_USQCDPropSourceInfo *record_info, char *version);
+int QIO_insert_usqcd_propsource_info( QIO_USQCDPropSourceInfo *record_info, char *info);
+int QIO_insert_usqcd_propsource_tag_string(QIO_USQCDPropSourceInfoWrapper *wrapper,
+					   char *recordinfo_tags);
+int QIO_insert_usqcd_propsource_spin( QIO_USQCDPropSourceInfo *record_info, int spin);
+int QIO_insert_usqcd_propsource_color( QIO_USQCDPropSourceInfo *record_info, int color);
+
 
 int QIO_insert_usqcd_proprecord_version(QIO_USQCDPropRecordInfo *record_info, char *version);
 int QIO_insert_usqcd_proprecord_info( QIO_USQCDPropRecordInfo *record_info, char *info);
 int QIO_insert_usqcd_proprecord_tag_string(QIO_USQCDPropRecordInfoWrapper *wrapper,
 					char *recordinfo_tags);
-
 /* added EES (these two functions were present in QIO_info_usqcd_prop.c but not in this header file) */
 int QIO_insert_usqcd_proprecord_spin( QIO_USQCDPropRecordInfo *record_info, int spin);
 int QIO_insert_usqcd_proprecord_color( QIO_USQCDPropRecordInfo *record_info, int color);
@@ -199,14 +207,17 @@ int QIO_defined_usqcd_propfileinfo(QIO_USQCDPropFileInfo *file_info);
 
 char *QIO_get_usqcd_propsource_info_tag_string(QIO_USQCDPropSourceInfoWrapper *wrapper);
 char *QIO_get_usqcd_propsource_info(QIO_USQCDPropSourceInfo *record_info);
+int QIO_get_usqcd_propsource_spin(QIO_USQCDPropSourceInfo *record_info);
+int QIO_get_usqcd_propsource_color(QIO_USQCDPropSourceInfo *record_info);
 int QIO_defined_usqcd_propsource_info(QIO_USQCDPropSourceInfo *record_info);
+int QIO_defined_usqcd_propsource_spin(QIO_USQCDPropSourceInfo *record_info);
+int QIO_defined_usqcd_propsource_color(QIO_USQCDPropSourceInfo *record_info);
 
 char *QIO_get_usqcd_proprecord_info_tag_string(QIO_USQCDPropRecordInfoWrapper *wrapper);
 char *QIO_get_usqcd_proprecord_info(QIO_USQCDPropRecordInfo *record_info);
 int QIO_get_usqcd_proprecord_spin(QIO_USQCDPropRecordInfo *record_info);
 int QIO_get_usqcd_proprecord_color(QIO_USQCDPropRecordInfo *record_info);
 int QIO_defined_usqcd_proprecordinfo(QIO_USQCDPropRecordInfo *record_info);
-
 /* added EES (two new functions in QIO_info_usqcd_prop.c)*/
 int QIO_defined_usqcd_proprecord_spin(QIO_USQCDPropRecordInfo *record_info);
 int QIO_defined_usqcd_proprecord_color(QIO_USQCDPropRecordInfo *record_info);
@@ -215,6 +226,8 @@ QIO_USQCDPropFileInfo *QIO_create_usqcd_propfile_info(int type, char *info);
 void QIO_destroy_usqcd_propfile_info(QIO_USQCDPropFileInfo *file_info);
 
 QIO_USQCDPropSourceInfo *QIO_create_usqcd_propsource_info(char *info);
+QIO_USQCDPropSourceInfo *QIO_create_usqcd_propsource_sc_info(int spin, 
+	     int color, char *info);
 void QIO_destroy_usqcd_propsource_info(QIO_USQCDPropSourceInfo *record_info);
 
 QIO_USQCDPropRecordInfo *QIO_create_usqcd_proprecord_info(char *info);

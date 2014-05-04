@@ -70,12 +70,14 @@ typedef struct {
    tag           member           description          
    ------------------------------------------------------------
    version       version        kspropsource record version number   1.0
+   color         color          
    info          info           XML string     collaboration option
 */
 
 
 typedef struct {
   QIO_TagCharValue version ;
+  QIO_TagIntValue color;
   QIO_TagCharValue info;
 } QIO_USQCDKSPropSourceInfo;
 
@@ -84,6 +86,7 @@ typedef struct {
 
 #define QIO_USQCD_KSPROPSOURCE_INFO_TEMPLATE {\
    {"version", "", "", 0}, \
+   {"color" ,  "", 0, 0}, \
    {"info"   , "", "", 0}  \
 }
 
@@ -165,16 +168,16 @@ int QIO_insert_usqcdkspropfile_info( QIO_USQCDKSPropFileInfo *file_info, char *i
 int QIO_insert_usqcdkspropfile_tag_string(QIO_USQCDKSPropFileInfoWrapper *wrapper,
 					char *fileinfo_tags);
 
-int QIO_insert_usqcdkspropsource_version(QIO_USQCDKSPropSourceInfo *record_info, char *version);
-int QIO_insert_usqcdkspropsource_info( QIO_USQCDKSPropSourceInfo *record_info, char *info);
+int QIO_insert_usqcdkspropsource_version(QIO_USQCDKSPropSourceInfo *source_info, char *version);
+int QIO_insert_usqcdkspropsource_info( QIO_USQCDKSPropSourceInfo *source_info, char *info);
 int QIO_insert_usqcdkspropsource_tag_string(QIO_USQCDKSPropSourceInfoWrapper *wrapper,
-					char *recordinfo_tags);
+					char *sourceinfo_tags);
+int QIO_insert_usqcd_kspropsource_color( QIO_USQCDKSPropSourceInfo *source_info, int color);
 
 int QIO_insert_usqcd_ksproprecord_version(QIO_USQCDKSPropRecordInfo *record_info, char *version);
 int QIO_insert_usqcd_ksproprecord_info( QIO_USQCDKSPropRecordInfo *record_info, char *info);
 int QIO_insert_usqcd_ksproprecord_tag_string(QIO_USQCDKSPropRecordInfoWrapper *wrapper,
 					char *recordinfo_tags);
-
 int QIO_insert_usqcd_ksproprecord_color( QIO_USQCDKSPropRecordInfo *record_info, int color);
 
 char *QIO_get_usqcd_kspropfile_info_tag_string(QIO_USQCDKSPropFileInfoWrapper *wrapper);
@@ -184,20 +187,23 @@ int QIO_defined_usqcd_kspropfile_type(QIO_USQCDKSPropFileInfo *file_info);
 int QIO_defined_usqcd_kspropfileinfo(QIO_USQCDKSPropFileInfo *file_info);
 
 char *QIO_get_usqcd_kspropsource_info_tag_string(QIO_USQCDKSPropSourceInfoWrapper *wrapper);
-char *QIO_get_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *record_info);
-int QIO_defined_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *record_info);
+char *QIO_get_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *source_info);
+int QIO_get_usqcd_kspropsource_color(QIO_USQCDKSPropSourceInfo *source_info);
+int QIO_defined_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *source_info);
+int QIO_defined_usqcd_kspropsource_color(QIO_USQCDKSPropSourceInfo *source_info);
 
 char *QIO_get_usqcd_ksproprecord_info_tag_string(QIO_USQCDKSPropRecordInfoWrapper *wrapper);
 char *QIO_get_usqcd_ksproprecord_info(QIO_USQCDKSPropRecordInfo *record_info);
 int QIO_get_usqcd_ksproprecord_color(QIO_USQCDKSPropRecordInfo *record_info);
-int QIO_defined_usqcd_ksproprecordinfo(QIO_USQCDKSPropRecordInfo *record_info);
-
+int QIO_defined_usqcd_ksproprecord_info(QIO_USQCDKSPropRecordInfo *record_info);
 int QIO_defined_usqcd_ksproprecord_color(QIO_USQCDKSPropRecordInfo *record_info);
 
 QIO_USQCDKSPropFileInfo *QIO_create_usqcd_kspropfile_info(int type, char *info);
 void QIO_destroy_usqcd_kspropfile_info(QIO_USQCDKSPropFileInfo *file_info);
 
 QIO_USQCDKSPropSourceInfo *QIO_create_usqcd_kspropsource_info(char *info);
+QIO_USQCDKSPropSourceInfo *QIO_create_usqcd_kspropsource_c_info(
+	     int color, char *info);
 void QIO_destroy_usqcd_kspropsource_info(QIO_USQCDKSPropSourceInfo *record_info);
 
 QIO_USQCDKSPropRecordInfo *QIO_create_usqcd_ksproprecord_info(char *info);
