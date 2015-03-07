@@ -1,3 +1,7 @@
+03/06/2015 -- James Osborn
+
+        Version 2.4.2 - when opening for write, only one node creates file.
+
 05/04/2014 -- Carleton DeTar
 
         Version 2.4.1 - Support color and color/spin tags in source record XML.
