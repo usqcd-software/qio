@@ -21,6 +21,7 @@
 #define LRL_CREAT      0
 #define LRL_TRUNC      1
 #define LRL_APPEND     2
+#define LRL_NOTRUNC    3
 
 #ifdef __cplusplus
 extern "C"

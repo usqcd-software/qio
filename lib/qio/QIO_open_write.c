@@ -148,14 +148,28 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
       || (this_node == dml_layout->master_io_node) ) {
     /* Modifies filename for non master nodes */
     newfilename = QIO_filename_edit(filename, volfmt, dml_layout->this_node);
+    if(qio_out->volfmt==QIO_SINGLEFILE) {
+      if(this_node == dml_layout->master_io_node) {
+	// optimization: one node creates file (if necessary) and closes
+	lrl_file_out = LRL_open_write_file(newfilename, mode);
+	LRL_close_write_file(lrl_file_out);
+      }
+      // the initial open will create or truncate the file if needed
+      // so now everyone can open it without extra creation or truncation
+      mode = LRL_NOTRUNC;
+    }
+    DML_sync();
     lrl_file_out = LRL_open_write_file(newfilename, mode);
-    if(lrl_file_out == NULL){
+    if(lrl_file_out == NULL) {
       printf("%s(%d): failed to open file for writing\n",myname,this_node);
       return NULL;
     }
     qio_out->lrl_file_out = lrl_file_out;
     free(newfilename);
+  } else {
+    DML_sync();
   }
+  DML_sync();
 
   if(this_node == dml_layout->master_io_node && 
      QIO_verbosity() >= QIO_VERB_MED)

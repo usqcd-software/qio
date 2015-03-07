@@ -1,6 +1,12 @@
 #include <qio_config.h>
 #include <lrl.h>
+#ifndef _POSIX_SOURCE
+#define _POSIX_SOURCE 1 // for fdopen in stdio
+#endif
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <string.h>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
@@ -78,6 +84,9 @@ LRL_FileWriter *LRL_open_write_file(const char *filename, int mode)
     /* Open according to requested mode */
     if(mode == LRL_APPEND) {
       fw->file = DCAPL(fopen)(filename,"a");
+    } else if(mode == LRL_NOTRUNC) {
+      int fd = DCAP(open)(filename, O_WRONLY, 0666);
+      fw->file = fdopen(fd, "w");
     } else {
       fw->file = DCAPL(fopen)(filename,"w");
     }
