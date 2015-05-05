@@ -232,8 +232,9 @@ DML_SiteList *DML_init_sitelist(int volfmt, int serpar, DML_Layout *layout){
     sites->number_of_io_sites = layout->sites_on_node;
   }
 
-  else if(volfmt == DML_PARTFILE || 
-	  (volfmt == DML_SINGLEFILE && serpar == DML_PARALLEL)){
+  else if(volfmt == DML_PARTFILE 
+          || volfmt == DML_PARTFILE_DIR 
+          || (volfmt == DML_SINGLEFILE && serpar == DML_PARALLEL)){
     /* Partitioned I/O requires a separate sitelist for each I/O
        partition.  Parallel I/O uses a sitelist to determine which
        sites to read or write. */
@@ -469,8 +470,9 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
   /* Multifile format requires a sitelist */
     return DML_fill_multifile_sitelist(layout,sites);
   }
-  else if(volfmt == DML_PARTFILE || 
-	  (volfmt == DML_SINGLEFILE && serpar == DML_PARALLEL)){
+  else if(volfmt == DML_PARTFILE 
+          || volfmt == DML_PARTFILE_DIR
+          || (volfmt == DML_SINGLEFILE && serpar == DML_PARALLEL)){
     /* Partitioned I/O requires a sitelist on the I/O node */
     /* Singlefile parallel I/O requires the same sitelist as partfile
        to determine which sites to write/read */
@@ -1251,7 +1253,7 @@ int DML_my_ionode(int volfmt, int serpar, DML_Layout *layout){
   else if(volfmt == DML_MULTIFILE){
     return layout->this_node;
   }
-  else if(volfmt == DML_PARTFILE){
+  else if(volfmt == DML_PARTFILE || volfmt == DML_PARTFILE_DIR){
     return layout->ionode(layout->this_node);
   }
   else {
@@ -1611,7 +1613,7 @@ static void DML_flush_tbuf_to_outbuf(size_t size,
    of nodes containing sites belonging to any single I/O node are
    disjoint from the corresponding set for any other I/O node.  This
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
-   PARTFILE modes. */
+   PARTFILE/PARTFILE_DIR modes. */
 
 uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out, 
 	   void (*get)(char *buf, size_t index, int count, void *arg),
@@ -1657,7 +1659,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 #if 0
   /* For parallel I/O we don't try to buffer for messaging.  When each
      node can do I/O the data being written is local.  If we start
-     doing PARTFILE parallel I/O we may want to buffer. */
+     doing PARTFILE/PARTFILE_DIR parallel I/O we may want to buffer. */
   if(serpar == DML_PARALLEL){
     max_buf_sites = 1;
     max_tbuf_sites = 1;
@@ -1847,7 +1849,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
    of nodes containing sites belonging to any single I/O node are
    disjoint from the corresponding set for any other I/O node.  This
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
-   PARTFILE modes. */
+   PARTFILE/PARTFILE_DIR modes. */
 
 /* This is the old algorithm that sent only one site's worth at a time */
 
@@ -2509,7 +2511,7 @@ uint64_t DML_partition_close_in(DML_RecordReader *dml_record_in)
    of nodes containing sites belonging to any single I/O node are
    disjoint from the corresponding set for any other I/O node.  This
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
-   PARTFILE modes. */
+   PARTFILE/PARTFILE_DIR modes. */
 uint64_t
 DML_partition_in(LRL_RecordReader *lrl_record_in, 
 		 void (*put)(char *buf, size_t index, int count, void *arg),

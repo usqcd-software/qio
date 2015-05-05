@@ -143,6 +143,7 @@ LRL_RecordReader *LRL_open_read_record(LRL_FileReader *fr,
 	     lime_status);
       *status = LRL_ERR_READ;
     }
+    free(rr);
     return NULL;
   }
 

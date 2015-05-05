@@ -54,6 +54,8 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
   /* Caller must clean up returned filename */
   int n = strlen(filename) + 12;
   char *newfilename = (char *)malloc(n);
+  const char *dirname_end;
+  int dirname_len;
 
   if(!newfilename){
     printf("QIO_filename_edit: Can't malloc newfilename\n");
@@ -66,7 +68,15 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
     newfilename[strlen(filename)] = '\0';
   }
   /* Add volume suffix for multifile and partfile formats */
-  else{
+  else if (volfmt == QIO_PARTFILE_DIR) {
+    dirname_end = strrchr(filename, '/');
+    dirname_len = 0;
+    if (NULL != dirname_end)
+      dirname_len = dirname_end - filename + 1;
+    strncpy(newfilename, filename, dirname_len);
+    snprintf(newfilename + dirname_len, n - dirname_len, "vol%04d/%s",
+       +             this_node, filename + dirname_len);
+  } else { /* QIO_PARTFILE, QIO_MULTIFILE? */
     snprintf(newfilename,n,"%s.vol%04d",filename,this_node);
   }
   return newfilename;
@@ -164,7 +174,7 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
      Partitioned file writes only if an I/O node */
 
   if(volfmt == QIO_SINGLEFILE)return 0;
-  if(volfmt == QIO_PARTFILE)
+  if(volfmt == QIO_PARTFILE || volfmt == QIO_PARTFILE_DIR)
     if(this_node != out->layout->ionode(this_node))return 0;
 
   /* Make a copy in case we have to byte reverse */
@@ -660,7 +670,7 @@ QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type)
 
   /* Only I/O nodes read and verify the sitelist */
   if((volfmt == QIO_MULTIFILE) || 
-     ((volfmt == QIO_PARTFILE) 
+          ((volfmt == QIO_PARTFILE || volfmt == QIO_PARTFILE_DIR)
       && (this_node == in->layout->ionode(this_node)))){
     /* Time release */
     /* double lapse = 1;

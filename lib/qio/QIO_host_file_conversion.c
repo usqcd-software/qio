@@ -1,5 +1,5 @@
 /* Single processor code for converting between SciDAC SINGLEFILE and
-   SciDAC PARTFILE format */
+   SciDAC PARTFILE/PARTFILE_DIR format */
 
 #include <qio_config.h>
 #include <qio.h>
@@ -353,8 +353,8 @@ static QIO_Reader *QIO_open_read_partfile(int io_node_rank, QIO_Iflag *iflag,
   /* Check the volume format */
   volfmt = QIO_get_reader_volfmt(infile);
 
-  if (volfmt != QIO_PARTFILE){
-    printf("%s(%d) File %s volume format must be PARTFILE.  Found %d\n",
+  if (volfmt != QIO_PARTFILE && volfmt != QIO_PARTFILE_DIR){
+    printf("%s(%d) File %s volume format must be PARTFILE/PARTFILE_DIR.  Found %d\n",
 	   myname, io_node_rank, newfilename, QIO_get_reader_volfmt(infile));
     return NULL;
   }
@@ -398,11 +398,11 @@ static QIO_Writer *QIO_open_write_partfile(int io_node_rank, QIO_Oflag *oflag,
 
 
 /********************************************************************/
-/*  Convert SINGLEFILE to PARTFILE                                  */
+/*  Convert SINGLEFILE to PARTFILE/PARTFILE_DIR                     */
 /********************************************************************/
 
 int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
-			QIO_Layout *layout)
+			QIO_Layout *layout, int volfmt)
 {
   QIO_Layout *scalar_layout, *ionode_layout;
   QIO_String *xml_file_in, *xml_record_in;
@@ -419,7 +419,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   int master_io_node = fs->master_io_node();
   uint64_t total_bytes;
   size_t datum_size;
-  int typesize,datacount,recordtype,word_size,volfmt;
+  int typesize,datacount,recordtype,word_size;
   int ntypes = 2;
   LIME_type lime_type_list[2] = {
     QIO_LIMETYPE_BINARY_DATA,
@@ -486,8 +486,13 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   xml_file_out = QIO_string_create();
   QIO_string_copy(xml_file_out, xml_file_in);
   
-  /* Set the output volfmt */
-  volfmt = QIO_PARTFILE;
+  /* Check the output volfmt */
+  if (volfmt != QIO_PARTFILE &&
+          volfmt != QIO_PARTFILE_DIR) {
+      printf("%s: can convert to QIO_PARTFILE or QIO_PARTFILE_DIR only\n", 
+              myname);
+      return QIO_BAD_ARG;
+  }
   
   /* Make space for message flags */
   msg_begin = (int *)malloc(sizeof(int)*number_io_nodes);
@@ -887,6 +892,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
   infile = QIO_open_read_partfile(master_io_node_rank, &iflag, filename, 
 				  ionode_layout, layout, fs);
   if(infile == NULL)return QIO_ERR_OPEN_READ;
+  iflag.volfmt = infile->volfmt;
 
   /* Read user file XML from input master */
   xml_file_in = QIO_string_create();

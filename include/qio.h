@@ -12,6 +12,7 @@
 #define QIO_SINGLEFILE DML_SINGLEFILE 
 #define QIO_MULTIFILE  DML_MULTIFILE  
 #define QIO_PARTFILE   DML_PARTFILE
+#define QIO_PARTFILE_DIR    DML_PARTFILE_DIR
 
 #define QIO_FIELD      DML_FIELD
 #define QIO_GLOBAL     DML_GLOBAL
@@ -179,7 +180,7 @@ int QIO_verbosity(void);
 
 /* HostAPI */
 int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
-			QIO_Layout *layout);
+			QIO_Layout *layout, int volfmt);
 int QIO_part_to_single( const char filename[], int ildgstyle, 
 			QIO_String *ildgLFN, 
 			QIO_Filesystem *fs, QIO_Layout *layout);

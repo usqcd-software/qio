@@ -58,11 +58,13 @@ QIO_create_reader(const char *filename,
       if(lrl_file_in != NULL) volfmt = QIO_SINGLEFILE;
       else if( volfmt == QIO_UNKNOWN || 
 	       volfmt == QIO_SINGLEFILE ) {
-	printf("%s(%d): Can't open %s in singlefile format.\n Trying partfile or multifile.\n",
-	       myname,this_node,filename);
+        if (this_node == master_ionode)
+          printf("%s(%d): cannot open %s as SINGLEFILE; trying PARTFILE\n",
+                 myname,this_node,filename);
       }
     }
-    if(lrl_file_in == NULL) {
+    /* try QIO_PARTFILE ; also, catch-all except partfile_dir */
+    if(lrl_file_in == NULL && volfmt != QIO_PARTFILE_DIR){ 
       /* If plain filename fails, try filename with volume number suffix */
       newfilename = QIO_filename_edit(filename, QIO_PARTFILE, this_node);
       if(QIO_verbosity() >= QIO_VERB_DEBUG)
@@ -70,16 +72,45 @@ QIO_create_reader(const char *filename,
 	       myname,this_node,newfilename);
       lrl_file_in = LRL_open_read_file(newfilename);
       if(lrl_file_in == NULL) {
-	printf("%s(%d): Can't open %s\n",myname,this_node,newfilename);
+	if (this_node == master_ionode)
+          printf("%s(%d): cannot open %s as PARTFILE; trying PARTFILE_DIR\n",
+                 myname,this_node,newfilename);
+      } else {
+        if (this_node == master_ionode)
+          printf("%s(%d): opened %s as PARTFILE\n", 
+                 myname, this_node, newfilename);
+        /* If we split an alien ILDG file, we currently put the
+           resulting PARTFILE volume in SciDAC format.  But if we ever
+           do split into an alien format, alien ILDG files with volume
+           extensions could only be PARTFILE, not MULTIFILE.  For native
+           SciDAC files, we will get the correct volume format later
+           when we decode the private file XML */
+        if (volfmt == QIO_UNKNOWN)
+          volfmt = QIO_PARTFILE;
       }
-      /* If we split an alien ILDG file, we currently put the
-	 resulting PARTFILE volume in SciDAC format.  But if we ever
-	 do split into an alien format, alien ILDG files with volume
-	 extensions could only be PARTFILE, not MULTIFILE.  For native
-	 SciDAC files, we will get the correct volume format later
-	 when we decode the private file XML */
-      if(volfmt == QIO_UNKNOWN)
-	volfmt = QIO_PARTFILE;
+      free(newfilename);
+    }
+    /* try QIO_PARTFILE_DIR: logic is identical to the QIO_PARTFILE clause 
+       also, catch-all for all methods that failed above */
+    if (lrl_file_in == NULL) {
+      newfilename = QIO_filename_edit(filename, QIO_PARTFILE_DIR, this_node);
+      if (QIO_verbosity() >= QIO_VERB_DEBUG)
+       printf("%s(%d): Calling LRL_open_read_file %s\n",
+              myname, this_node, newfilename);
+
+      lrl_file_in = LRL_open_read_file(newfilename);
+      if (lrl_file_in == NULL){
+        if (this_node == master_ionode)
+          printf("%s(%d): cannot open %s as PARTFILE_DIR; QIO_create_reader FAILED\n",
+                  myname, this_node, newfilename);
+      } else {
+        if (this_node == master_ionode)
+          printf("%s(%d): opened %s as PARTFILE_DIR\n",
+                  myname, this_node, newfilename);
+        if (volfmt == QIO_UNKNOWN
+            || qio_in->volfmt == QIO_PARTFILE)
+          volfmt = QIO_PARTFILE_DIR;
+      }
       free(newfilename);
     }
   }
@@ -590,7 +621,8 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
 	       myname,this_node,filename);fflush(stdout);
     }
   }
-  else if(qio_in->volfmt == QIO_PARTFILE) {
+  else if(qio_in->volfmt == QIO_PARTFILE 
+          || qio_in->volfmt == QIO_PARTFILE_DIR) {
     /* One file per machine partition in lexicographic order */
     if(this_node == dml_layout->master_io_node){
       if(QIO_verbosity() >= QIO_VERB_MED)

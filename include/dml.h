@@ -11,6 +11,7 @@
 #define DML_SINGLEFILE 0
 #define DML_MULTIFILE  1
 #define DML_PARTFILE   2
+#define DML_PARTFILE_DIR    3
 
 /* Data distribution */
 #define DML_FIELD      0

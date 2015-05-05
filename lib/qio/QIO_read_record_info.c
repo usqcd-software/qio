@@ -65,9 +65,11 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
 	xml_record_private = QIO_string_create();
 	
 	/* Read private record XML */
-	if((status=QIO_read_string(in, xml_record_private, &lime_type ))
-	   != QIO_SUCCESS)return status;
-	
+	if((status=QIO_read_string(in, xml_record_private, &lime_type )) 
+	        != QIO_SUCCESS) {
+          QIO_string_destroy(xml_record_private);
+          return status;
+        }	
 	if(QIO_verbosity() >= QIO_VERB_DEBUG){
 	  printf("%s(%d): private XML = \"%s\"\n",myname,this_node,
 		 QIO_string_ptr(xml_record_private));
@@ -75,8 +77,10 @@ int QIO_read_private_record_info(QIO_Reader *in, QIO_RecordInfo *record_info)
 	
 	/* Decode the private record XML */
 	status = QIO_decode_record_info(&(in->record_info), xml_record_private);
-	if(status != 0)return QIO_ERR_PRIVATE_REC_INFO;
-
+	if(status != 0) { 
+          QIO_string_destroy(xml_record_private);
+          return QIO_ERR_PRIVATE_REC_INFO;
+        }
 	/* Free storage */
 	QIO_string_destroy(xml_record_private);
       }
