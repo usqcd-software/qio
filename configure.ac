@@ -5,7 +5,7 @@ AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_SRCDIR([include/qio.h])
 AC_CONFIG_HEADER([include/qio_config_internal.h])
 
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([subdir-objects])
 
 dnl for saving the configure options
 qio_conf_opts=
