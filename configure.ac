@@ -187,6 +187,7 @@ AC_SUBST(QIO_CONFIGURE_OPTIONS, [$qio_conf_opts])
 
 # Checks for programs.
 AC_PROG_CC
+AM_PROG_CC_C_O
 AC_PROG_RANLIB
 AC_CHECK_TOOL(AR, ar, [ar])
 
