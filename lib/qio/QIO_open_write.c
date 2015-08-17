@@ -7,9 +7,14 @@
 #include <qio_string.h>
 #include <qioxml.h>
 #include <stdio.h>
+#include <assert.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <string.h>
 #ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
+
 
 
 /* Accessors for writer information */
@@ -46,6 +51,9 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   int mode;
   int serpar;
   char *newfilename;
+  char *dirname_end, *dirname;
+  int dirname_len;
+  struct stat dir_stat;
   char myname[] = "QIO_generic_open_write";
 
   /* Make a local copy of lattice size */
@@ -60,7 +68,7 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   /* Construct the layout data from the QIO_Layout structure*/
   dml_layout = (DML_Layout *)malloc(sizeof(DML_Layout));
   if (!layout){
-    printf("%s(%d): can't malloc dml_layout\n",myname,this_node);
+    printf("%s(%d): cannot malloc dml_layout\n",myname,this_node);
     return NULL;
   }
   
@@ -89,7 +97,10 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   
   /* Construct the writer handle */
   qio_out = (QIO_Writer *)malloc(sizeof(QIO_Writer));
-  if(qio_out == NULL) return NULL;
+  if(qio_out == NULL){
+    printf("%s(%d): cannot malloc QIO_Writer\n", myname, this_node);
+    return NULL;
+  }
   qio_out->lrl_file_out   = NULL;
   qio_out->volfmt         = volfmt;
   qio_out->layout         = dml_layout;
@@ -141,13 +152,49 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
      In all cases, the master I/O node opens the file. */
   
   if( (qio_out->volfmt == QIO_MULTIFILE)
-      || ((qio_out->volfmt == QIO_PARTFILE) 
+      || ((qio_out->volfmt == QIO_PARTFILE 
+           || qio_out->volfmt == QIO_PARTFILE_DIR)
 	  && (dml_layout->ionode(this_node) == this_node))
       || ((serpar == QIO_PARALLEL)
 	  && (dml_layout->ionode(this_node) == this_node))
       || (this_node == dml_layout->master_io_node) ) {
     /* Modifies filename for non master nodes */
     newfilename = QIO_filename_edit(filename, volfmt, dml_layout->this_node);
+    /* for QIO_PARTFILE_DIR: check if xxx/volNNNN directory exists */
+    if (qio_out->volfmt == QIO_PARTFILE_DIR) {
+      /* get dirname */
+      dirname_end = strrchr(newfilename, '/');
+      dirname_len = 0;
+      if (NULL != dirname_end)
+          dirname_len = dirname_end - newfilename;
+      dirname = (char *)malloc(dirname_len + 1);
+      assert(NULL != dirname);
+      strncpy(dirname, newfilename, dirname_len);
+      dirname[dirname_len] = '\0';
+
+      /* check if `dirname' exists and is a directory */
+      if (stat(dirname, &dir_stat)) {
+        if (ENOENT == errno) {
+          if (mkdir(dirname, 0777)) {
+            printf("%s(%d): %s: %s\n", myname, this_node,
+                   dirname, strerror(errno));
+            free(dirname);
+            return NULL;
+          }
+        } else {
+          printf("%s(%d): %s: %s\n", myname, this_node,
+                 dirname, strerror(errno));
+          free(dirname);
+          return NULL;
+        }
+      } else if ( ! S_ISDIR(dir_stat.st_mode)) {
+        printf("%s(%d): %s: is not a directory\n", myname, this_node, dirname);
+        free(dirname);
+        return NULL;
+      }
+      /* Ok; clean up */
+      free(dirname);
+    }
     if(qio_out->volfmt==QIO_SINGLEFILE) {
       if(this_node == dml_layout->master_io_node) {
 	// optimization: one node creates file (if necessary) and closes
@@ -183,6 +230,9 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
       else if(qio_out->volfmt == QIO_PARTFILE)
 	printf("%s(%d): Opened %s for writing in partfile format\n",
 	       myname,this_node,filename);
+      else if(qio_out->volfmt == QIO_PARTFILE_DIR)
+        printf("%s(%d): Opened %s for writing in partfile-dir format\n",
+               myname,this_node,filename);
     }
 
   /* Determine sites to be written and create site list if needed */
@@ -351,7 +401,8 @@ QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename,
 
   qio_out = QIO_generic_open_write(filename, volfmt, layout, oflag,
 				   my_io_node, master_io_node);
-
+  if (NULL == qio_out)
+    return NULL;
 #if 0
   /* Prevent premature file truncation in parallel writes */
   /* Note, the test will cause a hang if the oflag->serpar value is

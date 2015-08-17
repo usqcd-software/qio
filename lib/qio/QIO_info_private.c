@@ -444,7 +444,8 @@ int QIO_insert_volfmt(QIO_FileInfo *file_info, int volfmt){
   file_info->volfmt.occur = 0;
   if(volfmt!=QIO_SINGLEFILE && 
      volfmt!=QIO_MULTIFILE &&
-     volfmt!=QIO_PARTFILE){
+     volfmt!=QIO_PARTFILE &&
+     volfmt!=QIO_PARTFILE_DIR){
     printf("QIO_insert_volfmt: Bad volfmt parameter %d\n",volfmt);
     return QIO_BAD_ARG;
   }
