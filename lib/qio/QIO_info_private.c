@@ -918,7 +918,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
   char myname[] = "QIO_compare_record_info";
 
   if(QIO_defined_recordtype(expect))
-    if(!QIO_defined_recordtype(found) &&
+    if(!QIO_defined_recordtype(found) ||
        QIO_get_recordtype(found)  != QIO_get_recordtype(expect))
       {
 	printf("%s:Recordtype flag mismatch expected %d found %d \n",myname,
@@ -927,7 +927,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       }
 
   if(QIO_defined_datatype(expect))
-    if(!QIO_defined_datatype(found) && 
+    if(!QIO_defined_datatype(found) ||
        strncmp(QIO_get_datatype(found),QIO_get_datatype(expect),
 	       QIO_MAXVALUESTRING))
       {
@@ -937,7 +937,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       }
 
   if(QIO_defined_precision(expect))
-    if(!QIO_defined_precision(found) &&
+    if(!QIO_defined_precision(found) ||
        strncmp(QIO_get_precision(found),QIO_get_precision(expect),
 	       QIO_MAXVALUESTRING))
       {
@@ -947,7 +947,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       }
 
   if(QIO_defined_colors(expect))
-    if(!QIO_defined_colors(found) &&
+    if(!QIO_defined_colors(found) ||
        QIO_get_colors(found) != QIO_get_colors(expect))
       {
 	printf("%s:Colors mismatch expected %d found %d \n",myname,
@@ -956,7 +956,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       }
 
   if(QIO_defined_spins(expect))
-    if(!QIO_defined_spins(found) &&
+    if(!QIO_defined_spins(found) ||
        QIO_get_spins(found)  != QIO_get_spins(expect))
       {
 	printf("%s:Spins mismatch expected %d found %d \n",myname,
@@ -965,7 +965,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       }
 
   if(QIO_defined_typesize(expect))
-    if(!QIO_defined_typesize(found) &&
+    if(!QIO_defined_typesize(found) ||
        QIO_get_typesize(found) != QIO_get_typesize(expect))
       {
 	printf("%s:Typesize mismatch expected %d found %d \n",myname,
@@ -974,7 +974,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
       }
 
   if(QIO_defined_datacount(expect))
-    if(!QIO_defined_datacount(found) &&
+    if(!QIO_defined_datacount(found) ||
        QIO_get_datacount(found) != QIO_get_datacount(expect))
       {
 	printf("%s:Datacount mismatch expected %d found %d \n",myname,
