@@ -18,8 +18,10 @@
 
 QIO_Reader *
 QIO_create_reader(const char *filename, 
-		  QIO_Layout *layout, QIO_Iflag *iflag,
-		  int (*io_node)(int), int (*master_io_node)())
+                  QIO_Layout *layout, QIO_Iflag *iflag,
+                  DML_io_node_a_t io_node_a, 
+                  DML_master_io_node_a_t master_io_node_a,
+                  void *fs_arg)
 {
   QIO_Reader *qio_in;
   LRL_FileReader *lrl_file_in = NULL;
@@ -28,7 +30,7 @@ QIO_create_reader(const char *filename,
   int *latsize, *upper, *lower;
   int latdim = layout->latdim;
   int this_node = layout->this_node;
-  int master_ionode = master_io_node();
+  int master_ionode = master_io_node_a(fs_arg);
   char *newfilename;
   char myname[] = "QIO_create_reader";
 
@@ -50,14 +52,14 @@ QIO_create_reader(const char *filename,
     if( volfmt == QIO_UNKNOWN || 
         volfmt == QIO_SINGLEFILE ) {
       if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	printf("%s(%d): Calling LRL_open_read_file %s\n",
-	       myname,this_node,filename);
+        printf("%s(%d): Calling LRL_open_read_file %s\n",
+               myname,this_node,filename);
       lrl_file_in = LRL_open_read_file(filename);
       /* If the open succeeded with just "filename" the format
-	 must be SINGLEFILE */
+         must be SINGLEFILE */
       if(lrl_file_in != NULL) volfmt = QIO_SINGLEFILE;
       else if( volfmt == QIO_UNKNOWN || 
-	       volfmt == QIO_SINGLEFILE ) {
+               volfmt == QIO_SINGLEFILE ) {
         if (this_node == master_ionode)
           printf("%s(%d): cannot open %s as SINGLEFILE; trying PARTFILE\n",
                  myname,this_node,filename);
@@ -68,11 +70,11 @@ QIO_create_reader(const char *filename,
       /* If plain filename fails, try filename with volume number suffix */
       newfilename = QIO_filename_edit(filename, QIO_PARTFILE, this_node);
       if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	printf("%s(%d): Calling LRL_open_read_file %s\n",
-	       myname,this_node,newfilename);
+        printf("%s(%d): Calling LRL_open_read_file %s\n",
+               myname,this_node,newfilename);
       lrl_file_in = LRL_open_read_file(newfilename);
       if(lrl_file_in == NULL) {
-	if (this_node == master_ionode)
+        if (this_node == master_ionode)
           printf("%s(%d): cannot open %s as PARTFILE; trying PARTFILE_DIR\n",
                  myname,this_node,newfilename);
       } else {
@@ -141,10 +143,15 @@ QIO_create_reader(const char *filename,
   if (dml_layout == NULL || layout == NULL)
     return NULL;
 
-  dml_layout->node_number          = layout->node_number;
-  dml_layout->node_index           = layout->node_index;
-  dml_layout->get_coords           = layout->get_coords;
-  dml_layout->num_sites            = layout->num_sites;
+  dml_layout->node_number          = NULL;
+  dml_layout->node_index           = NULL;
+  dml_layout->get_coords           = NULL;
+  dml_layout->num_sites            = NULL;
+  dml_layout->node_number_a        = layout->node_number_a;
+  dml_layout->node_index_a         = layout->node_index_a;
+  dml_layout->get_coords_a         = layout->get_coords_a;
+  dml_layout->num_sites_a          = layout->num_sites_a;
+  dml_layout->arg                  = layout->arg;
   dml_layout->latsize              = latsize;
   dml_layout->latdim               = layout->latdim;
   dml_layout->volume               = layout->volume;
@@ -158,7 +165,8 @@ QIO_create_reader(const char *filename,
   dml_layout->hyperupper           = upper;
   dml_layout->subsetvolume         = layout->volume;
 
-  dml_layout->ionode               = io_node;
+  dml_layout->ionode_a             = io_node_a;
+  dml_layout->fs_arg               = fs_arg;
   dml_layout->master_io_node       = master_ionode;
 
   /* Construct the reader handle */
@@ -233,7 +241,7 @@ QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in)
       QIO_read_record_type(qio_in, &lime_type, &expected_rec_size, &status);
     if(lrl_record_in == NULL){
       printf("%s(%d): error %d finding private file XML\n",
-	     myname,this_node,status);
+             myname,this_node,status);
       return NULL;
     }
 
@@ -243,16 +251,16 @@ QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in)
       qio_in->format = QIO_SCIDAC_NATIVE;
 
       status = QIO_read_string_data(qio_in, lrl_record_in, xml_file_private, 
-				    expected_rec_size);
+                                    expected_rec_size);
       if(status != QIO_SUCCESS){
-	printf("%s(%d): error %d reading private file XML\n",
-	       myname,this_node,status);
-	return NULL;
+        printf("%s(%d): error %d reading private file XML\n",
+               myname,this_node,status);
+        return NULL;
       }
       
       if(QIO_verbosity() >= QIO_VERB_DEBUG){
-	printf("%s(%d): private file XML = %s\n",myname,this_node,
-	       QIO_string_ptr(xml_file_private));
+        printf("%s(%d): private file XML = %s\n",myname,this_node,
+               QIO_string_ptr(xml_file_private));
       }
       /* Decode the file info */
       file_info_found = QIO_create_file_info(0,NULL,0);
@@ -263,45 +271,45 @@ QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in)
     else{
       qio_in->format = QIO_ILDG_ALIEN;
       if(QIO_verbosity() >= QIO_VERB_REG)
-	printf("%s(%d): Non-SciDAC file.  Attempting to read as an alien ILDG lattice file\n",
-	       myname,this_node);
+        printf("%s(%d): Non-SciDAC file.  Attempting to read as an alien ILDG lattice file\n",
+               myname,this_node);
       
       if(strcmp(lime_type,(LIME_type)QIO_LIMETYPE_ILDG_FORMAT)!=0){
-	/* If the first record is not the ILDG format record,
-	   keep reading until we find it */
-	/* Close the LIME record we just read and don't want */
-	status = QIO_close_read_record(lrl_record_in);
-	if(status != QIO_SUCCESS){
-	  printf("%s(%d): error %d closing alien record\n",
-		 myname,this_node,status);
-	  return NULL;
-	}
-	/* Scan for the ILDG format record */
-	lrl_record_in = QIO_open_read_target_record(qio_in, 
-	    lime_type_list, ntypes, &lime_type, &expected_rec_size, &status);
-	
-	/* One cause of failure is hitting an EOF */
-	if(lrl_record_in == NULL){
-	  printf("%s(%d): error %d finding ILDG format record\n",
-		 myname,this_node,status);
-	  return NULL;
-	}
+        /* If the first record is not the ILDG format record,
+           keep reading until we find it */
+        /* Close the LIME record we just read and don't want */
+        status = QIO_close_read_record(lrl_record_in);
+        if(status != QIO_SUCCESS){
+          printf("%s(%d): error %d closing alien record\n",
+                 myname,this_node,status);
+          return NULL;
+        }
+        /* Scan for the ILDG format record */
+        lrl_record_in = QIO_open_read_target_record(qio_in, 
+            lime_type_list, ntypes, &lime_type, &expected_rec_size, &status);
+        
+        /* One cause of failure is hitting an EOF */
+        if(lrl_record_in == NULL){
+          printf("%s(%d): error %d finding ILDG format record\n",
+                 myname,this_node,status);
+          return NULL;
+        }
       }
 
       /* Found the ILDG format record.  Now read the XML string. */
       qio_in->ildgstyle = QIO_ILDGLAT;
 
       status = QIO_read_string_data(qio_in, lrl_record_in, xml_file_private, 
-				    expected_rec_size);
+                                    expected_rec_size);
       if(status != QIO_SUCCESS){
-	printf("%s(%d): error %d reading ILDG format record\n",
-	       myname,this_node,status);
-	return NULL;
+        printf("%s(%d): error %d reading ILDG format record\n",
+               myname,this_node,status);
+        return NULL;
       }
       
       if(QIO_verbosity() >= QIO_VERB_DEBUG){
-	printf("%s(%d): ILDG format XML = %s\n",myname,this_node,
-	       QIO_string_ptr(xml_file_private));
+        printf("%s(%d): ILDG format XML = %s\n",myname,this_node,
+               QIO_string_ptr(xml_file_private));
       }
       /* Decode the ILDG format XML record */
       ildg_info = QIO_create_ildg_format_info(0, NULL);
@@ -310,7 +318,7 @@ QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in)
       
       /* Extract the ILDG format information */
       /* We don't look at the field type for now, since only lattice
-	 data is currently supported in the ILDG */
+         data is currently supported in the ILDG */
       qio_in->ildg_precision = QIO_get_ildgformat_precision(ildg_info);
       ildg_dims[0] = QIO_get_ildgformat_lx(ildg_info);
       ildg_dims[1] = QIO_get_ildgformat_ly(ildg_info);
@@ -318,7 +326,7 @@ QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in)
       ildg_dims[3] = QIO_get_ildgformat_lt(ildg_info);
       
       /* Create a SciDAC file info structure 
-	 and populate it with the ILDG format data */
+         and populate it with the ILDG format data */
       
       file_info_found = QIO_create_file_info(4, ildg_dims, qio_in->volfmt);
     }
@@ -383,10 +391,10 @@ int QIO_set_latdim(QIO_Reader *qio_in, int latdim, int *latsize)
   if(latdim != latdim_r){
     /* Set correct space for given dimensions */
     dml_layout->latsize = (int *)realloc(dml_layout->latsize, 
-					 latdim*sizeof(int));
+                                         latdim*sizeof(int));
     if(!dml_layout->latsize){
       printf("%s(%d): Can't malloc space for latsize dim %d\n",
-	     myname,this_node,latdim);
+             myname,this_node,latdim);
       return QIO_ERR_ALLOC;
     }
     dml_layout->latdim = latdim;
@@ -409,7 +417,7 @@ int QIO_set_reader_pointer(QIO_Reader *qio_in, off_t offset)
 
   if(QIO_verbosity() >= QIO_VERB_DEBUG)
     printf("QIO_set_reader_pointer(%d): Setting to %llu\n",
-	   qio_in->layout->this_node, (unsigned long long)offset);
+           qio_in->layout->this_node, (unsigned long long)offset);
   status = LRL_set_reader_pointer(qio_in->lrl_file_in, offset);
   if(status != LRL_SUCCESS)
     return QIO_ERR_BAD_SEEK;
@@ -424,7 +432,7 @@ off_t QIO_get_reader_pointer(QIO_Reader *qio_in)
 
   if(QIO_verbosity() >= QIO_VERB_DEBUG)
     printf("QIO_get_reader_pointer(%d): Got %llu\n",
-	   qio_in->layout->this_node, (unsigned long long)offset);
+           qio_in->layout->this_node, (unsigned long long)offset);
   return offset;
 }
 
@@ -450,7 +458,7 @@ int QIO_check_file_info(DML_Layout *dml_layout, QIO_FileInfo *file_info_found)
   /* Compare what we found and what we expected */
   if((status = 
       QIO_compare_file_info(file_info_found,file_info_expect,
-			    myname,this_node))!=QIO_SUCCESS){
+                            myname,this_node))!=QIO_SUCCESS){
     printf("%s(%d): Error %d checking file info\n",myname,this_node,status);
     return QIO_ERR_FILE_INFO;
   }
@@ -466,8 +474,10 @@ int QIO_check_file_info(DML_Layout *dml_layout, QIO_FileInfo *file_info_found)
 
 QIO_Reader *
 QIO_open_read_master(const char *filename, 
-		     QIO_Layout *layout, QIO_Iflag *iflag,
-		     int (*io_node)(int), int (*master_io_node)())
+                     QIO_Layout *layout, QIO_Iflag *iflag,
+                     DML_io_node_a_t io_node_a, 
+                     DML_master_io_node_a_t master_io_node_a,
+                     void *fs_arg)
 {
   QIO_Reader *qio_in;
   DML_Layout *dml_layout;
@@ -479,7 +489,7 @@ QIO_open_read_master(const char *filename,
   /* First, only the global master node opens the file, regardless of
      whether it will be read by all nodes */
 
-  qio_in = QIO_create_reader(filename, layout, iflag, io_node, master_io_node);
+  qio_in = QIO_create_reader(filename, layout, iflag, io_node_a, master_io_node_a, fs_arg);
   if(!qio_in)return NULL;
 
   dml_layout = qio_in->layout;
@@ -514,7 +524,7 @@ QIO_open_read_master(const char *filename,
        if we are in discovery mode */
     if(qio_in->layout->discover_dims_mode){
       status = QIO_set_latdim(qio_in, QIO_get_spacetime(file_info_found),
-			      QIO_get_dims(file_info_found));
+                              QIO_get_dims(file_info_found));
       if(status != QIO_SUCCESS)return NULL;
     }
 
@@ -535,10 +545,10 @@ int QIO_broadcast_file_reader_info(QIO_Reader *qio_in, int discover_dims)
   /* Master I/O node broadcasts the volume format to all the nodes, */
   /* inserting the value in the qio_in structure */
   DML_broadcast_bytes((char *)(&qio_in->volfmt), sizeof(int),
-		      this_node, DML_master_io_node());
+                      this_node, DML_master_io_node_a(NULL));
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d): volume format info was broadcast\n",
-	   myname,this_node);fflush(stdout);
+           myname,this_node);fflush(stdout);
   }
 
   /* In discover dimensions mode the master broadcasts the lattice
@@ -546,26 +556,26 @@ int QIO_broadcast_file_reader_info(QIO_Reader *qio_in, int discover_dims)
 
   /* Master node calls for discovery */
   DML_broadcast_bytes((char *)(&discover), sizeof(int),
-		      this_node, DML_master_io_node());
+                      this_node, DML_master_io_node_a(NULL));
 
   if(discover){
     /* Set the lattice dimension from the master */
     DML_broadcast_bytes((char *)(&dml_layout->latdim),
-			sizeof(int), this_node, DML_master_io_node());
+                        sizeof(int), this_node, DML_master_io_node_a(NULL));
     /* Adjust space for the lattice dimensions */
     dml_layout->latsize = (int *)realloc(dml_layout->latsize,
-					 sizeof(int)*dml_layout->latdim);
+                                         sizeof(int)*dml_layout->latdim);
     if(!dml_layout->latsize){
       printf("%s(%d): Can't realloc latsize\n",myname,this_node);
       return QIO_ERR_ALLOC;
     }
     /* Broadcast the lattice dimensions */
     DML_broadcast_bytes((char *)(dml_layout->latsize),
-			sizeof(int)*dml_layout->latdim, 
-			this_node, DML_master_io_node());
+                        sizeof(int)*dml_layout->latdim, 
+                        this_node, DML_master_io_node_a(NULL));
     if(QIO_verbosity() >= QIO_VERB_DEBUG){
       printf("%s(%d): lattice dimension info was broadcast\n",
-	     myname,this_node);fflush(stdout);
+             myname,this_node);fflush(stdout);
     }
   }
 
@@ -580,7 +590,7 @@ int QIO_broadcast_file_reader_info(QIO_Reader *qio_in, int discover_dims)
 
 int
 QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
-			QIO_Iflag *iflag)
+                        QIO_Iflag *iflag)
 {
   DML_Layout *dml_layout = qio_in->layout;
   int this_node = dml_layout->this_node;
@@ -597,7 +607,7 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
     qio_in->serpar = QIO_SERIAL;
     if(QIO_verbosity() >= QIO_VERB_REG){
       printf("%s(%d): changed mode from QIO_PARALLEL to QIO_SERIAL \n",
-	     myname,this_node);
+             myname,this_node);
     }
   }
   
@@ -605,20 +615,20 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
     /* One file for all nodes */
     /* If parallel read, all io nodes (except master) open the file */
     if( qio_in->serpar == QIO_PARALLEL &&
-	this_node != dml_layout->master_io_node &&
-	this_node == dml_layout->ionode(this_node) ) {
+        this_node != dml_layout->master_io_node &&
+        this_node == dml_layout->ionode_a(this_node, dml_layout->fs_arg) ) {
       lrl_file_in = LRL_open_read_file(filename);
       if(lrl_file_in == NULL){
-	printf("%s(%d): Can't open %s\n",myname,this_node,filename);
-	return QIO_ERR_OPEN_READ;
+        printf("%s(%d): Can't open %s\n",myname,this_node,filename);
+        return QIO_ERR_OPEN_READ;
       }
       qio_in->lrl_file_in = lrl_file_in; 
     }
 
     if(this_node == dml_layout->master_io_node){
       if(QIO_verbosity() >= QIO_VERB_MED)
-	printf("%s(%d): Opened %s for reading in singlefile mode\n",
-	       myname,this_node,filename);fflush(stdout);
+        printf("%s(%d): Opened %s for reading in singlefile mode\n",
+               myname,this_node,filename);fflush(stdout);
     }
   }
   else if(qio_in->volfmt == QIO_PARTFILE 
@@ -626,32 +636,32 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
     /* One file per machine partition in lexicographic order */
     if(this_node == dml_layout->master_io_node){
       if(QIO_verbosity() >= QIO_VERB_MED)
-	printf("%s(%d): Opened %s for reading in partfile mode\n",
-	       myname,this_node,filename);fflush(stdout);
+        printf("%s(%d): Opened %s for reading in partfile mode\n",
+               myname,this_node,filename);fflush(stdout);
     }
 
     /* All the partition I/O nodes open their files.  */
-    if(this_node == dml_layout->ionode(this_node)){
+    if(this_node == dml_layout->ionode_a(this_node, dml_layout->fs_arg)){
       /* (The global master has already opened its file) */
       if(this_node != dml_layout->master_io_node){
-	/* Construct the file name based on the partition I/O node number */
-	newfilename = QIO_filename_edit(filename, qio_in->volfmt, this_node);
-	/* Open the file */
-	if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	  printf("%s(%d): Calling LRL_open_read_file %s\n",
-		 myname,this_node,newfilename);
-	lrl_file_in = LRL_open_read_file(newfilename);
-	if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	  printf("%s(%d): LRL_open_read_file returns %p\n",myname,this_node,
-		 lrl_file_in);
-	if(lrl_file_in == NULL){
-	  printf("%s(%d): Can't open %s for reading\n",myname,this_node,
-		 newfilename);
-	  free(newfilename);
-	  return QIO_ERR_OPEN_READ;
-	}
-	free(newfilename);
-	qio_in->lrl_file_in = lrl_file_in; 
+        /* Construct the file name based on the partition I/O node number */
+        newfilename = QIO_filename_edit(filename, qio_in->volfmt, this_node);
+        /* Open the file */
+        if(QIO_verbosity() >= QIO_VERB_DEBUG)
+          printf("%s(%d): Calling LRL_open_read_file %s\n",
+                 myname,this_node,newfilename);
+        lrl_file_in = LRL_open_read_file(newfilename);
+        if(QIO_verbosity() >= QIO_VERB_DEBUG)
+          printf("%s(%d): LRL_open_read_file returns %p\n",myname,this_node,
+                 lrl_file_in);
+        if(lrl_file_in == NULL){
+          printf("%s(%d): Can't open %s for reading\n",myname,this_node,
+                 newfilename);
+          free(newfilename);
+          return QIO_ERR_OPEN_READ;
+        }
+        free(newfilename);
+        qio_in->lrl_file_in = lrl_file_in; 
       }
     }
   }
@@ -659,22 +669,22 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
     /* One file per node */
     if(this_node == dml_layout->master_io_node){
       if(QIO_verbosity() >= QIO_VERB_MED)
-	printf("%s(%d): Opened %s for reading in multifile mode\n",
-	       myname,this_node,filename);fflush(stdout);
+        printf("%s(%d): Opened %s for reading in multifile mode\n",
+               myname,this_node,filename);fflush(stdout);
     }
     /* The non-master nodes open their files */
     if(this_node != dml_layout->master_io_node){
       /* Edit file name */
       newfilename = QIO_filename_edit(filename, qio_in->volfmt, this_node);
       if(QIO_verbosity() >= QIO_VERB_DEBUG)
-	printf("%s(%d): Calling LRL_open_read_file %s\n",
-	       myname,this_node,newfilename);
+        printf("%s(%d): Calling LRL_open_read_file %s\n",
+               myname,this_node,newfilename);
       lrl_file_in = LRL_open_read_file(newfilename);
       if(lrl_file_in == NULL){
-	printf("%s(%d): Can't open %s for reading\n",myname,this_node,
-	       newfilename);
-	free(newfilename);
-	return QIO_ERR_OPEN_READ;
+        printf("%s(%d): Can't open %s for reading\n",myname,this_node,
+               newfilename);
+        free(newfilename);
+        return QIO_ERR_OPEN_READ;
       }
       free(newfilename);
       qio_in->lrl_file_in = lrl_file_in; 
@@ -682,7 +692,7 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
   }
   else {
     printf("%s(%d): bad volfmt parameter %d\n",myname,this_node,
-	   qio_in->volfmt);
+           qio_in->volfmt);
     return QIO_ERR_FILE_INFO;
   }
 
@@ -703,10 +713,10 @@ int QIO_read_check_sitelist(QIO_Reader *qio_in){
   /* Create the expected sitelist.  Input must agree exactly. */
 
   qio_in->sites = QIO_create_sitelist(qio_in->layout, qio_in->volfmt, 
-				      qio_in->serpar);
+                                      qio_in->serpar);
   if(qio_in->sites == NULL){
     printf("%s(%d): error creating sitelist\n",
-	   myname,this_node);
+           myname,this_node);
     return QIO_ERR_BAD_SITELIST;
   }
   
@@ -745,10 +755,10 @@ int QIO_read_user_file_xml(QIO_String *xml_file, QIO_Reader *qio_in){
   if(this_node == qio_in->layout->master_io_node){
     if(qio_in->format == QIO_SCIDAC_NATIVE){
       if((status = 
-	  QIO_read_string(qio_in, xml_file, &lime_type))!= QIO_SUCCESS){
-	printf("%s(%d): error %d reading user file XML\n",
-	       myname,this_node,status);
-	return QIO_ERR_PRIVATE_FILE_INFO;
+          QIO_read_string(qio_in, xml_file, &lime_type))!= QIO_SUCCESS){
+        printf("%s(%d): error %d reading user file XML\n",
+               myname,this_node,status);
+        return QIO_ERR_PRIVATE_FILE_INFO;
       }
     }
     else{
@@ -757,7 +767,7 @@ int QIO_read_user_file_xml(QIO_String *xml_file, QIO_Reader *qio_in){
     
     if(QIO_verbosity() >= QIO_VERB_DEBUG){
       printf("%s(%d): user file XML = \"%s\"\n",
-	     myname,this_node,QIO_string_ptr(xml_file));
+             myname,this_node,QIO_string_ptr(xml_file));
     }
   }
   
@@ -770,8 +780,8 @@ int QIO_read_user_file_xml(QIO_String *xml_file, QIO_Reader *qio_in){
 
 QIO_Reader *
 QIO_open_read(QIO_String *xml_file, const char *filename, 
-	      QIO_Layout *layout, QIO_Filesystem *fs,
-	      QIO_Iflag *iflag)
+              QIO_Layout *layout, QIO_Filesystem *fs,
+              QIO_Iflag *iflag)
 {
   QIO_Reader *qio_in;
   DML_Layout *dml_layout;
@@ -779,28 +789,30 @@ QIO_open_read(QIO_String *xml_file, const char *filename,
   int this_node = layout->this_node;
   int status;
   int length;
-  DML_io_node_t my_io_node;
-  DML_master_io_node_t master_io_node;
+  DML_io_node_a_t my_io_node_a;
+  DML_master_io_node_a_t master_io_node_a;
+  void *fs_arg = NULL;
 
   /* Assign default behavior for io_node functions if needed */
   if(fs == NULL) {
-    my_io_node = DML_io_node;
-    master_io_node = DML_master_io_node;
+    my_io_node_a = DML_io_node_a;
+    master_io_node_a = DML_master_io_node_a;
   } else {
-    if(fs->my_io_node == NULL)
-      my_io_node = DML_io_node;
+    fs_arg = fs->arg;
+    if(fs->my_io_node_a == NULL)
+      my_io_node_a = DML_io_node_a;
     else
-      my_io_node = fs->my_io_node;
-    if(fs->master_io_node == NULL)
-      master_io_node = DML_master_io_node;
+      my_io_node_a = fs->my_io_node_a;
+    if(fs->master_io_node_a == NULL)
+      master_io_node_a = DML_master_io_node_a;
     else
-      master_io_node = fs->master_io_node;
+      master_io_node_a = fs->master_io_node_a;
   }
 
   /* On the compute nodes, we use DML calls to specify the I/O nodes
      and the master I/O node */
   qio_in = QIO_open_read_master(filename, layout, iflag,
-				my_io_node, master_io_node);
+                                my_io_node_a, master_io_node_a, fs_arg);
   if(qio_in == NULL) return NULL;
 
   /* Master I/O node broadcasts the volume format to all the nodes, */
@@ -808,7 +820,7 @@ QIO_open_read(QIO_String *xml_file, const char *filename,
   /* In discovery mode the master also broadcasts the lattice
      dimensions to all the nodes */
   status = QIO_broadcast_file_reader_info(qio_in, 
-					  qio_in->layout->discover_dims_mode);
+                                          qio_in->layout->discover_dims_mode);
 
   /* Read the rest of the header */
   status = QIO_open_read_nonmaster(qio_in, filename, iflag);
@@ -828,7 +840,7 @@ QIO_open_read(QIO_String *xml_file, const char *filename,
 
   /* First broadcast length */
   DML_broadcast_bytes((char *)&length,sizeof(int),
-		      this_node, dml_layout->master_io_node);
+                      this_node, dml_layout->master_io_node);
   
   /* Receiving nodes resize their strings */
   if(this_node != dml_layout->master_io_node){
@@ -837,7 +849,7 @@ QIO_open_read(QIO_String *xml_file, const char *filename,
 
   /* Then broadcast the string itself */
   DML_broadcast_bytes(QIO_string_ptr(xml_file),length,
-		      this_node, dml_layout->master_io_node);
+                      this_node, dml_layout->master_io_node);
   
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d): Done with user file XML\n",myname,this_node);

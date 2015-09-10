@@ -83,9 +83,14 @@ extern "C"
 /* For collecting and passing layout information */
 typedef struct {
   int (*node_number)(const int coords[]);
+  int (*node_number_a)(const int coords[], void *arg);
   int (*node_index)(const int coords[]);
+  int (*node_index_a)(const int coords[], void *arg);
   void (*get_coords)(int coords[], int node, int index);
+  void (*get_coords_a)(int coords[], int node, int index, void *arg);
   int (*num_sites)(int node);
+  int (*num_sites_a)(int node, void *arg);
+  void *arg;
   int *latsize;
   int latdim;
   size_t volume;
@@ -148,23 +153,50 @@ typedef struct {
 
 typedef struct {
   int number_io_nodes;
-  int type;                             /* Is node_path specified? */
-  DML_io_node_t my_io_node;             /* Mapping as on compute nodes */
-  DML_master_io_node_t master_io_node;  /* As on compute nodes */
-  int *io_node;                         /* Only if number_io_nodes !=
-					 number_of_nodes */
+  int type;                                 /* Is node_path specified? */
+  DML_io_node_t my_io_node;                 /* Mapping as on compute nodes */
+  DML_io_node_a_t my_io_node_a;             /* Mapping as on compute nodes, +arg */
+  DML_master_io_node_t master_io_node;      /* As on compute nodes */
+  DML_master_io_node_a_t master_io_node_a;  /* As on compute nodes, +arg */
+  void *arg;
+  int *io_node;                             /* Only if number_io_nodes !=
+					       number_of_nodes */
   char **node_path;                     /* Only if type = QIO_MULTI_PATH */
 } QIO_Filesystem;
 
+/* control structure for converters SINGLEFILE<->PARTFILE(_DIR) */
+typedef struct {
+  /* Local copy of layout as it appears on compute nodes */
+  QIO_Layout QIO_mpp_layout;
+
+  /* Local copy of file system specification */
+  QIO_Filesystem QIO_mpp_fs;
+
+  /* Table of size "number_of_nodes" maps node to io_node rank 
+     i.e. it inverts the io_node table */
+  int *QIO_ionode_to_rank;
+
+  /* Table of size "number_of_nodes" maps node to node_index offset 
+     needed for the fake ionode layout functions */
+  size_t *QIO_node_index_offset;
+
+  /* Table of size "number_io_nodes" maps io_node rank to list of node
+     members */
+  QIO_IOFamilyMember *QIO_io_family;
+
+  /* Flag to indicate whether fake ionode layout is in force */
+  int QIO_fake_ionode_layout = 0;
+} QIO_host_utils_s; /* for lack of better name */
+
 /* Internal host file conversion utilities in QIO_host_utils.c */
-QIO_Layout *QIO_create_ionode_layout(QIO_Layout *layout, QIO_Filesystem *fs);
+QIO_Layout *QIO_create_ionode_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO_host_utils_s *hu);
 void QIO_delete_ionode_layout(QIO_Layout* layout);
-QIO_Layout *QIO_create_scalar_layout(QIO_Layout *layout, QIO_Filesystem *fs);
+QIO_Layout *QIO_create_scalar_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO_host_utils_s *hu);
 void QIO_delete_scalar_layout(QIO_Layout *layout);
-int QIO_ionode_io_node(int node);
-int QIO_get_io_node_rank(int node);
-int QIO_ionode_to_scalar_index(int ionode_node, int ionode_index);
-int QIO_scalar_to_ionode_index(int scalar_node, int scalar_index);
+int QIO_ionode_io_node(int node, QIO_host_utils_s *hu);
+int QIO_get_io_node_rank(int node, QIO_host_utils_s *hu);
+int QIO_ionode_to_scalar_index(int ionode_node, int ionode_index, QIO_host_utils_s *hu);
+int QIO_scalar_to_ionode_index(int scalar_node, int scalar_index, QIO_host_utils_s *hu);
 
 /* Verbosity */
 int QIO_verbose(int level);

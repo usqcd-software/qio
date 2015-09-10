@@ -57,6 +57,7 @@ typedef struct
   get_put_arg *arg;
   int node;
   int master_io_node;
+  QIO_host_utils_s *hu;
   QIO_Reader *reader;
 } read_seek_arg;
 
@@ -65,6 +66,7 @@ typedef struct
   get_put_arg *arg;
   int node;
   int master_io_node;
+  QIO_host_utils_s *hu;
   QIO_Writer *writer;
 } write_seek_arg;
 
@@ -124,14 +126,14 @@ int QIO_bytes_of_word(char *type)
 }
 
 
-/* my_io_node function for host should be called only for node 0 */
-int QIO_host_my_io_node(int node)
+/* my_io_node_a function for host should be called only for node 0 */
+int QIO_host_my_io_node_a(int node, void *arg)
 {
   return node;
 }
 
 /* master I/O node for host */
-int QIO_host_master_io_node( void )
+int QIO_host_master_io_node_a(void *arg)
 {
   return 0;
 }
@@ -185,7 +187,7 @@ void QIO_scalar_get( char *s1, size_t ionode_index, int count, void *s2 )
   int status;
 
   /* Convert site rank ionode_index to scalar_index */
-  scalar_index = QIO_ionode_to_scalar_index(ionode_node,ionode_index);
+  scalar_index = QIO_ionode_to_scalar_index(ionode_node,ionode_index, arg_seek->hu);
 
   /* Read the field at location "scalar_index" and put it into
      field_in using the QIO_scalar_put factory function */
@@ -250,7 +252,7 @@ void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
   memcpy(dest,s1,datum_size);
 
   /* Convert ionode_index to scalar_index */
-  scalar_index = QIO_ionode_to_scalar_index(ionode_node,ionode_index);
+  scalar_index = QIO_ionode_to_scalar_index(ionode_node,ionode_index, arg_seek->hu);
 
   /* Write the field to the host single file at the location
      "scalar_index", getting it from field_in using the QIO_part_get
@@ -347,7 +349,7 @@ static QIO_Reader *QIO_open_read_partfile(int io_node_rank, QIO_Iflag *iflag,
   
   /* Open master ionode file to read */
   infile = QIO_open_read_master(newfilename,ionode_layout,
-				iflag,fs->my_io_node,fs->master_io_node);
+				iflag,fs->my_io_node_a,fs->master_io_node_a);
   if(infile == NULL)return NULL;
 
   /* Check the volume format */
@@ -392,7 +394,7 @@ static QIO_Writer *QIO_open_write_partfile(int io_node_rank, QIO_Oflag *oflag,
   /* Open to write by appending or with truncation if the file exists */
   outfile = QIO_generic_open_write(newfilename,volfmt,
 				   ionode_layout,oflag,
-				   fs->my_io_node,fs->master_io_node);
+				   fs->my_io_node_a,fs->master_io_node_a, fs->arg);
   return outfile;
 }
 
@@ -405,6 +407,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 			QIO_Layout *layout, int volfmt)
 {
   QIO_Layout *scalar_layout, *ionode_layout;
+  QIO_host_utils_s hu;
   QIO_String *xml_file_in, *xml_record_in;
   QIO_String *xml_file_out, *xml_record_out;
   QIO_Reader *infile;
@@ -416,7 +419,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   int *msg_begin, *msg_end;
   int i,status,master_io_node_rank;
   int number_io_nodes = fs->number_io_nodes;
-  int master_io_node = fs->master_io_node();
+  int master_io_node = fs->master_io_node_a(fs->arg);
   uint64_t total_bytes;
   size_t datum_size;
   int typesize,datacount,recordtype,word_size;
@@ -448,13 +451,13 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   xml_file_in = QIO_string_create();
   
   /* Create the MPP io_node layout structure */
-  ionode_layout = QIO_create_ionode_layout(layout, fs);
+  ionode_layout = QIO_create_ionode_layout(layout, fs, &hu);
   
   /* Create the scalar host layout structure */
-  scalar_layout = QIO_create_scalar_layout(layout, fs);
+  scalar_layout = QIO_create_scalar_layout(layout, fs, &hu);
   
   /* Which entry in the table is the MPP master ionode? */
-  master_io_node_rank = QIO_get_io_node_rank(master_io_node);
+  master_io_node_rank = QIO_get_io_node_rank(master_io_node, &hu);
   if(master_io_node_rank < 0){
     printf("%s: Bad Filesystem structure.  Master node %d is not an I/O node\n",
 	   myname,master_io_node);
@@ -463,8 +466,9 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 
   /* Open the input master file for reading */
   infile = QIO_open_read_master(filename, scalar_layout, NULL,
-				QIO_host_my_io_node,
-				QIO_host_master_io_node);
+				QIO_host_my_io_node_a,
+				QIO_host_master_io_node_a,
+                                NULL);
   if(infile == NULL)return QIO_ERR_OPEN_READ;
   
   if (QIO_get_reader_volfmt(infile) != QIO_SINGLEFILE)
@@ -598,8 +602,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 	if(status != QIO_SUCCESS)return status;
 
 	/* Prepare to read */
-	QIO_init_get_put_arg(&arg, &field_in, QIO_host_my_io_node(0),
-			     QIO_host_master_io_node());
+	QIO_init_get_put_arg(&arg, &field_in, QIO_host_my_io_node_a(0, NULL),
+			     QIO_host_master_io_node_a(NULL));
 	/* Read the data from the host file */
 	QIO_suppress_global_broadcast(infile);  /* Scalar operation here */
 	status = 
@@ -646,8 +650,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 	
 	/* Prepare to read */
 	QIO_init_get_put_arg(&arg, &field_in, 
-			     QIO_host_my_io_node(0),
-			     QIO_host_master_io_node());
+			     QIO_host_my_io_node_a(0, NULL),
+			     QIO_host_master_io_node_a(NULL));
 	
 	/* Expected total for the entire field */
 	total_bytes = ((uint64_t)infile->layout->subsetvolume) * datum_size;
@@ -814,7 +818,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
   int msg_begin, msg_end;
   int i,status,master_io_node_rank;
   int number_io_nodes = fs->number_io_nodes;
-  int master_io_node = fs->master_io_node();
+  int master_io_node = fs->master_io_node(fs->arg);
   size_t datum_size;
   int typesize,datacount,recordtype,word_size;
   int ntypes = 2;
@@ -873,15 +877,15 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
     offset[i] = -1;
   
   /* Create the MPP ionode layout structure */
-  ionode_layout = QIO_create_ionode_layout(layout, fs);
+  ionode_layout = QIO_create_ionode_layout(layout, fs, &hu);
   if(ionode_layout == NULL)return QIO_ERR_ALLOC;
 
   /* Create the scalar layout structure */
-  scalar_layout = QIO_create_scalar_layout(layout, fs);
+  scalar_layout = QIO_create_scalar_layout(layout, fs, &hu);
   if(scalar_layout == NULL)return QIO_ERR_ALLOC;
 
   /* Which entry in the table is the MPP master ionode? */
-  master_io_node_rank = QIO_get_io_node_rank(master_io_node);
+  master_io_node_rank = QIO_get_io_node_rank(master_io_node, &hu);
   if(master_io_node_rank < 0){
     printf("%s: Bad Filesystem structure.  Master node %d is not an I/O node\n",
            myname, master_io_node);
@@ -918,8 +922,8 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 
   outfile =  QIO_generic_open_write(filename,QIO_SINGLEFILE,
 				    scalar_layout, &oflag,
-				    QIO_host_my_io_node,
-				    QIO_host_master_io_node);
+				    QIO_host_my_io_node_a,
+				    QIO_host_master_io_node_a);
   
   if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
 
@@ -1029,8 +1033,8 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 	  totnbytes_in = nbytes_in;
 	  
 	  /* Write the global data to the host single file */
-	  QIO_init_get_put_arg(&arg, &field_in, QIO_host_my_io_node(0),
-			       QIO_host_master_io_node());
+	  QIO_init_get_put_arg(&arg, &field_in, QIO_host_my_io_node_a(0, NULL),
+			       QIO_host_master_io_node_a(NULL));
 
 	  status = QIO_write_record_data(outfile, &rec_info_in,
 					 QIO_scalar_get_global, 
@@ -1091,8 +1095,8 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
       
 	  /* Prepare to write */
 	  QIO_init_get_put_arg(&arg, &field_in, 
-			       QIO_host_my_io_node(0),
-			       QIO_host_master_io_node());
+			       QIO_host_my_io_node_a(0, NULL),
+			       QIO_host_master_io_node_a(NULL));
 	
 	  /* Cycle through all the partition files, reading and
 	     copying one site at a time.  The factory "put" function

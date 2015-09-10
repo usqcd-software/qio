@@ -165,7 +165,7 @@ int setup_layout(int len[], int nd, int numnodes){
   return 0;
 }
 
-int node_number(const int x[])
+int node_number_a(const int x[], void *a)
 {
   int i;
 
@@ -175,7 +175,7 @@ int node_number(const int x[])
   return QMP_get_node_number_from(mcoord);
 }
 
-int node_index(const int x[])
+int node_index_a(const int x[], void *a)
 {
   int i, r=0, p=0;
 
@@ -192,7 +192,7 @@ int node_index(const int x[])
   return r;
 }
 
-void get_coords(int x[], int node, int index)
+void get_coords_a(int x[], int node, int index, void *a)
 {
   int i, s, si;
   int *m;
@@ -227,7 +227,7 @@ void get_coords(int x[], int node, int index)
   free(m);
 
   /* Check the result */
-  if(node_index(x)!=si) {
+  if(node_index_a(x, NULL)!=si) {
     if(this_node==0) {
       fprintf(stderr,"get_coords: error in layout!\n");
       for(i=0; i<ndim; i++) {
@@ -243,6 +243,6 @@ void get_coords(int x[], int node, int index)
 }
 
 /* The number of sites on the specified node */
-int num_sites(int node){
+int num_sites_a(int node, void *a){
   return sites_on_node;
 }

@@ -494,17 +494,17 @@ void setup_layout(){
 /*------------------------------------------------------------------*/
 /* Layout utilities */
 /*------------------------------------------------------------------*/
-int node_number(const int coords[]) {
+int node_number_a(const int coords[], void *a) {
   return 0;
 }
 
 /*------------------------------------------------------------------*/
-int node_index(const int coords[]) {
+int node_index_a(const int coords[], void *a) {
   return lex_rank(coords,4,squaresize);
 }
 
 /*------------------------------------------------------------------*/
-int num_sites(int node) {
+int num_sites_a(int node, void *a) {
   return  sites_on_node;
 }
 
@@ -512,13 +512,13 @@ int num_sites(int node) {
 /* Map node number and index to coordinates  */
 /* (The inverse of node_number and node_index) */
 
-void get_coords(int coords[], int node, const int index){
+void get_coords_a(int coords[], int node, const int index, void *a){
   assert(node == 0);
   lex_coords(coords, LATDIM, squaresize, index);
 }
 
 /*------------------------------------------------------------------*/
-int io_node(int node){
+int io_node_a(int node, void *a){
   return node;
 }
 
@@ -678,24 +678,30 @@ void build_qio_layout(QIO_Layout *layout){
   lattice_size[2] = nz;
   lattice_size[3] = nt;
 
-  layout->node_number     = node_number;
-  layout->node_index      = node_index;
-  layout->get_coords      = get_coords;
-  layout->num_sites       = num_sites;
-  layout->latsize         = lattice_size;
-  layout->latdim          = LATDIM;
-  layout->volume          = volume;
-  layout->sites_on_node   = sites_on_node;
-  layout->this_node       = this_node;
+  layout->node_number   = NULL;
+  layout->node_index    = NULL;
+  layout->get_coords    = NULL;
+  layout->num_sites     = NULL;
+  layout->node_number_a = node_number_a;
+  layout->node_index_a  = node_index_a;
+  layout->get_coords_a  = get_coords_a;
+  layout->num_sites_a   = num_sites_a;
+  layout->arg           = NULL;
+  layout->latsize       = lattice_size;
+  layout->latdim        = LATDIM;
+  layout->volume        = volume;
+  layout->sites_on_node = sites_on_node;
+  layout->this_node     = this_node;
   layout->number_of_nodes = number_of_nodes;
 }
 
 /*----------------------------------------------------------------------*/
 void build_qio_filesystem(QIO_Filesystem *fs){
-  fs->number_io_nodes = 0;
-  fs->type = QIO_SINGLE_PATH;
-  fs->my_io_node = io_node;   /* Partfile I/O uses io_node from layout*.c */
-  fs->master_io_node = NULL;  /* Serial I/O uses default: node 0 */
+  fs->number_io_nodes   = 0;
+  fs->type              = QIO_SINGLE_PATH;
+  fs->my_io_node        = NULL; 
+  fs->my_io_node_a      = io_node_a;   /* Partfile I/O uses io_node from layout*.c */
+  fs->master_io_node    = NULL;  /* Serial I/O uses default: node 0 */
   fs->io_node = NULL;
   fs->node_path = NULL;
 }

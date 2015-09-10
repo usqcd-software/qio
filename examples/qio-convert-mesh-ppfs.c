@@ -79,11 +79,12 @@
 #define LINELENGTH PATHLENGTH+16
 #define	BASE_DIRMODE	0775
 
+/* TODO move to a structure passed as void *arg to my_io_node_a [sns 2015/09/10] */
 static QIO_Mesh_Topology *mesh;
 static int *nodes_per_ionode;
 static int *io_node_coords;
 
-/* Initialize my_io_node data */
+/* Initialize my_io_node_a data */
 
 static int init_my_io_node(){
   int i;
@@ -105,7 +106,7 @@ static int init_my_io_node(){
 }
 
 /* Map any node to its I/O node */
-static int my_io_node(int node){
+static int my_io_node_a(int node, void *arg){
   int i; 
 
   /* Get the machine coordinates for the specified node */
@@ -120,7 +121,7 @@ static int my_io_node(int node){
   return (int)lex_rank(io_node_coords, mesh->machdim, mesh->machsize);
 }
 
-static int zero_master_io_node(){return 0;}
+static int zero_master_io_node_a(void *arg){return 0;}
 
 static char *errmsg(void)
 {
@@ -148,8 +149,8 @@ static QIO_Filesystem *create_multi_ppfs(void){
   }
   fs->number_io_nodes = mesh->number_io_nodes;
   fs->type = QIO_MULTI_PATH;
-  fs->my_io_node = my_io_node;
-  fs->master_io_node = zero_master_io_node;
+  fs->my_io_node_a = my_io_node_a;
+  fs->master_io_node_a = zero_master_io_node_a;
   fs->io_node = NULL;
   fs->node_path = NULL;
 
@@ -272,7 +273,7 @@ int main(int argc, char *argv[]){
   /* Read topology */
   mesh = qio_read_topology(0);
 
-  /* Initialize the my_io_node function */
+  /* Initialize data for the my_io_node_a function */
   status = init_my_io_node();
   if(status != 0)return status;
 

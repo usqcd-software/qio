@@ -38,8 +38,9 @@ void QIO_reset_writer_ILDG_flags(QIO_Writer *out, QIO_Oflag *oflag){
 QIO_Writer *QIO_generic_open_write(const char *filename, 
 				   int volfmt, QIO_Layout *layout, 
 				   QIO_Oflag *oflag, 
-				   DML_io_node_t io_node, 
-				   DML_master_io_node_t master_io_node)
+				   DML_io_node_a_t io_node_a, 
+				   DML_master_io_node_a_t master_io_node_a,
+                                   void *fs_arg)
 {
   QIO_Writer *qio_out = NULL;
   LRL_FileWriter *lrl_file_out = NULL;
@@ -75,10 +76,15 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   /* Force single file format if there is only one node */
   if(layout->number_of_nodes==1) volfmt = QIO_SINGLEFILE;
   
-  dml_layout->node_number          = layout->node_number;
-  dml_layout->node_index           = layout->node_index;
-  dml_layout->get_coords           = layout->get_coords;
-  dml_layout->num_sites            = layout->num_sites;
+  dml_layout->node_number          = NULL;
+  dml_layout->node_index           = NULL;
+  dml_layout->get_coords           = NULL;
+  dml_layout->num_sites            = NULL;
+  dml_layout->node_number_a        = layout->node_number_a;
+  dml_layout->node_index_a         = layout->node_index_a;
+  dml_layout->get_coords_a         = layout->get_coords_a;
+  dml_layout->num_sites_a          = layout->num_sites_a;
+  dml_layout->arg                  = layout->arg;
   dml_layout->latsize              = latsize;
   dml_layout->latdim               = layout->latdim;
   dml_layout->volume               = layout->volume;
@@ -92,8 +98,10 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   dml_layout->hyperupper           = upper;
   dml_layout->subsetvolume         = layout->volume;
 				   
-  dml_layout->ionode               = io_node;
-  dml_layout->master_io_node       = master_io_node();
+  dml_layout->ionode               = NULL;
+  dml_layout->ionode_a             = io_node_a;
+  dml_layout->fs_arg               = fs_arg;
+  dml_layout->master_io_node       = master_io_node_a(fs_arg);
   
   /* Construct the writer handle */
   qio_out = (QIO_Writer *)malloc(sizeof(QIO_Writer));
@@ -154,9 +162,9 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   if( (qio_out->volfmt == QIO_MULTIFILE)
       || ((qio_out->volfmt == QIO_PARTFILE 
            || qio_out->volfmt == QIO_PARTFILE_DIR)
-	  && (dml_layout->ionode(this_node) == this_node))
+	  && (dml_layout->ionode_a(this_node, dml_layout->fs_arg) == this_node))
       || ((serpar == QIO_PARALLEL)
-	  && (dml_layout->ionode(this_node) == this_node))
+	  && (dml_layout->ionode_a(this_node, dml_layout->fs_arg) == this_node))
       || (this_node == dml_layout->master_io_node) ) {
     /* Modifies filename for non master nodes */
     newfilename = QIO_filename_edit(filename, volfmt, dml_layout->this_node);
@@ -262,13 +270,13 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
 int QIO_write_file_header(QIO_Writer* qio_out, QIO_String *xml_file)
 {
   QIO_String *xml_file_private;
-  DML_Layout *dml_layout = qio_out->layout;
-  int volfmt             = qio_out->volfmt;
-  int serpar             = qio_out->serpar;
-  int *latsize       = dml_layout->latsize;
-  int latdim         = dml_layout->latdim;
-  int this_node      = dml_layout->this_node;
-  int master_io_node = dml_layout->master_io_node;
+  DML_Layout *dml_layout= qio_out->layout;
+  int volfmt            = qio_out->volfmt;
+  int serpar            = qio_out->serpar;
+  int *latsize          = dml_layout->latsize;
+  int latdim            = dml_layout->latdim;
+  int this_node         = dml_layout->this_node;
+  int master_io_node    = dml_layout->master_io_node;
 
   QIO_FileInfo *file_info;
   int msg_begin, msg_end;
@@ -380,27 +388,29 @@ QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename,
   QIO_Writer *qio_out;
   int status;
   int this_node = layout->this_node;
-  DML_io_node_t my_io_node;
-  DML_master_io_node_t master_io_node;
+  DML_io_node_a_t my_io_node_a;
+  DML_master_io_node_a_t master_io_node_a;
+  void *fs_arg = NULL;
 
   /* Assign default behavior for io_node functions if needed */
   if(fs == NULL){
-    my_io_node = DML_io_node;
-    master_io_node = DML_master_io_node;
+    my_io_node_a = DML_io_node_a;
+    master_io_node_a = DML_master_io_node_a;
   }
   else{
-    if(fs->my_io_node == NULL)
-      my_io_node = DML_io_node;
+    fs_arg = fs->arg;
+    if(fs->my_io_node_a == NULL)
+      my_io_node_a = DML_io_node_a;
     else
-      my_io_node = fs->my_io_node;
-    if(fs->master_io_node == NULL)
-      master_io_node = DML_master_io_node;
+      my_io_node_a = fs->my_io_node_a;
+    if(fs->master_io_node_a == NULL)
+      master_io_node_a = DML_master_io_node_a;
     else
-      master_io_node = fs->master_io_node;
+      master_io_node_a = fs->master_io_node_a;
   }
 
   qio_out = QIO_generic_open_write(filename, volfmt, layout, oflag,
-				   my_io_node, master_io_node);
+				   my_io_node_a, master_io_node_a, fs_arg);
   if (NULL == qio_out)
     return NULL;
 #if 0
@@ -412,7 +422,7 @@ QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename,
   int fail = (qio_out==NULL);
   DML_sum_int(&fail);
   if(fail) {
-    if(this_node == master_io_node()) {
+    if(this_node == master_io_node_a(fs->arg)) {
       fprintf(stderr, "%s(%d): %i ranks failed to open file %s\n",
 	      __func__, this_node, fail, filename);
     }
@@ -424,7 +434,7 @@ QIO_Writer *QIO_open_write(QIO_String *xml_file, const char *filename,
   fail = (status != QIO_SUCCESS);
   DML_sum_int(&fail);
   if(fail) {
-    if(this_node == master_io_node()) {
+    if(this_node == master_io_node_a(fs->arg)) {
       fprintf(stderr, "%s(%d): %i ranks failed to write header to file %s\n",
 	      __func__, this_node, fail, filename);
     }

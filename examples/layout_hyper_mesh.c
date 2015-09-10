@@ -11,9 +11,9 @@
 /* The API:
 
    setup_layout()  sets up layout
-   node_number()   returns the node number on which a site lives
-   node_index()    returns the index of the site on the node
-   get_coords()    gives lattice coords from node & index
+   node_number_a() returns the node number on which a site lives
+   node_index_a()  returns the index of the site on the node
+   get_coords_a()  gives lattice coords from node & index
 */
 
 #include <stdlib.h>
@@ -79,7 +79,7 @@ setup_layout(
 }
 
 int
-node_number(const int x[])
+node_number_a(const int x[], void *a)
 {
   int i; 
   int *m;
@@ -106,7 +106,7 @@ node_number(const int x[])
 }
 
 int
-node_index(const int x[])
+node_index_a(const int x[], void *a)
 {
   int i, r=0, p=0;
 
@@ -124,7 +124,7 @@ node_index(const int x[])
 }
 
 void
-get_coords(int x[], int node, int index)
+get_coords_a(int x[], int node, int index, void *a)
 {
   int i, s, si;
   int *m = (int *)malloc(ndim*sizeof(int));
@@ -168,7 +168,7 @@ get_coords(int x[], int node, int index)
 
   free(m);
 
-  if(node_index(x)!=si) {
+  if(node_index_a(x, NULL)!=si) {
     fprintf(stderr,"layout_hyper_mesh: error in layout!\n");
     for(i=0; i<ndim; i++) {
       fprintf(stderr,"%i\t%i\t%i\n", size1[0][i], size1[1][i], size2[i]);
@@ -182,6 +182,6 @@ get_coords(int x[], int node, int index)
 
 
 /* The number of sites on the specified node */
-int num_sites(int node){
+int num_sites_a(int node, void *a){
   return sites_on_node;
 }

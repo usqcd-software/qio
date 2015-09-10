@@ -54,10 +54,15 @@ typedef uint32_t DML_SiteRank;
 /* See qio.h for QIO_Layout */
 typedef struct {
   /* Data distribution fixed for the entire file */
-  int (*node_number)(const int coords[]);
+  int (*node_number)(const int coords[]) ;
   int (*node_index)(const int coords[]);
   void (*get_coords)(int coords[], int node, const int index);
   int (*num_sites)(int node);
+  int (*node_number_a)(const int coords[], void *arg);
+  int (*node_index_a)(const int coords[], void *arg);
+  void (*get_coords_a)(int coords[], int node, const int index, void *arg);
+  int (*num_sites_a)(int node, void *arg);
+  void *arg;
   int *latsize;
   int latdim;
   size_t volume;
@@ -74,7 +79,8 @@ typedef struct {
   size_t subsetvolume;
 
   /* I/O partitions */
-  int (*ionode)(int node);
+  int (*ionode_a)(int node, void *arg);
+  void *fs_arg;
   int master_io_node;
 } DML_Layout;
 
@@ -275,10 +281,12 @@ void DML_sync(void);
 
 /* I/O layout */
 typedef int (*DML_io_node_t)(const int);
+typedef int (*DML_io_node_a_t)(const int, void *);
 typedef int (*DML_master_io_node_t)(void);
+typedef int (*DML_master_io_node_a_t)(void *);
 
-int DML_io_node(const int node);
-int DML_master_io_node(void);
+int DML_io_node_a(const int node, void *arg);
+int DML_master_io_node_a(void *arg);
 
 uint32_t DML_crc32(uint32_t crc, const unsigned char *buf, uint32_t len);
 

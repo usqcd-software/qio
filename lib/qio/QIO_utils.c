@@ -179,7 +179,7 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 
   /* Make a copy in case we have to byte reverse */
   rec_size = sites->number_of_io_sites * sizeof(DML_SiteRank);
-  if(this_node == DML_master_io_node() && QIO_verbosity() >= QIO_VERB_DEBUG){
+  if(this_node == DML_master_io_node_a(NULL) && QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d) allocating %llu for output sitelist\n",myname,this_node,
 	   (unsigned long long)rec_size);fflush(stdout);
   }

@@ -139,7 +139,7 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   int node;
   int this_node = layout->this_node;
   int number_of_nodes = layout->number_of_nodes;
-  int my_io_node = layout->ionode(this_node);
+  int my_io_node = layout->ionode_a(this_node, layout->fs_arg);
   size_t number_of_io_sites;
   int number_of_my_ionodes;
   char myname[] = "DML_count_partition_sitelist";
@@ -159,11 +159,11 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   number_of_my_ionodes = 0;
   number_of_io_sites = 0;
   for(node = 0; node < number_of_nodes; node++){
-    if(layout->ionode(node) == my_io_node){
+    if(layout->ionode_a(node, layout->fs_arg) == my_io_node){
       /* ( If we are discovering the lattice dimensions, we won't know
 	 the number of sites on any node ) */
       if(layout->latdim != 0)
-	number_of_io_sites += layout->num_sites(node);
+	number_of_io_sites += layout->num_sites_a(node, layout->arg);
       number_of_my_ionodes++;
     }
   }
@@ -178,8 +178,8 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
       /* Convert rank index to coordinates */
       DML_lex_coords(coords, latdim, latsize, rank);
       /* The node containing these coordinates */
-      send_node = layout->node_number(coords);
-      if(layout->ionode(send_node) == my_io_node)
+      send_node = layout->node_number_a(coords, arg);
+      if(layout->ionode_a(send_node, layout->fs_arg) == my_io_node)
 	number_of_io_sites++;
     }
 #endif
@@ -298,7 +298,7 @@ int DML_fill_multifile_sitelist(DML_Layout *layout, DML_SiteList *sites){
   /* Iterate over sites in storage order on this node */
   for(index = 0; index < layout->sites_on_node; index++){
     /* Convert storage order to coordinates */
-    layout->get_coords(coords,this_node,index);
+    layout->get_coords_a(coords,this_node,index, layout->arg);
     /* Convert coordinate to lexicographic rank */
     sites->list[index] = DML_lex_rank(coords,latdim,latsize);
   }
@@ -316,7 +316,7 @@ int DML_fill_partition_sitelist_try(DML_Layout *layout, DML_SiteList *sites){
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
   int this_node = layout->this_node;
-  int my_io_node = layout->ionode(this_node);
+  int my_io_node = layout->ionode_a(this_node, layout->fs_arg);
   size_t number_of_io_sites = sites->number_of_io_sites;
   DML_SiteRank *list        = sites->list;
   size_t index;
@@ -337,7 +337,8 @@ int DML_fill_partition_sitelist_try(DML_Layout *layout, DML_SiteList *sites){
     DML_lex_coords(coords, latdim, latsize, rank);
     /* If we have this site, add it to the list */
     /* (find the node that has the coords to node and then its I/O node) */
-    if(layout->ionode(layout->node_number(coords)) == my_io_node){
+    if(layout->ionode_a(layout->node_number_a(
+                    coords, layout->arg), layout->fs_arg) == my_io_node){
       list[index] = rank;
       index++;
       if(index >= number_of_io_sites)break;  /* memory protection */
@@ -408,7 +409,7 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   int node;
   int node_sites;
   int this_node = layout->this_node;
-  int my_io_node = layout->ionode(this_node);
+  int my_io_node = layout->ionode_a(this_node, layout->fs_arg);
   int number_of_nodes = layout->number_of_nodes;
   size_t number_of_io_sites = sites->number_of_io_sites;
   DML_SiteRank *list        = sites->list;
@@ -427,10 +428,10 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   index = 0;
   for(node = 0; node < number_of_nodes; node++){
     /* Find the nodes on my partition */
-    if(layout->ionode(node) == my_io_node){
-      node_sites = layout->num_sites(node);
+    if(layout->ionode_a(node, layout->fs_arg) == my_io_node){
+      node_sites = layout->num_sites_a(node, layout->arg);
       for(node_index = 0; node_index < node_sites; node_index++){
-	layout->get_coords(coords,node,node_index);
+	layout->get_coords_a(coords,node,node_index, layout->arg);
 	list[index] = DML_lex_rank(coords,latdim,latsize);
 	index++;
       }
@@ -1248,13 +1249,13 @@ int DML_my_ionode(int volfmt, int serpar, DML_Layout *layout){
     if(serpar == DML_SERIAL)
       return layout->master_io_node;
     else
-      return layout->ionode(layout->this_node);
+      return layout->ionode_a(layout->this_node, layout->fs_arg);
   }
   else if(volfmt == DML_MULTIFILE){
     return layout->this_node;
   }
   else if(volfmt == DML_PARTFILE || volfmt == DML_PARTFILE_DIR){
-    return layout->ionode(layout->this_node);
+    return layout->ionode_a(layout->this_node, layout->fs_arg);
   }
   else {
     printf("DML_my_ionode: Bad volfmt code %d\n",volfmt);
@@ -1410,7 +1411,7 @@ int DML_partition_subset_sitedata_out(DML_RecordWriter *dml_record_out,
   DML_lex_coords(coords, latdim, latsize, snd_coords);
   
   /* Node that has this data and sends it to my_io_node */
-  new_node = layout->node_number(coords);
+  new_node = layout->node_number_a(coords, layout->arg);
   
   /* Send nodes must wait for a ready signal from the I/O node
      to prevent message pileups on the I/O node */
@@ -1425,7 +1426,7 @@ int DML_partition_subset_sitedata_out(DML_RecordWriter *dml_record_out,
   if(this_node == current_node){
     /* Fetch directly to the buffer */
     buf = outbuf + size*buf_sites;
-    get(buf,layout->node_index(coords),count,arg);
+    get(buf,layout->node_index_a(coords, layout->arg),count,arg);
     buf_sites++;
   }
   
@@ -1733,7 +1734,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     DML_lex_coords(coords, latdim, latsize, snd_coords);
 
     /* Node that sends data */
-    new_node = layout->node_number(coords);
+    new_node = layout->node_number_a(coords, layout->arg);
 
     /* A node sends its message buffer to the io_node when changing
        nodes or when its message buffer is full or when the
@@ -1788,7 +1789,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     if(this_node == current_node){
       /* Fetch to the message buffer */
       buf = tbuf + size*tbuf_sites;
-      get(buf,layout->node_index(coords),count,arg);
+      get(buf,layout->node_index_a(coords, layout->arg),count,arg);
 
       /* Do byte reordering and update checksum */
       if (! DML_big_endian()) DML_byterevn(buf, size, word_size);
@@ -1930,7 +1931,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     DML_lex_coords(coords, latdim, latsize, snd_coords);
 
     /* Node that sends data */
-    new_node = layout->node_number(coords);
+    new_node = layout->node_number_a(coords, layout->arg);
 
     /* Send nodes must wait for a ready signal from the I/O node
        to prevent message pileups on the I/O node */
@@ -1945,7 +1946,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     if(this_node == current_node){
       /* Fetch directly to the buffer */
       buf = outbuf + size*buf_sites;
-      get(buf,layout->node_index(coords),count,arg);
+      get(buf,layout->node_index_a(coords, layout->arg),count,arg);
       buf_sites++;
     }
 
@@ -2113,7 +2114,7 @@ uint64_t DML_multifile_out(LRL_RecordWriter *lrl_record_out,
   for(isite = 0; isite < max_dest_sites; isite++){
 
     /* The coordinates of this site */
-    layout->get_coords(coords, this_node, isite);
+    layout->get_coords_a(coords, this_node, isite, layout->arg);
 
     /* The lexicographic rank of this site */
     rank = DML_lex_rank(coords, layout->latdim, layout->latsize);
@@ -2193,7 +2194,7 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
   for(isite = 0; isite < max_send_sites; isite++){
 
     /* The coordinates of this site */
-    layout->get_coords(coords, this_node, isite);
+    layout->get_coords_a(coords, this_node, isite, layout->arg);
 
     /* The lexicographic rank of this site */
     rank = DML_lex_rank(coords, layout->latdim, layout->latsize);
@@ -2369,7 +2370,7 @@ int DML_partition_subset_sitedata_in(DML_RecordReader *dml_record_in,
   DML_lex_coords(coords, latdim, latsize, rcv_coords);
   
   /* The node that gets the next datum */
-  dest_node = layout->node_number(coords);
+  dest_node = layout->node_number_a(coords, layout->arg);
   
   if(this_node == my_io_node){
     /* I/O node reads the next value */
@@ -2417,7 +2418,7 @@ int DML_partition_subset_sitedata_in(DML_RecordReader *dml_record_in,
       DML_byterevn(buf, size, word_size);
     
     /* Store the data */
-    put(buf,layout->node_index(coords),count,arg);
+    put(buf,layout->node_index_a(coords, layout->arg),count,arg);
   }
   
   buf_extract++;
@@ -2582,8 +2583,8 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
       DML_lex_coords(coords, latdim, latsize, rcv_coords);
       rcoords[k] = rcv_coords;
       /* The node that gets the next datum */
-      dest_node[k] = layout->node_number(coords);
-      node_index[k] = layout->node_index(coords);
+      dest_node[k] = layout->node_number_a(coords, layout->arg);
+      node_index[k] = layout->node_index_a(coords, layout->arg);
       k++;
       notdone = DML_next_subset_site(&rcv_coords, sites);
     } while(k<max_buf_sites && notdone);

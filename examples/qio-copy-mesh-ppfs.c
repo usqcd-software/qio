@@ -95,7 +95,7 @@ static int init_my_io_node(void){
 
 /* Map any node to its I/O node */
 static int
-my_io_node(int node)
+my_io_node_a(int node, void *arg)
 {
   /* Get the machine coordinates for this node's IO node */
   lex_coords(io_node_coords, mesh->machdim, mesh->machsize, node);
@@ -109,7 +109,7 @@ my_io_node(int node)
   return (int)lex_rank(io_node_coords, mesh->machdim, mesh->machsize);
 }
 
-static int zero_master_io_node(){return 0;}
+static int zero_master_io_node_a(void *arg){return 0;}
 
 static QIO_Filesystem *
 create_abbrev_multi_ppfs(void)
@@ -120,12 +120,12 @@ create_abbrev_multi_ppfs(void)
     printf("Can't malloc fs\n"); fflush(stdout);
     return NULL;
   }
-  fs->number_io_nodes = mesh->number_io_nodes;
-  fs->type = QIO_MULTI_PATH;
-  fs->my_io_node = my_io_node;
-  fs->master_io_node = zero_master_io_node;
-  fs->io_node = NULL;
-  fs->node_path = NULL;
+  fs->number_io_nodes   = mesh->number_io_nodes;
+  fs->type              = QIO_MULTI_PATH;
+  fs->my_io_node_a      = my_io_node_a;
+  fs->master_io_node_a  = zero_master_io_node_a;
+  fs->io_node           = NULL;
+  fs->node_path         = NULL;
   return fs;
 }
 
@@ -194,7 +194,7 @@ static int qio_file_copy(QIO_Filesystem *fs, int *argc, char **argv[])
   QIO_wait(this_node*delay);
 
   /* If I am my own I/O node, then I copy the file */
-  if(this_node == fs->my_io_node(this_node)){
+  if(this_node == fs->my_io_node_a(this_node, NULL)){
 
     /* Create the full source file name with the volume number suffix */
     srcfilepath = QIO_filename_edit(srcfilestem, QIO_PARTFILE, this_node);

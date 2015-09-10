@@ -27,9 +27,9 @@
 #include <stdio.h>
 #include "qio-convert-mesh.h"
 
-static int self_io_node(int node){return node;}
+static int self_io_node_a(int node, void *arg){return node;}
 
-static int zero_master_io_node(){return 0;}
+static int zero_master_io_node_a(void *arg){return 0;}
 
 static QIO_Filesystem *create_simple_fs(int numnodes){
   QIO_Filesystem *fs;
@@ -41,8 +41,8 @@ static QIO_Filesystem *create_simple_fs(int numnodes){
   }
   fs->number_io_nodes = numnodes;
   fs->type = QIO_SINGLE_PATH;
-  fs->my_io_node = self_io_node;
-  fs->master_io_node = zero_master_io_node;
+  fs->my_io_node_a = self_io_node_a;
+  fs->master_io_node_a = zero_master_io_node_a;
   fs->io_node = NULL;
   fs->node_path = NULL;
 

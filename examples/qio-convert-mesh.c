@@ -37,10 +37,15 @@ QIO_Layout *create_mpp_layout(int numnodes, int *latsize_in, int latdim){
   for(i = 0; i < latdim; i++)
     volume *= latsize[i];
 
-  layout->node_number = node_number;
-  layout->node_index = node_index;
-  layout->get_coords = get_coords;
-  layout->num_sites = num_sites;
+  layout->node_number   = NULL;
+  layout->node_index    = NULL;
+  layout->get_coords    = NULL;
+  layout->num_sites     = NULL;
+  layout->node_number_a = node_number_a;
+  layout->node_index_a  = node_index_a;
+  layout->get_coords_a  = get_coords_a;
+  layout->num_sites_a   = num_sites_a;
+  layout->arg           = NULL;
   layout->latsize = latsize;
   layout->latdim = latdim;
   layout->volume = volume;
@@ -106,17 +111,17 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   if(part_to_single == 0){
     /* If we are converting single to partfile the input master file is
        the current single file */
-    qio_in = QIO_open_read_master(filename, mpp_layout, 0, fs->my_io_node,
-				  fs->master_io_node);
+    qio_in = QIO_open_read_master(filename, mpp_layout, 0, fs->my_io_node_a,
+				  fs->master_io_node_a, fs->arg);
   }
   else{
     /* Otherwise the input master file is a partfile */
     /* Set input path for file according to MULTI/SINGLE PATH flag */
-    newfilename = QIO_set_filepath(fs,filename,fs->master_io_node());
+    newfilename = QIO_set_filepath(fs,filename,fs->master_io_node(fs->arg));
     
     /* Get lattice dimensions from file */
-    qio_in = QIO_open_read_master(newfilename, mpp_layout, 0, fs->my_io_node,
-				  fs->master_io_node);
+    qio_in = QIO_open_read_master(newfilename, mpp_layout, 0, fs->my_io_node_a,
+				  fs->master_io_node_a, fs->arg);
     free(newfilename);
     if(!qio_in)return 1;
   }
@@ -140,7 +145,7 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   if(part_to_single == 0)
     {
       printf("Converting %s from SINGLEFILE to PARTFILE\n",filename);
-      status = QIO_single_to_part(filename, fs, mpp_layout);
+      status = QIO_single_to_part(filename, fs, mpp_layout); // <- this is VERY suspicious [sns 2015/09/10]
       status = QIO_single_to_part(filename, fs, mpp_layout, QIO_PARTFILE);
     }
   else if(part_to_single == 1)
