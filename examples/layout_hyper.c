@@ -25,10 +25,10 @@
 */
 
 /*
-   setup_layout()  sets up layout
-   node_number()   returns the node number on which a site lives
-   node_index()    returns the index of the site on the node
-   get_coords()    gives lattice coords from node & index
+   setup_layout_a(void *arg)  sets up layout
+   node_number_a(void *arg)   returns the node number on which a site lives
+   node_index_a(void *arg)    returns the index of the site on the node
+   get_coords_a(void *arg)    gives lattice coords from node & index
 */
 
 

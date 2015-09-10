@@ -175,7 +175,7 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 
   if(volfmt == QIO_SINGLEFILE)return 0;
   if(volfmt == QIO_PARTFILE || volfmt == QIO_PARTFILE_DIR)
-    if(this_node != out->layout->ionode(this_node))return 0;
+    if(this_node != out->layout->ionode_a(this_node, out->layout->fs_arg))return 0;
 
   /* Make a copy in case we have to byte reverse */
   rec_size = sites->number_of_io_sites * sizeof(DML_SiteRank);
@@ -287,7 +287,7 @@ QIO_open_write_field(QIO_Writer *out,
     /* For serial output, the io_nodes open their records */
     /* For parallel output, only the master node opens its record */
     if( ( out->serpar == DML_SERIAL && 
-	  this_node == out->layout->ionode(this_node) ) ||
+	  this_node == out->layout->ionode_a(this_node, out->layout->fs_arg) ) ||
 	( out->serpar == DML_PARALLEL &&
 	  this_node == out->layout->master_io_node ) ) {
       if(QIO_verbosity() >= QIO_VERB_DEBUG)
@@ -671,7 +671,7 @@ QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type)
   /* Only I/O nodes read and verify the sitelist */
   if((volfmt == QIO_MULTIFILE) || 
           ((volfmt == QIO_PARTFILE || volfmt == QIO_PARTFILE_DIR)
-      && (this_node == in->layout->ionode(this_node)))){
+      && (this_node == in->layout->ionode_a(this_node, in->layout->fs_arg)))){
     /* Time release */
     /* double lapse = 1;
        QIO_wait(this_node*lapse); */

@@ -117,7 +117,7 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   else{
     /* Otherwise the input master file is a partfile */
     /* Set input path for file according to MULTI/SINGLE PATH flag */
-    newfilename = QIO_set_filepath(fs,filename,fs->master_io_node(fs->arg));
+    newfilename = QIO_set_filepath(fs,filename,fs->master_io_node_a(fs->arg));
     
     /* Get lattice dimensions from file */
     qio_in = QIO_open_read_master(newfilename, mpp_layout, 0, fs->my_io_node_a,

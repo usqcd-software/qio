@@ -7,14 +7,6 @@
 
 #define QIO_NON_IO -1
 
-typedef struct {
-  int *node_number;
-  int n;
-  int max;
-  int num_sites;
-} QIO_IOFamilyMember;
-
-
 /* Table lookup */
 /* Searches node offset table for node belonging to fake node index */
 /* Answer is the last node number in the family "io_node_rank" whose
@@ -131,7 +123,7 @@ void QIO_ionode_get_coords_a(int coords[], int ionode_node, int ionode_index, vo
   }
 
   /* Table lookup returns the true node number for this offset */
-  node = hu->QIO_offset_lookup(ionode_index, k, hu);
+  node = QIO_offset_lookup(ionode_index, k, hu);
   if(node < 0){
     printf("%s: Bad QIO_io_family table\n",myname);
     return;
@@ -256,7 +248,7 @@ int QIO_create_io_node_table(QIO_host_utils_s *hu){
   /* Build table of node_index offsets for each node */
   /* Start by counting sites per node */
   for(i = 0; i < hu->QIO_mpp_layout.number_of_nodes; i++)
-    hu->QIO_node_index_offset[i] = hu->QIO_mpp_layout.num_sites(i, hu->QIO_mpp_layout.arg);
+    hu->QIO_node_index_offset[i] = hu->QIO_mpp_layout.num_sites_a(i, hu->QIO_mpp_layout.arg);
 
 #if 0
   coords = DML_allocate_coords(latdim,myname,0);
@@ -285,8 +277,7 @@ int QIO_create_io_node_table(QIO_host_utils_s *hu){
   return 0;
 }
 
-void QIO_delete_io_node_table(void){
-  QIO_host_utils_s *hu = (QIO_host_utils_s *)arg;
+void QIO_delete_io_node_table(QIO_host_utils_s *hu){
   int number_io_nodes = hu->QIO_mpp_fs.number_io_nodes;
   int k;
 
@@ -315,6 +306,7 @@ QIO_Layout *QIO_create_ionode_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO
   /* Save values in globals for subsequent calls */
   QIO_init_mpp_layout(layout, hu);
   QIO_init_mpp_fs(fs, hu);
+  hu->QIO_fake_ionode_layout = 0; /* default value in previously global variable */
 
   /* Allocate and fill the layout structure */
   ionode_layout = (QIO_Layout *)malloc(sizeof(QIO_Layout));
@@ -354,8 +346,7 @@ QIO_Layout *QIO_create_ionode_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO
 
 /* Return rank of a given node */
 /* Returns -1 if node is not an I/O node */
-int QIO_get_io_node_rank(int node, void *arg){
-  QIO_host_utils_s *hu = (QIO_host_utils_s *)arg;
+int QIO_get_io_node_rank(int node, QIO_host_utils_s *hu){
   int rank;
 
   /* If we are faking the ionode layout, use the table */

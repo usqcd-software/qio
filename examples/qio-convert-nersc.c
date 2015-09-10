@@ -700,8 +700,9 @@ void build_qio_filesystem(QIO_Filesystem *fs){
   fs->number_io_nodes   = 0;
   fs->type              = QIO_SINGLE_PATH;
   fs->my_io_node        = NULL; 
+  fs->master_io_node    = NULL;  
   fs->my_io_node_a      = io_node_a;   /* Partfile I/O uses io_node from layout*.c */
-  fs->master_io_node    = NULL;  /* Serial I/O uses default: node 0 */
+  fs->master_io_node_a  = NULL;  /* Serial I/O uses default: node 0 */
   fs->io_node = NULL;
   fs->node_path = NULL;
 }

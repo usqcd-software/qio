@@ -98,7 +98,6 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   dml_layout->hyperupper           = upper;
   dml_layout->subsetvolume         = layout->volume;
 				   
-  dml_layout->ionode               = NULL;
   dml_layout->ionode_a             = io_node_a;
   dml_layout->fs_arg               = fs_arg;
   dml_layout->master_io_node       = master_io_node_a(fs_arg);

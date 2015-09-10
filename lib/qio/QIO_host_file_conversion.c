@@ -349,7 +349,7 @@ static QIO_Reader *QIO_open_read_partfile(int io_node_rank, QIO_Iflag *iflag,
   
   /* Open master ionode file to read */
   infile = QIO_open_read_master(newfilename,ionode_layout,
-				iflag,fs->my_io_node_a,fs->master_io_node_a);
+				iflag,fs->my_io_node_a,fs->master_io_node_a, fs->arg);
   if(infile == NULL)return NULL;
 
   /* Check the volume format */
@@ -789,7 +789,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   QIO_string_destroy(xml_file_in);
   
   QIO_delete_scalar_layout(scalar_layout);
-  QIO_delete_ionode_layout(ionode_layout);
+  QIO_delete_ionode_layout(ionode_layout, &hu);
   
   return QIO_SUCCESS;
 }
@@ -803,6 +803,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 			QIO_Filesystem *fs, QIO_Layout *layout)
 {
   QIO_Layout *scalar_layout, *ionode_layout;
+  QIO_host_utils_s hu;
   QIO_String *xml_file_in, *xml_record_in;
   QIO_String *xml_file_out, *xml_record_out;
   QIO_Reader *infile;
@@ -818,7 +819,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
   int msg_begin, msg_end;
   int i,status,master_io_node_rank;
   int number_io_nodes = fs->number_io_nodes;
-  int master_io_node = fs->master_io_node(fs->arg);
+  int master_io_node = fs->master_io_node_a(fs->arg);
   size_t datum_size;
   int typesize,datacount,recordtype,word_size;
   int ntypes = 2;
@@ -923,7 +924,8 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
   outfile =  QIO_generic_open_write(filename,QIO_SINGLEFILE,
 				    scalar_layout, &oflag,
 				    QIO_host_my_io_node_a,
-				    QIO_host_master_io_node_a);
+				    QIO_host_master_io_node_a, 
+                                    NULL);
   
   if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
 
@@ -1245,7 +1247,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
   QIO_string_destroy(xml_file_in);
   
   QIO_delete_scalar_layout(scalar_layout);
-  QIO_delete_ionode_layout(ionode_layout);
+  QIO_delete_ionode_layout(ionode_layout, &hu);
   
   return QIO_SUCCESS;
 }
