@@ -57,8 +57,9 @@ QIO_create_reader(const char *filename,
       lrl_file_in = LRL_open_read_file(filename);
       /* If the open succeeded with just "filename" the format
          must be SINGLEFILE */
-      if(lrl_file_in != NULL) volfmt = QIO_SINGLEFILE;
-      else if( volfmt == QIO_UNKNOWN || 
+      if(lrl_file_in != NULL)           /* open SINGLEFILE successful */
+        volfmt = QIO_SINGLEFILE;
+      else if( volfmt == QIO_UNKNOWN || /* open SINGLEFILE failed */
                volfmt == QIO_SINGLEFILE ) {
         if (this_node == master_ionode)
           printf("%s(%d): cannot open %s as SINGLEFILE; trying PARTFILE\n",
@@ -73,11 +74,11 @@ QIO_create_reader(const char *filename,
         printf("%s(%d): Calling LRL_open_read_file %s\n",
                myname,this_node,newfilename);
       lrl_file_in = LRL_open_read_file(newfilename);
-      if(lrl_file_in == NULL) {
+      if(lrl_file_in == NULL) {         /* open PARTFILE failed */
         if (this_node == master_ionode)
           printf("%s(%d): cannot open %s as PARTFILE; trying PARTFILE_DIR\n",
                  myname,this_node,newfilename);
-      } else {
+      } else {                          /* open PARTFILE successful */
         if (this_node == master_ionode)
           printf("%s(%d): opened %s as PARTFILE\n", 
                  myname, this_node, newfilename);
@@ -101,17 +102,15 @@ QIO_create_reader(const char *filename,
               myname, this_node, newfilename);
 
       lrl_file_in = LRL_open_read_file(newfilename);
-      if (lrl_file_in == NULL){
+      if (lrl_file_in == NULL){         /* open PARTFILE_DIR failed */
         if (this_node == master_ionode)
           printf("%s(%d): cannot open %s as PARTFILE_DIR; QIO_create_reader FAILED\n",
                   myname, this_node, newfilename);
-      } else {
+      } else {                          /* open PARTFILE_DIR successful */
         if (this_node == master_ionode)
           printf("%s(%d): opened %s as PARTFILE_DIR\n",
                   myname, this_node, newfilename);
-        if (volfmt == QIO_UNKNOWN
-            || qio_in->volfmt == QIO_PARTFILE)
-          volfmt = QIO_PARTFILE_DIR;
+        volfmt = QIO_PARTFILE_DIR;
       }
       free(newfilename);
     }
