@@ -328,10 +328,6 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
   sites_on_node = num_sites_a(this_node, NULL);
 
   /* Build the layout structure */
-  layout.node_number    = NULL;
-  layout.node_index     = NULL;
-  layout.get_coords     = NULL;
-  layout.num_sites      = NULL;
   layout.node_number_a  = node_number_a;
   layout.node_index_a   = node_index_a;
   layout.get_coords_a   = get_coords_a;

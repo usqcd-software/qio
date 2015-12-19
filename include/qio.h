@@ -82,13 +82,9 @@ extern "C"
   
 /* For collecting and passing layout information */
 typedef struct {
-  int (*node_number)(const int coords[]);
   int (*node_number_a)(const int coords[], void *arg);
-  int (*node_index)(const int coords[]);
   int (*node_index_a)(const int coords[], void *arg);
-  void (*get_coords)(int coords[], int node, int index);
   void (*get_coords_a)(int coords[], int node, int index, void *arg);
-  int (*num_sites)(int node);
   int (*num_sites_a)(int node, void *arg);
   void *arg;
   int *latsize;
@@ -154,9 +150,7 @@ typedef struct {
 typedef struct {
   int number_io_nodes;
   int type;                                 /* Is node_path specified? */
-  DML_io_node_t my_io_node;                 /* Mapping as on compute nodes */
   DML_io_node_a_t my_io_node_a;             /* Mapping as on compute nodes, +arg */
-  DML_master_io_node_t master_io_node;      /* As on compute nodes */
   DML_master_io_node_a_t master_io_node_a;  /* As on compute nodes, +arg */
   void *arg;
   int *io_node;                             /* Only if number_io_nodes !=
@@ -301,9 +295,12 @@ int QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
                             QIO_Iflag *iflag);
 int QIO_read_check_sitelist(QIO_Reader *qio_in);
 int QIO_read_user_file_xml(QIO_String *xml_file, QIO_Reader *qio_in);
-QIO_Writer *QIO_generic_open_write(const char *filename, int volfmt, QIO_Layout *layout, 
-                                   QIO_Oflag *oflag, DML_io_node_a_t io_node_a, 
-                                   DML_master_io_node_a_t master_io_node_a, void *fs_arg);
+QIO_Writer *QIO_generic_open_write(const char *filename, 
+                                  int volfmt, QIO_Layout *layout, 
+                                  QIO_Oflag *oflag, 
+                                  DML_io_node_a_t io_node_a, 
+                                  DML_master_io_node_a_t master_io_node_a, 
+                                  void *fs_arg);
 int QIO_reader_insert_hypercube_data(QIO_Reader *in, 
                                      QIO_RecordInfo *record_info);
 int QIO_writer_insert_hypercube_data(QIO_Writer *out, 

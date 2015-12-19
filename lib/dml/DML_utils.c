@@ -178,7 +178,7 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
       /* Convert rank index to coordinates */
       DML_lex_coords(coords, latdim, latsize, rank);
       /* The node containing these coordinates */
-      send_node = layout->node_number_a(coords, arg);
+      send_node = layout->node_number_a(coords, layout->arg);
       if(layout->ionode_a(send_node, layout->fs_arg) == my_io_node)
 	number_of_io_sites++;
     }

@@ -326,10 +326,6 @@ QIO_Layout *QIO_create_ionode_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO
 
   /* Otherwise we are using a fake ionode layout */
   hu->QIO_fake_ionode_layout = 1;
-  ionode_layout->node_number    = NULL;
-  ionode_layout->node_index     = NULL;
-  ionode_layout->get_coords     = NULL;
-  ionode_layout->num_sites      = NULL;
   ionode_layout->node_number_a  = QIO_ionode_node_number_a;
   ionode_layout->node_index_a   = QIO_ionode_node_index_a;
   ionode_layout->get_coords_a   = QIO_ionode_get_coords_a;
@@ -439,10 +435,6 @@ QIO_Layout *QIO_create_scalar_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO
   *scalar_layout = *layout;
 
   /* Make adjustments */
-  scalar_layout->node_number    = NULL;
-  scalar_layout->node_index     = NULL;
-  scalar_layout->get_coords     = NULL;
-  scalar_layout->num_sites      = NULL;
   scalar_layout->node_number_a  = QIO_scalar_node_number_a;
   scalar_layout->node_index_a   = QIO_scalar_node_index_a;
   scalar_layout->get_coords_a   = QIO_scalar_get_coords_a;

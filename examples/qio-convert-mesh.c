@@ -37,10 +37,6 @@ QIO_Layout *create_mpp_layout(int numnodes, int *latsize_in, int latdim){
   for(i = 0; i < latdim; i++)
     volume *= latsize[i];
 
-  layout->node_number   = NULL;
-  layout->node_index    = NULL;
-  layout->get_coords    = NULL;
-  layout->num_sites     = NULL;
   layout->node_number_a = node_number_a;
   layout->node_index_a  = node_index_a;
   layout->get_coords_a  = get_coords_a;

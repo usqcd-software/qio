@@ -124,6 +124,7 @@ create_abbrev_multi_ppfs(void)
   fs->type              = QIO_MULTI_PATH;
   fs->my_io_node_a      = my_io_node_a;
   fs->master_io_node_a  = zero_master_io_node_a;
+  fs->arg               = NULL;
   fs->io_node           = NULL;
   fs->node_path         = NULL;
   return fs;

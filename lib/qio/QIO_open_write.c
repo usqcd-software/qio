@@ -76,10 +76,6 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   /* Force single file format if there is only one node */
   if(layout->number_of_nodes==1) volfmt = QIO_SINGLEFILE;
   
-  dml_layout->node_number          = NULL;
-  dml_layout->node_index           = NULL;
-  dml_layout->get_coords           = NULL;
-  dml_layout->num_sites            = NULL;
   dml_layout->node_number_a        = layout->node_number_a;
   dml_layout->node_index_a         = layout->node_index_a;
   dml_layout->get_coords_a         = layout->get_coords_a;

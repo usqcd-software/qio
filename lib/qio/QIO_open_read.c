@@ -142,10 +142,6 @@ QIO_create_reader(const char *filename,
   if (dml_layout == NULL || layout == NULL)
     return NULL;
 
-  dml_layout->node_number          = NULL;
-  dml_layout->node_index           = NULL;
-  dml_layout->get_coords           = NULL;
-  dml_layout->num_sites            = NULL;
   dml_layout->node_number_a        = layout->node_number_a;
   dml_layout->node_index_a         = layout->node_index_a;
   dml_layout->get_coords_a         = layout->get_coords_a;

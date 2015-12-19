@@ -54,10 +54,6 @@ typedef uint32_t DML_SiteRank;
 /* See qio.h for QIO_Layout */
 typedef struct {
   /* Data distribution fixed for the entire file */
-  int (*node_number)(const int coords[]) ;
-  int (*node_index)(const int coords[]);
-  void (*get_coords)(int coords[], int node, const int index);
-  int (*num_sites)(int node);
   int (*node_number_a)(const int coords[], void *arg);
   int (*node_index_a)(const int coords[], void *arg);
   void (*get_coords_a)(int coords[], int node, const int index, void *arg);
@@ -280,9 +276,7 @@ int DML_clear_to_send(char *buf, size_t size, int my_io_node, int tonode);
 void DML_sync(void);
 
 /* I/O layout */
-typedef int (*DML_io_node_t)(const int);
 typedef int (*DML_io_node_a_t)(const int, void *);
-typedef int (*DML_master_io_node_t)(void);
 typedef int (*DML_master_io_node_a_t)(void *);
 
 int DML_io_node_a(const int node, void *arg);

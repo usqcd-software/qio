@@ -678,10 +678,6 @@ void build_qio_layout(QIO_Layout *layout){
   lattice_size[2] = nz;
   lattice_size[3] = nt;
 
-  layout->node_number   = NULL;
-  layout->node_index    = NULL;
-  layout->get_coords    = NULL;
-  layout->num_sites     = NULL;
   layout->node_number_a = node_number_a;
   layout->node_index_a  = node_index_a;
   layout->get_coords_a  = get_coords_a;
@@ -699,10 +695,9 @@ void build_qio_layout(QIO_Layout *layout){
 void build_qio_filesystem(QIO_Filesystem *fs){
   fs->number_io_nodes   = 0;
   fs->type              = QIO_SINGLE_PATH;
-  fs->my_io_node        = NULL; 
-  fs->master_io_node    = NULL;  
   fs->my_io_node_a      = io_node_a;   /* Partfile I/O uses io_node from layout*.c */
   fs->master_io_node_a  = NULL;  /* Serial I/O uses default: node 0 */
+  fs->arg               = NULL;
   fs->io_node = NULL;
   fs->node_path = NULL;
 }

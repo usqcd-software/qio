@@ -43,6 +43,7 @@ static QIO_Filesystem *create_simple_fs(int numnodes){
   fs->type = QIO_SINGLE_PATH;
   fs->my_io_node_a = self_io_node_a;
   fs->master_io_node_a = zero_master_io_node_a;
+  fs->arg = NULL;
   fs->io_node = NULL;
   fs->node_path = NULL;
 

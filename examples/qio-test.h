@@ -17,9 +17,9 @@ EXTERN int lattice_size[4];
 /* layout_hyper */
 int setup_layout(int len[], int nd, int numnodes);
 int node_number_a(const int x[], void *arg);
-int node_index_(const int x[], void *arg);
-void get_coords_(int x[], int node, int index, void *arg);
-int num_sites_(int node, void *arg);
+int node_index_a(const int x[], void *arg);
+void get_coords_a(int x[], int node, int index, void *arg);
+int num_sites_a(int node, void *arg);
 EXTERN int this_node;
 
 #define NCLR 3
