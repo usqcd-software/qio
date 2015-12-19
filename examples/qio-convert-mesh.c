@@ -145,7 +145,6 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   if(part_to_single == 0)
     {
       printf("Converting %s from SINGLEFILE to PARTFILE\n",filename);
-      status = QIO_single_to_part(filename, fs, mpp_layout); // <- this is VERY suspicious [sns 2015/09/10]
       status = QIO_single_to_part(filename, fs, mpp_layout, QIO_PARTFILE);
     }
   else if(part_to_single == 1)

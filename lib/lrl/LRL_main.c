@@ -1,8 +1,8 @@
-#include <qio_config.h>
-#include <lrl.h>
 #ifndef _POSIX_SOURCE
 #define _POSIX_SOURCE 1 // for fdopen in stdio
 #endif
+#include <qio_config.h>
+#include <lrl.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
