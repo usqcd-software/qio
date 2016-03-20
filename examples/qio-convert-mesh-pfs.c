@@ -1,7 +1,8 @@
 /* Host file conversion for grid machines.  FOR SINGLE PROCESSOR ONLY! */
 /* Converts from SINGLEFILE to PARTFILE format. */
 /* Here we treat the simplest case that each node reads its own file
-   from its own directory path */
+   from its own directory path.  For the case that a group of nodes
+   share a part file, use qio-convert-mesh-ppfs */
 
 /* Usage
 
@@ -20,6 +21,9 @@
 
       line 1: machdim            Number of machine dimensions allocated
       line 2: mx my mz ...       Dimensions of the allocated machine
+
+      NOTE: These values are known to the MILC code as node_geom, which
+      must be equivalent to ionode_geom for this application.
 
          The remaining lines specify the host path to the file system
          for each logical node.  The first value is the logical node

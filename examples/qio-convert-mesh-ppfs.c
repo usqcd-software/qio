@@ -23,9 +23,15 @@
       line 2: mx my mz ...       Dimensions of the node-partitioned machine
       line 3: px py pz ...       Dimensions of the I/O partitioned machine
 
+      NOTE: These are the same dimensions known to the MILC code as
+      node_geom and ionode_geom, respectively.
+
          The remaining lines specify the host path to the file system
          for each logical node.  The first value is the logical node
          number and the second is the path.  The path can be empty.
+
+         NOTE: These lines may be omitted entirely if the files are in the
+         same directory and the volume numbers are standard.
 
       line 4:  0 path1
       line 5:  k pathk
