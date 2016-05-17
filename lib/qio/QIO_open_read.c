@@ -113,10 +113,10 @@ QIO_create_reader(const char *filename,
       }
       free(newfilename);
     }
-    int success = (lrl_file_in != NULL);
-    DML_broadcast_bytes((char *)&success, sizeof(int), this_node, master_ionode);
-    if(!success) return NULL;
   }
+  int success = (lrl_file_in != NULL);
+  DML_broadcast_bytes((char *)&success, sizeof(int), this_node, master_ionode);
+  if(!success) return NULL;
 
   /* Make a local copy of lattice size */
   if(latdim != 0){
