@@ -79,6 +79,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <qio.h>
+#include <qmp.h>
 #include "qio-convert-mesh.h"
 
 #define PATHLENGTH 256
@@ -264,6 +265,26 @@ static void destroy_multi_ppfs(QIO_Filesystem *fs){
   }
 }
 
+static void
+init_qmp(int *argc, char **argv[])
+{
+  QMP_status_t status;
+  QMP_thread_level_t req, prv;
+
+  /* Start QMP */
+  req = QMP_THREAD_SINGLE;
+  status = QMP_init_msg_passing (argc, argv, req, &prv);
+
+  if (status != QMP_SUCCESS) {
+    QMP_error ("QMP_init failed: %s\n", QMP_error_string(status));
+    QMP_abort(1);
+  }
+}
+
+static void quit_qmp(void){
+  QMP_finalize_msg_passing ();
+}
+
 int main(int argc, char *argv[]){
   QIO_Filesystem *fs;
   int status;
@@ -274,6 +295,9 @@ int main(int argc, char *argv[]){
     fprintf(stderr,"Usage %s <0 (sing to part) | 1 (part to sing ILDG) | 2 (part to sing SciDAC) > <filename> [<ildgLFN>] < layoutfile\n",argv[0]);
     return 1;
   }
+
+  /* Initialize QMP */
+  init_qmp(&argc, &argv);
 
   /* Read topology */
   mesh = qio_read_topology(0);
