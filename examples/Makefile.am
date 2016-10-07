@@ -24,7 +24,6 @@ endif
 if ARCH_SCALAR
 bin_PROGRAMS += qio-convert-mesh-singlefs
 bin_PROGRAMS += qio-convert-mesh-pfs
-bin_PROGRAMS += qio-convert-mesh-ppfs
 bin_PROGRAMS += qio-convert-nersc
 check_PROGRAMS += 
 endif
@@ -32,7 +31,7 @@ endif
 # Only parallel arch
 if ARCH_PARSCALAR
 check_PROGRAMS +=
-bin_PROGRAMS += qio-copy-mesh-ppfs
+bin_PROGRAMS += qio-convert-mesh-ppfs qio-copy-mesh-ppfs
 endif
 
 EXTRA_DIST = qio-host-test.sh layout_test layout_test_ppfs binary_host_test
