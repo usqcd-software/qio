@@ -2513,9 +2513,9 @@ uint64_t DML_partition_close_in(DML_RecordReader *dml_record_in)
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
    PARTFILE/PARTFILE_DIR modes. */
 uint64_t
-DML_partition_in(LRL_RecordReader *lrl_record_in, 
+DML_partition_in(LRL_RecordReader *lrl_record_in,
 		 void (*put)(char *buf, size_t index, int count, void *arg),
-		 int count, size_t size, int word_size, void *arg, 
+		 int count, size_t size, int word_size, void *arg,
 		 DML_Layout *layout, DML_SiteList *sites, int volfmt,
 		 int serpar, DML_Checksum *checksum)
 {
@@ -2563,10 +2563,11 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
     return 0;
   }
 
-  DML_SiteRank rcoords[max_buf_sites];
+  DML_SiteRank *rcoords =
+    (DML_SiteRank*)DML_allocate_buf(sizeof(*rcoords),&max_buf_sites);
   DML_SiteRank firstrank=0, nextrank=0;
-  int dest_node[max_buf_sites];
-  int node_index[max_buf_sites];
+  int *dest_node = (int*)DML_allocate_buf(sizeof(*dest_node),&max_buf_sites);
+  int *node_index = (int*)DML_allocate_buf(sizeof(*node_index),&max_buf_sites);
   int notdone = 1;
   while(notdone) {
     int k = 0;
@@ -2623,10 +2624,16 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
       }
     }
   }
-  free(inbuf); free(coords);
+  free(dest_node);
+  free(node_index);
+  free(rcoords);
+  free(coords);
+  free(inbuf);
 
   timestop(dtall);
-  if(this_node==0) printf("%s times: read %.2f  send %.2f  total %.2f\n", __func__, dtread, dtsend, dtall);
+  if(this_node==0)
+    printf("%s times: read %.2f  send %.2f  total %.2f\n",
+	   __func__, dtread, dtsend, dtall);
   /* return the number of bytes read by this node only */
   return nbytes;
 }

@@ -137,12 +137,12 @@ static char *errmsg(void)
 
 static QIO_Filesystem *create_multi_ppfs(void){
   QIO_Filesystem *fs;
-  int i, j, k, d, numnodes;
+  int i, j, k, d;
   int *io_part_coords;
   mode_t dir_mode = BASE_DIRMODE;
   char myname[] = "create_multi_ppfs";
 
-  numnodes = mesh->numnodes;
+  //int numnodes = mesh->numnodes;
   char line[LINELENGTH];
   char path[PATHLENGTH+1];
   char *p;
@@ -288,7 +288,7 @@ static void quit_qmp(void){
 int main(int argc, char *argv[]){
   QIO_Filesystem *fs;
   int status;
-  
+
   /* Check arguments and process layout parameters */
 
   if(argc < 3){
@@ -316,6 +316,8 @@ int main(int argc, char *argv[]){
   destroy_multi_ppfs(fs);
 
   qio_destroy_topology(mesh);
+
+  quit_qmp();
 
   return status;
 }

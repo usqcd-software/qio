@@ -107,8 +107,7 @@ QIO_create_reader(const char *filename,
         if (this_node == master_ionode)
           printf("%s(%d): opened %s as PARTFILE_DIR\n",
                   myname, this_node, newfilename);
-        if (volfmt == QIO_UNKNOWN
-            || qio_in->volfmt == QIO_PARTFILE)
+        if (volfmt == QIO_UNKNOWN /*|| qio_in->volfmt == QIO_PARTFILE*/ )
           volfmt = QIO_PARTFILE_DIR;
       }
       free(newfilename);
