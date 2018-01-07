@@ -80,23 +80,25 @@ static void QIO_init_get_put_arg(get_put_arg *arg, s_field *field, int node,
 }
 
 static void QIO_init_read_seek_arg(read_seek_arg *arg_seek, get_put_arg *arg,
-				   QIO_Reader *reader, int node,
+				   QIO_Reader *reader, int node, QIO_host_utils_s *hu,
 				   int master_io_node)
 {
   arg_seek->arg            = arg;
   arg_seek->node           = node;
   arg_seek->master_io_node = master_io_node;
   arg_seek->reader         = reader;
+  arg_seek->hu             = hu;
 }
 
 static void QIO_init_write_seek_arg(write_seek_arg *arg_seek, get_put_arg *arg,
-				    QIO_Writer *writer, int node, 
+				    QIO_Writer *writer, int node, QIO_host_utils_s *hu,
 				    int master_io_node)
 {
   arg_seek->arg            = arg;
   arg_seek->node           = node;
   arg_seek->master_io_node = master_io_node;
   arg_seek->writer         = writer;
+  arg_seek->hu             = hu;
 }
 
 /* Convert precision code to bytes */
@@ -672,7 +674,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 
 	  /* Prepare part file output */
 	  QIO_init_read_seek_arg(&arg_seek, &arg, infile,
-				 ionode_layout->this_node,
+				 ionode_layout->this_node, &hu,
 				 master_io_node);
 	  
 	  /* Copy hypercube data from record_info structure to writer */
@@ -1139,7 +1141,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
       
 	    /* Prepare host single file output */
 	    QIO_init_write_seek_arg(&arg_seek, &arg, outfile,
-				    ionode_layout->this_node,
+				    ionode_layout->this_node, &hu,
 				    master_io_node);
 	    
 	    /* Read the record data, writing it to the host single
