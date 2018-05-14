@@ -6,7 +6,17 @@
 #include <qio_string.h>
 #include <lrl.h>
 #include <dml.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <lime.h>
+
+#ifdef __cplusplus
+}
+#endif
 
 #define QIO_UNKNOWN    DML_UNKNOWN
 #define QIO_SINGLEFILE DML_SINGLEFILE 
