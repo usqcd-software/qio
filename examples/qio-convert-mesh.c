@@ -47,6 +47,7 @@ QIO_Layout *create_mpp_layout(int numnodes, int *latsize_in, int latdim){
   layout->volume = volume;
   layout->sites_on_node = 0;  /* Ignored */
   layout->this_node = 0;      /* Reset */
+  layout->this_volume = 0;
   layout->number_of_nodes = numnodes;
   return layout;
 }

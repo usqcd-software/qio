@@ -92,6 +92,7 @@ typedef struct {
   size_t volume;
   size_t sites_on_node;
   int this_node;
+  int this_volume;
   int number_of_nodes;
 } QIO_Layout;
 

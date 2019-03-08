@@ -343,6 +343,7 @@ static QIO_Reader *QIO_open_read_partfile(int io_node_rank, QIO_Iflag *iflag,
   /* Pretend we are the ionode */
   ionode_layout->this_node = 
     QIO_set_this_node(fs,layout,io_node_rank);
+  ionode_layout->this_volume = ionode_layout->this_node;
   
   /* Set output path according to MULTI/SINGLE PATH flag */
   newfilename = QIO_set_filepath(fs,filename,io_node_rank);
@@ -387,6 +388,7 @@ static QIO_Writer *QIO_open_write_partfile(int io_node_rank, QIO_Oflag *oflag,
 
   /* Pretend we are the ionode */
   ionode_layout->this_node = QIO_set_this_node(fs,layout,io_node_rank);
+  ionode_layout->this_volume = ionode_layout->this_node;
   
   /* Set output path according to MULTI/SINGLE PATH flag */
   newfilename = QIO_set_filepath(fs,filename,io_node_rank);

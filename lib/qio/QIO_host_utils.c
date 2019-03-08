@@ -441,6 +441,7 @@ QIO_Layout *QIO_create_scalar_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO
   scalar_layout->num_sites_a    = QIO_scalar_num_sites_a;
   scalar_layout->arg            = hu;
   scalar_layout->this_node      = 0;
+  scalar_layout->this_volume    = 0;
   scalar_layout->number_of_nodes= 1;
   scalar_layout->sites_on_node  = hu->QIO_mpp_layout.volume;
 

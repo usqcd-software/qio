@@ -688,6 +688,7 @@ void build_qio_layout(QIO_Layout *layout){
   layout->volume        = volume;
   layout->sites_on_node = sites_on_node;
   layout->this_node     = this_node;
+  layout->this_volume   = this_node;
   layout->number_of_nodes = number_of_nodes;
 }
 

@@ -49,7 +49,7 @@ int QIO_verbosity(){
 /* In case of multifile format we use a common file name stem and add
    a suffix that depends on the node number */
 
-char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
+char *QIO_filename_edit(const char *filename, int volfmt, int this_volume){
 
   /* Caller must clean up returned filename */
   int n = strlen(filename) + 12;
@@ -75,9 +75,9 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
       dirname_len = dirname_end - filename + 1;
     strncpy(newfilename, filename, dirname_len);
     snprintf(newfilename + dirname_len, n - dirname_len, "vol%04d/%s",
-       +             this_node, filename + dirname_len);
+       +             this_volume, filename + dirname_len);
   } else { /* QIO_PARTFILE, QIO_MULTIFILE? */
-    snprintf(newfilename,n,"%s.vol%04d",filename,this_node);
+    snprintf(newfilename,n,"%s.vol%04d",filename,this_volume);
   }
   return newfilename;
 }

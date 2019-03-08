@@ -69,7 +69,7 @@ QIO_create_reader(const char *filename,
     /* try QIO_PARTFILE ; also, catch-all except partfile_dir */
     if(lrl_file_in == NULL && volfmt != QIO_PARTFILE_DIR){ 
       /* If plain filename fails, try filename with volume number suffix */
-      newfilename = QIO_filename_edit(filename, QIO_PARTFILE, this_node);
+      newfilename = QIO_filename_edit(filename, QIO_PARTFILE, layout->this_volume);
       if(QIO_verbosity() >= QIO_VERB_DEBUG)
         printf("%s(%d): Calling LRL_open_read_file %s\n",
                myname,this_node,newfilename);
@@ -96,7 +96,7 @@ QIO_create_reader(const char *filename,
     /* try QIO_PARTFILE_DIR: logic is identical to the QIO_PARTFILE clause 
        also, catch-all for all methods that failed above */
     if (lrl_file_in == NULL) {
-      newfilename = QIO_filename_edit(filename, QIO_PARTFILE_DIR, this_node);
+      newfilename = QIO_filename_edit(filename, QIO_PARTFILE_DIR, layout->this_volume);
       if (QIO_verbosity() >= QIO_VERB_DEBUG)
        printf("%s(%d): Calling LRL_open_read_file %s\n",
               myname, this_node, newfilename);
@@ -152,6 +152,7 @@ QIO_create_reader(const char *filename,
   dml_layout->volume               = layout->volume;
   dml_layout->sites_on_node        = layout->sites_on_node;
   dml_layout->this_node            = layout->this_node;
+  dml_layout->this_volume          = layout->this_volume;
   dml_layout->number_of_nodes      = layout->number_of_nodes;
   dml_layout->broadcast_globaldata = 1;
   dml_layout->discover_dims_mode   = (layout->latdim == 0);
@@ -640,7 +641,7 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
       /* (The global master has already opened its file) */
       if(this_node != dml_layout->master_io_node){
         /* Construct the file name based on the partition I/O node number */
-        newfilename = QIO_filename_edit(filename, qio_in->volfmt, this_node);
+        newfilename = QIO_filename_edit(filename, qio_in->volfmt, dml_layout->this_volume);
         /* Open the file */
         if(QIO_verbosity() >= QIO_VERB_DEBUG)
           printf("%s(%d): Calling LRL_open_read_file %s\n",
@@ -670,7 +671,7 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
     /* The non-master nodes open their files */
     if(this_node != dml_layout->master_io_node){
       /* Edit file name */
-      newfilename = QIO_filename_edit(filename, qio_in->volfmt, this_node);
+      newfilename = QIO_filename_edit(filename, qio_in->volfmt, dml_layout->this_volume);
       if(QIO_verbosity() >= QIO_VERB_DEBUG)
         printf("%s(%d): Calling LRL_open_read_file %s\n",
                myname,this_node,newfilename);

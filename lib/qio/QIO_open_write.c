@@ -86,6 +86,7 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
   dml_layout->volume               = layout->volume;
   dml_layout->sites_on_node        = layout->sites_on_node;
   dml_layout->this_node            = layout->this_node;
+  dml_layout->this_volume          = layout->this_volume;
   dml_layout->number_of_nodes      = layout->number_of_nodes;
   dml_layout->broadcast_globaldata = 0; /* Not applicable for writing */
   dml_layout->discover_dims_mode   = 0;
@@ -162,7 +163,7 @@ QIO_Writer *QIO_generic_open_write(const char *filename,
 	  && (dml_layout->ionode_a(this_node, dml_layout->fs_arg) == this_node))
       || (this_node == dml_layout->master_io_node) ) {
     /* Modifies filename for non master nodes */
-    newfilename = QIO_filename_edit(filename, volfmt, dml_layout->this_node);
+    newfilename = QIO_filename_edit(filename, volfmt, dml_layout->this_volume);
     /* for QIO_PARTFILE_DIR: check if xxx/volNNNN directory exists */
     if (qio_out->volfmt == QIO_PARTFILE_DIR) {
       /* get dirname */
