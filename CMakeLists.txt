@@ -33,11 +33,11 @@ if(QMP_DIR)
     message(FATAL_ERROR "Attempting to use QMP in a Non-parallel build!!!")
   endif()
 
-  list(APPEND ${CMAKE_PREFIX_PATH} ${QMP_DIR}/cmake)
-  find_package(QMP)
+  list(APPEND ${CMAKE_PREFIX_PATH} ${QMP_DIR})
+  find_package(QMP REQUIRED)
   if(QMP_FOUND)
-    message(STATUS "Found QMP.")
-  endif()
+    message(STATUS "Found QMP")   
+  endif(QMP_FOUND)
 endif()
 
 if( QIO_ENABLE_PARALLEL_IO )
@@ -88,5 +88,17 @@ check_type_size("unsigned short" SIZEOF_UNSIGNED_SHORT)
 
 configure_file(include/qio_config_internal.cmake.h.in include/qio_config_internal.h)
 
-
 add_subdirectory(other_libs/c-lime)
+add_subdirectory(lib)
+
+
+install(TARGETS qio EXPORT QIOTargets
+  ARCHIVE DESTINATION lib
+  LIBRARY  DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include)
+  
+install(EXPORT QIOTargets DESTINATION lib/cmake/QIO)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTALL_PREFIX})
+
