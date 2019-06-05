@@ -90,7 +90,7 @@ configure_file(include/qio_config_internal.cmake.h.in include/qio_config_interna
 
 add_subdirectory(other_libs/c-lime)
 add_subdirectory(lib)
-
+add_subdirectory(examples)
 
 # Install the library and the targets 
 # into the export for the targets
