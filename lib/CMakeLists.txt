@@ -51,5 +51,7 @@ target_include_directories(qio PUBLIC
 target_include_directories(qio PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../include>
   $<INSTALL_INTERFACE:include>)
-  
-
+ 
+ 
+set_target_properties(qio PROPERTIES C_STANDARD 99)
+set_target_properties(qio PROPERTIES C_EXTENSIONS OFF)

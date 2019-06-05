@@ -4,6 +4,7 @@
 #
 #
 include(CMakeFindDependencyMacro)
+set(QIO_ENABLE_PARALLEL_BUILD @QIO_ENABLE_PARALLEL_BUILD@)
 
 find_dependency(C-Lime REQUIRED)
 if(QIO_ENABLE_PARALLEL_BUILD)
