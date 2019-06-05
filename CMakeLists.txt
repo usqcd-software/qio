@@ -122,3 +122,4 @@ write_basic_package_version_file(
     )
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/QIOVersion.cmake ${CMAKE_CURRENT_BINARY_DIR}/QIOConfig.cmake DESTINATION lib/cmake/QIO)
+export(PACKAGE QIO)
