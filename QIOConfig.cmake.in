@@ -1,0 +1,16 @@
+@PACKAGE_INIT@
+
+# Boiler Plate Config file
+#
+#
+include(CMakeFindDependencyMacro)
+
+find_dependency(C-Lime REQUIRED)
+if(QIO_ENABLE_PARALLEL_BUILD)
+  find_dependency(QMP REQUIRED)
+endif()
+
+set(QIO_INCLUDE_DIR @QIO_INCLUDE_DIR@)
+
+# Include the generated exported targets
+include(${CMAKE_CURRENT_LIST_DIR}/QIOTargets.cmake)

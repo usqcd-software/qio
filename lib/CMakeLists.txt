@@ -34,8 +34,12 @@ else()
 endif()
 
 add_library(qio ${QIO_SRCS})
+
+
+
+
 target_link_libraries(qio PUBLIC lime)
-if( QIO_ENABLE_PARALLEL_BUILD )
+if(QIO_ENABLE_PARALLEL_BUILD)
   target_link_libraries(qio PUBLIC qmp)
 endif()
 

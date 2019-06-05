@@ -92,13 +92,33 @@ add_subdirectory(other_libs/c-lime)
 add_subdirectory(lib)
 
 
+# Install the library and the targets 
+# into the export for the targets
 install(TARGETS qio EXPORT QIOTargets
   ARCHIVE DESTINATION lib
   LIBRARY  DESTINATION lib
   RUNTIME DESTINATION bin
   INCLUDES DESTINATION include)
   
-install(EXPORT QIOTargets DESTINATION lib/cmake/QIO)
+# Install the export for the targets into lib/cmake/QIO/QIOTargets.cmake
+install(EXPORT QIOTargets NAMESPACE QIO:: DESTINATION lib/cmake/QIO)
 
+# Install the headers
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTALL_PREFIX})
 
+# Install the generated headers
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/qio_config_internal.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/)
+set(QIO_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)
+message(STATUS "Setting QIO_INCLUDE_DIR: ${QIO_INCLUDE_DIR}")
+# Make the config file
+configure_package_config_file(QIOConfig.cmake.in QIOConfig.cmake INSTALL_DESTINATION lib/cmake/QIO PATH_VARS QIO_INCLUDE_DIR)
+
+# Make the version file
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    QIOVersion.cmake
+    VERSION ${PACKAGE_VERSION}
+    COMPATIBILITY AnyNewerVersion
+    )
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/QIOVersion.cmake ${CMAKE_CURRENT_BINARY_DIR}/QIOConfig.cmake DESTINATION lib/cmake/QIO)
