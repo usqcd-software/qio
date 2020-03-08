@@ -84,8 +84,8 @@ extern "C"
 typedef struct {
   int (*node_number)(const int coords[]);
   int (*node_index)(const int coords[]);
-  void (*get_coords)(int coords[], int node, int index);
-  int (*num_sites)(int node);
+  void (*get_coords)(int coords[], int node, size_t index);
+  size_t (*num_sites)(int node);
   int *latsize;
   int latdim;
   size_t volume;
@@ -163,8 +163,8 @@ QIO_Layout *QIO_create_scalar_layout(QIO_Layout *layout, QIO_Filesystem *fs);
 void QIO_delete_scalar_layout(QIO_Layout *layout);
 int QIO_ionode_io_node(int node);
 int QIO_get_io_node_rank(int node);
-int QIO_ionode_to_scalar_index(int ionode_node, int ionode_index);
-int QIO_scalar_to_ionode_index(int scalar_node, int scalar_index);
+int QIO_ionode_to_scalar_index(int ionode_node, size_t ionode_index);
+int QIO_scalar_to_ionode_index(int scalar_node, size_t scalar_index);
 
 /* Verbosity */
 int QIO_verbose(int level);

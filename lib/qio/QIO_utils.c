@@ -253,20 +253,26 @@ QIO_open_write_field(QIO_Writer *out,
       return NULL;
     }
     /* Field or subset data */
-    if(out->serpar == QIO_SERIAL)
+    if(out->serpar == QIO_SERIAL){
       /* Serial output.  Record size equals the size we write. */
       planned_rec_size = ((uint64_t)sites->subset_io_sites) * datum_size;
-    else
-      /* Parallel output.  Record size equals the total volume
-	 NOTE: If we later decide to write partitions in parallel,
-	 this has to be changed to the size for the partition. */
-      planned_rec_size = ((uint64_t)out->layout->subsetvolume) * datum_size;
-    
-    if(QIO_verbosity() >= QIO_VERB_DEBUG){
-      printf("%s(%d): field data: sites %lu datum %lu\n",
-	     myname,this_node,
-	     (unsigned long)sites->subset_io_sites,
-	     (unsigned long)datum_size);
+      if(QIO_verbosity() >= QIO_VERB_DEBUG){
+	printf("%s(%d): field data: sites %llu datum %lu\n",
+	       myname,this_node,
+	       (unsigned long long)sites->subset_io_sites,
+	       (unsigned long)datum_size);
+      } else {
+	/* Parallel output.  Record size equals the total volume
+	   NOTE: If we later decide to write partitions in parallel,
+	   this has to be changed to the size for the partition. */
+	planned_rec_size = ((uint64_t)out->layout->subsetvolume) * datum_size;
+	if(QIO_verbosity() >= QIO_VERB_DEBUG){
+	  printf("%s(%d): field data: sites %llu datum %lu\n",
+		 myname,this_node,
+		 (unsigned long long)out->layout->subsetvolume,
+		 (unsigned long)datum_size);
+	}
+      }
     }
   }
   
@@ -791,14 +797,23 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size,
       expected_rec_size = datum_size;
     else {
       /* Field data or hypercube data */
-      if(in->serpar == QIO_SERIAL)
+      if(in->serpar == QIO_SERIAL){
 	/* Serial input. Record size equals the size we actually read */
 	expected_rec_size = ((uint64_t)sites->subset_io_sites) * datum_size; 
-      else
+	if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	  printf("%s(%d): subset_io_sites %llu, datum_size %lu\n",
+		 myname, this_node, 
+		 (unsigned long long)sites->subset_io_sites, datum_size);
+      }  else {
 	/* Parallel input.  Record size equals the total volume
 	   NOTE: If we later decide to read partitions in parallel,
 	   this has to be changed to the size for the partition. */
 	expected_rec_size = ((uint64_t)in->layout->subsetvolume) * datum_size;
+	if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	  printf("%s(%d): subset volume %llu, datum_size %lu\n",
+		 myname, this_node, 
+		 (unsigned long long)in->layout->subsetvolume, datum_size);
+      }
     }
     if (announced_rec_size != expected_rec_size){
       printf("%s(%d): rec_size mismatch: found %llu expected %llu\n",

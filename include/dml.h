@@ -56,8 +56,8 @@ typedef struct {
   /* Data distribution fixed for the entire file */
   int (*node_number)(const int coords[]);
   int (*node_index)(const int coords[]);
-  void (*get_coords)(int coords[], int node, const int index);
-  int (*num_sites)(int node);
+  void (*get_coords)(int coords[], int node, const size_t index);
+  size_t (*num_sites)(int node);
   int *latsize;
   int latdim;
   size_t volume;
@@ -91,8 +91,9 @@ typedef struct {
 
   /* Constant for a record */
   int use_subset;
-  int *subset_rank;     /* Rank order of sites in subset */
-  int subset_io_sites;
+  DML_SiteRank *subset_rank;     /* Rank order of sites in subset */
+  char *insubset;                /* 'T'/'F' Is the site in the subset? */
+  size_t subset_io_sites;
 } DML_SiteList;
 
 

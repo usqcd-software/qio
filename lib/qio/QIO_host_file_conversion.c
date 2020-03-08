@@ -181,7 +181,7 @@ void QIO_scalar_get( char *s1, size_t ionode_index, int count, void *s2 )
   size_t datum_size = field_in->datum_size;
   char *src         = field_in->data;
   int word_size     = field_in->word_size;
-  int scalar_index;
+  size_t scalar_index;
   int status;
 
   /* Convert site rank ionode_index to scalar_index */
@@ -243,7 +243,7 @@ void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
   size_t datum_size        = field_in->datum_size;
   char *dest               = field_in->data;
   int word_size            = field_in->word_size;
-  int scalar_index;
+  size_t scalar_index;
   int status;
 
   /* Copy the input buffer to field_in */
