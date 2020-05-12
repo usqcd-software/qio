@@ -6,7 +6,7 @@
 /* layout_hyper_mesh */
 int setup_layout(int len[], int nd, int nsquares2[], int ndim2);
 int node_number(const int x[]);
-int node_index(const int x[]);
+size_t node_index(const int x[]);
 void get_coords(int x[], int node, size_t index);
 size_t num_sites(int node);
 

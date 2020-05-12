@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static int sites_on_node;
+static size_t sites_on_node;
 static int *squaresize;   /* dimensions of hypercubes */
 static int *nsquares;     /* number of hypercubes in each direction */
 static int ndim;
@@ -105,10 +105,11 @@ node_number(const int x[])
   return rank;
 }
 
-int
+size_t
 node_index(const int x[])
 {
-  int i, r=0, p=0;
+  int i;
+  size_t r=0, p=0;
 
   for(i=ndim-1; i>=0; --i) {
     r = r*squaresize[i] + (x[i]%squaresize[i]);
@@ -124,9 +125,10 @@ node_index(const int x[])
 }
 
 void
-get_coords(int x[], int node, int index)
+get_coords(int x[], int node, size_t index)
 {
-  int i, s, si;
+  int i;
+  size_t s, si;
   int *m = (int *)malloc(ndim*sizeof(int));
   int pos;
 
@@ -182,6 +184,6 @@ get_coords(int x[], int node, int index)
 
 
 /* The number of sites on the specified node */
-int num_sites(int node){
+size_t num_sites(int node){
   return sites_on_node;
 }

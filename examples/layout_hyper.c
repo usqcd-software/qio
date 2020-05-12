@@ -50,7 +50,7 @@ static int *nsquares;     /* number of hypercubes in each direction */
 static int ndim;
 static int *size1[2], *size2;
 static int prime[] = {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53};
-static int sites_on_node;
+static size_t sites_on_node;
 static int *mcoord;
 
 #define MAXPRIMES (sizeof(prime)/sizeof(int))
@@ -175,9 +175,10 @@ int node_number(const int x[])
   return QMP_get_node_number_from(mcoord);
 }
 
-int node_index(const int x[])
+size_t node_index(const int x[])
 {
-  int i, r=0, p=0;
+  int i;
+  size_t r=0, p=0;
 
   for(i=ndim-1; i>=0; --i) {
     r = r*squaresize[i] + (x[i]%squaresize[i]);
@@ -192,9 +193,10 @@ int node_index(const int x[])
   return r;
 }
 
-void get_coords(int x[], int node, int index)
+void get_coords(int x[], int node, size_t index)
 {
-  int i, s, si;
+  int i;
+  size_t s, si;
   int *m;
 
   si = index;
@@ -243,6 +245,6 @@ void get_coords(int x[], int node, int index)
 }
 
 /* The number of sites on the specified node */
-int num_sites(int node){
+size_t num_sites(int node){
   return sites_on_node;
 }

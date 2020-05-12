@@ -16,7 +16,7 @@ void print_m(suN_matrix *a)
 }
 
 
-void vfill_m(suN_matrix *a, int coords[], int rank)
+void vfill_m(suN_matrix *a, int coords[], size_t rank)
 {
   int i,j;
   
@@ -38,7 +38,8 @@ void vfill_m(suN_matrix *a, int coords[], int rank)
 void vset_M(suN_matrix *field[], int count)
 {
   int x[4];
-  int index,i;
+  size_t index;
+  int i;
 
   for(i = 0; i < count; i++)
     for(x[3] = 0; x[3] < lattice_size[3]; x[3]++)
@@ -203,7 +204,8 @@ void vfill_r(float *r, int coords[],int rank){
 
 void vset_R(float *field[], int count){
   int x[4];
-  int index,i;
+  size_t index;
+  int i;
   for(i = 0; i < count; i++)
     for(x[3] = 0; x[3] < lattice_size[3]; x[3]++)
       for(x[2] = 0; x[2] < lattice_size[2]; x[2]++)
@@ -236,7 +238,8 @@ int inside_subset(int x[], int lower[], int upper[])
 void vsubset_R(float *out[], float *in[], int lower[], int upper[], int count)
 {
   int x[4];
-  int index,i;
+  size_t index;
+  int i;
 
   for(index = 0; index < num_sites(this_node); index++){
     get_coords(x, this_node, index);

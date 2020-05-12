@@ -295,7 +295,8 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
   QMP_thread_level_t provided;
   int status;
   int sites_on_node = 0;
-  int i,volume;
+  int i;
+  size_t volume;
   char filename[] = "binary_test";
   int dim = 4;
   int lower[4] = {1, 0, 0, 2};
