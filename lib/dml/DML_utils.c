@@ -1157,7 +1157,7 @@ int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out,
 		       uint64_t *nbytes, char *myname, int this_node){
 
   /* Seek to the appropriate position */
-  if(LRL_seek_write_record(lrl_record_out,(off_t)size*seeksite)
+  if(LRL_seek_write_record(lrl_record_out,((off_t)size)*seeksite)
      != LRL_SUCCESS){
     printf("%s(%d) seek error\n",myname,this_node);
     return 1;
@@ -1176,7 +1176,7 @@ DML_read_buf(LRL_RecordReader *lrl_record_in, char *buf,
 {
   //printf("node %i firstrank %i size %li num %i doseek %i\n", QMP_get_node_number(), firstrank, size, num, doseek);
   if(doseek) {
-    if(LRL_seek_read_record(lrl_record_in,(off_t)size*firstrank)
+    if(LRL_seek_read_record(lrl_record_in,((off_t)size)*firstrank)
        != LRL_SUCCESS) {
       return -1;
     }
