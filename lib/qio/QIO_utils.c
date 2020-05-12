@@ -228,7 +228,7 @@ QIO_open_write_field(QIO_Writer *out,
 		     const LIME_type lime_type, int *do_output, int *status)
 {
   LRL_RecordWriter *lrl_record_out = NULL;
-  uint64_t planned_rec_size;
+  uint64_t planned_rec_size = 0;
   int this_node = out->layout->this_node;
   int recordtype = out->layout->recordtype;
   int volfmt = out->volfmt;
