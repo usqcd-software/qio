@@ -235,7 +235,7 @@ void get_coords(int x[], int node, size_t index)
       for(i=0; i<ndim; i++) {
 	fprintf(stderr,"%i\t%i\t%i\n", size1[0][i], size1[1][i], size2[i]);
       }
-      fprintf(stderr,"%i\t%i", node, si);
+      fprintf(stderr,"%i\t%lu", node, si);
       for(i=0; i<ndim; i++) fprintf(stderr,"\t%i", x[i]);
       fprintf(stderr,"\n");
     }
