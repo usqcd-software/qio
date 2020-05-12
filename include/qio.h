@@ -83,7 +83,7 @@ extern "C"
 /* For collecting and passing layout information */
 typedef struct {
   int (*node_number)(const int coords[]);
-  int (*node_index)(const int coords[]);
+  size_t (*node_index)(const int coords[]);
   void (*get_coords)(int coords[], int node, size_t index);
   size_t (*num_sites)(int node);
   int *latsize;
