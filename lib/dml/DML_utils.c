@@ -2599,7 +2599,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
   int *node_index = (int*)DML_allocate_buf(sizeof(*node_index),&max_buf_sites);
   int notdone = 1;
   while(notdone) {
-    int k = 0;
+    size_t k = 0;
     do { // get list of file contiguous sites
       /* The subset_rank locates the datum for rcv_coords in the
 	 record our I/O partition is reading */
