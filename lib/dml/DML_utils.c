@@ -1160,7 +1160,7 @@ int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out,
   if(LRL_seek_write_record(lrl_record_out,(off_t)size*seeksite)
      != LRL_SUCCESS){
     printf("%s(%d) error while seeking to %lu\n",
-	   myname,this_node,(off_t)size*seeksite));
+	   myname,this_node,(off_t)size*seeksite);
     return 1;
   }
 
