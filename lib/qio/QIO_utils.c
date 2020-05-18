@@ -244,8 +244,7 @@ QIO_open_write_field(QIO_Writer *out,
       printf("%s(%d): global data: size %lu\n",myname,this_node,
 	     (unsigned long)datum_size);
     }
-  }
-  else{
+  } else {
     /* Create list of sites in subset for output and count them */
     if(DML_create_subset_rank(out->sites, out->layout, volfmt, serpar) == 1){
       printf("%s(%d) No room for subset rank list\n",
@@ -255,23 +254,23 @@ QIO_open_write_field(QIO_Writer *out,
     /* Field or subset data */
     if(out->serpar == QIO_SERIAL){
       /* Serial output.  Record size equals the size we write. */
-      planned_rec_size = ((uint64_t)sites->subset_io_sites) * datum_size;
+      planned_rec_size = (uint64_t)sites->subset_io_sites * datum_size;
       if(QIO_verbosity() >= QIO_VERB_DEBUG){
 	printf("%s(%d): field data: sites %llu datum %lu\n",
 	       myname,this_node,
 	       (unsigned long long)sites->subset_io_sites,
 	       (unsigned long)datum_size);
-      } else {
-	/* Parallel output.  Record size equals the total volume
-	   NOTE: If we later decide to write partitions in parallel,
-	   this has to be changed to the size for the partition. */
-	planned_rec_size = ((uint64_t)out->layout->subsetvolume) * datum_size;
-	if(QIO_verbosity() >= QIO_VERB_DEBUG){
-	  printf("%s(%d): field data: sites %llu datum %lu\n",
-		 myname,this_node,
-		 (unsigned long long)out->layout->subsetvolume,
-		 (unsigned long)datum_size);
-	}
+      }
+    } else {
+      /* Parallel output.  Record size equals the total volume
+	 NOTE: If we later decide to write partitions in parallel,
+	 this has to be changed to the size for the partition. */
+      planned_rec_size = (uint64_t)out->layout->subsetvolume * datum_size;
+      if(QIO_verbosity() >= QIO_VERB_DEBUG){
+	printf("%s(%d): field data: sites %llu datum %lu\n",
+	       myname,this_node,
+	       (unsigned long long)out->layout->subsetvolume,
+	       (unsigned long)datum_size);
       }
     }
   }
