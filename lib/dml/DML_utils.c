@@ -950,10 +950,10 @@ int DML_create_subset_rank_serial(DML_SiteList *sites, DML_Layout *layout){
     if(DML_rank_inside_subset(r, layout)){
       sites->subset_rank[sites->current_index] = s++;
       sites->insubset[sites->current_index] = 'T';
-    }
-    else
+    } else {
       sites->subset_rank[sites->current_index] = -1;
       sites->insubset[sites->current_index] = 'F';
+    }
   } while(DML_next_site(&r, sites));
 
   sites->subset_io_sites = s;
@@ -1159,7 +1159,8 @@ int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out,
   /* Seek to the appropriate position */
   if(LRL_seek_write_record(lrl_record_out,(off_t)size*seeksite)
      != LRL_SUCCESS){
-    printf("%s(%d) seek error\n",myname,this_node);
+    printf("%s(%d) error while seeking to %lu\n",
+	   myname,this_node,(off_t)size*seeksite));
     return 1;
   }
 
