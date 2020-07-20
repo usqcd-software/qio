@@ -109,10 +109,10 @@ int QIO_ionode_node_number(const int coords[]){
 }
 
 /* Map coordinates to fake node index */
-int QIO_ionode_node_index(const int coords[]){
+size_t QIO_ionode_node_index(const int coords[]){
 
   /* The actual node that will receive these coordinates */
-  int node = QIO_mpp_layout.node_number(coords);
+  size_t node = QIO_mpp_layout.node_number(coords);
 
   /* The fake node_index offset for this node */
   size_t offset = QIO_node_index_offset[node];
@@ -391,8 +391,8 @@ int QIO_scalar_node_number(const int coords[]){
 /* This is not the standard hypercube layout for a scalar
    machine, but it is fine for file conversion */
 /* CAUTION: conversion from DML_SiteRank type to int */
-int QIO_scalar_node_index(const int coords[]){
-  int index = DML_lex_rank(coords, QIO_mpp_layout.latdim, QIO_mpp_layout.latsize);
+size_t QIO_scalar_node_index(const int coords[]){
+  size_t index = DML_lex_rank(coords, QIO_mpp_layout.latdim, QIO_mpp_layout.latsize);
   return index;
 }
 
