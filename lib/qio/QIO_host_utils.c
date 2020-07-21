@@ -112,7 +112,7 @@ int QIO_ionode_node_number(const int coords[]){
 size_t QIO_ionode_node_index(const int coords[]){
 
   /* The actual node that will receive these coordinates */
-  size_t node = QIO_mpp_layout.node_number(coords);
+  int node = QIO_mpp_layout.node_number(coords);
 
   /* The fake node_index offset for this node */
   size_t offset = QIO_node_index_offset[node];
