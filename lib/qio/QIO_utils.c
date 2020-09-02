@@ -64,8 +64,8 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
 
   /* No change for singlefile format */
   if(volfmt == QIO_SINGLEFILE){
-    strncpy(newfilename,filename,strlen(filename));
-    newfilename[strlen(filename)] = '\0';
+    strncpy(newfilename,filename,n);
+    newfilename[n-1] = '\0';
   }
   /* Add volume suffix for multifile and partfile formats */
   else if (volfmt == QIO_PARTFILE_DIR) {
@@ -158,7 +158,7 @@ DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt, int serpar){
 /* Write list of sites (used with multifile and partitioned file formats) */
 /* Returns number of bytes written */
 
-int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end, 
+int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 		       const LIME_type lime_type){
   LRL_RecordWriter *lrl_record_out;
   uint64_t nbytes;
@@ -177,8 +177,22 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
   if(volfmt == QIO_PARTFILE || volfmt == QIO_PARTFILE_DIR)
     if(this_node != out->layout->ionode(this_node))return 0;
 
+  // check if we can fit each site index in 32 bits
+  int use32 = 1;
+  size_t max32 = UINT32_MAX;
+  for(size_t i=0; i<sites->number_of_io_sites; i++) {
+    if(sites->list[i] > max32) {
+      use32 = 0;
+      break;
+    }
+  }
+
   /* Make a copy in case we have to byte reverse */
-  rec_size = sites->number_of_io_sites * sizeof(DML_SiteRank);
+  if(use32) {
+    rec_size = sites->number_of_io_sites * sizeof(DML_SiteRank32);
+  } else {
+    rec_size = sites->number_of_io_sites * sizeof(DML_SiteRank);
+  }
   if(this_node == DML_master_io_node() && QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d) allocating %llu for output sitelist\n",myname,this_node,
 	   (unsigned long long)rec_size);fflush(stdout);
@@ -191,11 +205,19 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
     return QIO_ERR_ALLOC;
   }
 
-  memcpy(outputlist, sites->list, rec_size);
-
-  /* Byte reordering for entire sitelist */
-  if (! DML_big_endian())
-    DML_byterevn((char *)outputlist, rec_size, sizeof(DML_SiteRank));
+  if(use32) {
+    DML_SiteRank32 *ol32 = (DML_SiteRank32 *)outputlist;
+    for(size_t i=0; i<sites->number_of_io_sites; i++) {
+      ol32[i] = sites->list[i];
+    }
+    if (! DML_big_endian())
+      DML_byterevn(ol32, rec_size, sizeof(DML_SiteRank32));
+  } else {
+    memcpy(outputlist, sites->list, rec_size);
+    /* Byte reordering for entire sitelist */
+    if (! DML_big_endian())
+      DML_byterevn(outputlist, rec_size, sizeof(DML_SiteRank));
+  }
 
   /* Write site list */
   lrl_record_out = LRL_open_write_record(out->lrl_file_out, msg_begin,
@@ -203,7 +225,7 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
   nbytes = LRL_write_bytes(lrl_record_out, (char *)outputlist, rec_size);
 
   if(nbytes != rec_size){
-    printf("%s(%d): Error writing site list. Wrote %llu bytes expected %lu\n", 
+    printf("%s(%d): Error writing site list. Wrote %llu bytes expected %lu\n",
 	   myname,out->layout->this_node,
 	   (unsigned long long)nbytes,(unsigned long)rec_size);
     free(outputlist);
@@ -212,11 +234,11 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 
   if(QIO_verbosity() >= QIO_VERB_DEBUG)
     printf("%s(%d): wrote sitelist\n", myname, out->layout->this_node);
-  
+
   /* Close record when done and clean up*/
   LRL_close_write_record(lrl_record_out);
 
-  free(outputlist); 
+  free(outputlist);
   return QIO_SUCCESS;
 }
 
@@ -360,7 +382,7 @@ int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   DML_RecordWriter *dml_record_out;
   int this_node = out->layout->this_node;
   int do_output;
-  int status;
+  int status = 0;
   char myname[] = "QIO_init_write_field";
 
   /* NOTE: we aren't currently returning do_output */
@@ -1014,3 +1036,77 @@ int QIO_read_field(QIO_Reader *in,
   return status;
 }
 
+int
+QIO_node_number_ext(const int coords[], void *arg)
+{
+  int nn;
+  QIO_Layout *layout = (QIO_Layout *)arg;
+  if(layout->node_number==NULL) {
+    nn = layout->node_number_ext(coords, layout->arg);
+  } else {
+    nn = layout->node_number(coords);
+  }
+  return nn;
+}
+
+QIO_Index
+QIO_node_index_ext(const int coords[], void *arg)
+{
+  QIO_Index ni;
+  QIO_Layout *layout = (QIO_Layout *)arg;
+  if(layout->node_index==NULL) {
+    ni = layout->node_index_ext(coords, layout->arg);
+  } else {
+    ni = layout->node_index(coords);
+  }
+  return ni;
+}
+
+void
+QIO_get_coords_ext(int coords[], int node, QIO_Index index, void *arg)
+{
+  QIO_Layout *layout = (QIO_Layout *)arg;
+  if(layout->get_coords==NULL) {
+    layout->get_coords_ext(coords, node, index, layout->arg);
+  } else {
+    layout->get_coords(coords, node, index);
+  }
+}
+
+QIO_Index
+QIO_num_sites_ext(int node, void *arg)
+{
+  QIO_Index ns;
+  QIO_Layout *layout = (QIO_Layout *)arg;
+  if(layout->num_sites==NULL) {
+    ns = layout->num_sites_ext(node, layout->arg);
+  } else {
+    ns = layout->num_sites(node);
+  }
+  return ns;
+}
+
+QIO_Layout *
+QIO_check_layout_ext(QIO_Layout *layout)
+{
+  // Make copy of layout and set _ext callbacks if not all set
+  if(layout->node_number!=NULL ||
+     layout->node_index!=NULL ||
+     layout->get_coords!=NULL ||
+     layout->num_sites!=NULL) {
+    QIO_Layout *l = malloc(sizeof(QIO_Layout));
+    *l = *layout;
+    l->arg = layout;
+    l->node_number_ext = QIO_node_number_ext;
+    l->node_index_ext = QIO_node_index_ext;
+    l->get_coords_ext = QIO_get_coords_ext;
+    l->num_sites_ext = QIO_num_sites_ext;
+    l->node_number = NULL;
+    l->node_index = NULL;
+    l->get_coords = NULL;
+    l->num_sites = NULL;
+    layout = l;
+  }
+
+  return layout;
+}

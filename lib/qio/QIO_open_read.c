@@ -144,6 +144,11 @@ QIO_create_reader(const char *filename,
   dml_layout->node_index           = layout->node_index;
   dml_layout->get_coords           = layout->get_coords;
   dml_layout->num_sites            = layout->num_sites;
+  dml_layout->node_number_ext      = layout->node_number_ext;
+  dml_layout->node_index_ext       = layout->node_index_ext;
+  dml_layout->get_coords_ext       = layout->get_coords_ext;
+  dml_layout->num_sites_ext        = layout->num_sites_ext;
+  dml_layout->arg                  = layout->arg;
   dml_layout->latsize              = latsize;
   dml_layout->latdim               = layout->latdim;
   dml_layout->volume               = layout->volume;
@@ -781,6 +786,10 @@ QIO_open_read(QIO_String *xml_file, const char *filename,
   DML_io_node_t my_io_node;
   DML_master_io_node_t master_io_node;
 
+  // check and provide _ext interface if needed
+  QIO_Layout *layout_in = layout;
+  layout = QIO_check_layout_ext(layout);
+
   /* Assign default behavior for io_node functions if needed */
   if(fs == NULL) {
     my_io_node = DML_io_node;
@@ -800,6 +809,7 @@ QIO_open_read(QIO_String *xml_file, const char *filename,
      and the master I/O node */
   qio_in = QIO_open_read_master(filename, layout, iflag,
 				my_io_node, master_io_node);
+  if(layout!=layout_in) free(layout);
   if(qio_in == NULL) return NULL;
 
   /* Master I/O node broadcasts the volume format to all the nodes, */
