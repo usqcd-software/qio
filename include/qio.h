@@ -161,6 +161,9 @@ typedef struct {
   int type;                             /* Is node_path specified? */
   DML_io_node_t my_io_node;             /* Mapping as on compute nodes */
   DML_master_io_node_t master_io_node;  /* As on compute nodes */
+  DML_io_node_ext my_io_node_ext;             /* Mapping as on compute nodes */
+  DML_master_io_node_ext master_io_node_ext;  /* As on compute nodes */
+  void *arg;
   int *io_node;                         /* Only if number_io_nodes !=
 					 number_of_nodes */
   char **node_path;                     /* Only if type = QIO_MULTI_PATH */
@@ -265,6 +268,7 @@ double QIO_time(void);
 void QIO_wait(double sec);
 void QIO_suppress_global_broadcast(QIO_Reader *qio_in);
 QIO_Layout *QIO_check_layout_ext(QIO_Layout *layout);
+void QIO_free_layout_ext(DML_Layout *layout);
 QIO_Reader *QIO_open_read_master(const char *filename, QIO_Layout *layout,
 				 QIO_Iflag *iflag, int (*io_node)(int),
 				 int (*master_io_node)(void));

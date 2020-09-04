@@ -406,7 +406,7 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
   int node;
-  int node_sites;
+  DML_Index node_sites;
   int this_node = layout->this_node;
   int my_io_node = layout->ionode(this_node);
   int number_of_nodes = layout->number_of_nodes;
@@ -546,7 +546,7 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
     if (! DML_big_endian())
       DML_byterevn(ilist32, announced_rec_size, sizeof(DML_SiteRank32));
     size_t n = announced_rec_size / sizeof(DML_SiteRank32);
-    inputlist = malloc(n*sizeof(DML_SiteRank));
+    inputlist = (DML_SiteRank *)malloc(n*sizeof(DML_SiteRank));
     for(size_t i=0; i<n; i++) {
       inputlist[i] = ilist32[i];
     }
@@ -706,7 +706,7 @@ int DML_rank_inside_subset(DML_SiteRank rank, DML_Layout *layout){
 
   status = DML_coord_inside_subset(coords, layout);
 
-  free(coords); 
+  free(coords);
   return status;
 }
 
@@ -715,10 +715,10 @@ int DML_rank_inside_subset(DML_SiteRank rank, DML_Layout *layout){
 /* Table lookup for sorted table.  Return index if found and -1 if not
    found. Binary search for exact match. */
 
-int DML_table_lookup(DML_SiteRank list[], size_t n, DML_SiteRank r)
+int64_t DML_table_lookup(DML_SiteRank list[], size_t n, DML_SiteRank r)
 {
-  int ju,jm,jl;
-  
+  int64_t ju,jm,jl;
+
   if ( n == 0) return -1;
   if ( r < list[0] || r > list[n-1] ) return -1;
   if ( r == list[0] ) return 0;
@@ -741,24 +741,22 @@ int DML_table_lookup(DML_SiteRank list[], size_t n, DML_SiteRank r)
 /* Find the physical location in the record of the site with
    lexicographic index "rank".  Returns 1 on error.  0 for success. */
 
-int DML_lookup_subset_rank(DML_SiteRank *seek, DML_SiteRank rank, 
+int DML_lookup_subset_rank(DML_SiteRank *seek, DML_SiteRank rank,
 			   DML_SiteList *sites)
 {
-  int current_index;
-  int status;
+  DML_SiteRank current_index;
 
-  if(sites->use_list){
-    current_index = DML_table_lookup(sites->list, sites->number_of_io_sites, 
+  if(sites->use_list) {
+    current_index = DML_table_lookup(sites->list, sites->number_of_io_sites,
 				     rank);
     if(current_index < 0)
       return 1;
-  }
-  else{
+  } else {
     current_index = rank;
   }
 
-  if(sites->use_subset){
-    status = sites->subset_rank[current_index];
+  if(sites->use_subset) {
+    DML_SiteRank status = sites->subset_rank[current_index];
     if(status < 0)return 1;
     *seek = status;
   } else {
@@ -782,12 +780,12 @@ int DML_next_subset_site(DML_SiteRank *rank, DML_SiteList *sites)
 
   return status;
 }
- 
+
 /*------------------------------------------------------------------*/
 /* Return position of site in record - same as subset rank          */
 /* Note: this routine is used only in conjunction with the
    DML_next_subset_site iterator.  */
-int
+DML_SiteRank
 DML_subset_rank(DML_SiteRank rank, DML_SiteList *sites)
 {
   //printf("node %i rank %i\n", QMP_get_node_number(), rank);
@@ -816,11 +814,10 @@ int DML_init_subset_site_loop(DML_SiteRank *rank, DML_SiteList *sites){
 /*------------------------------------------------------------------*/
 /* Search an ordered table of site ranks for a given rank.  Return the
    index of the match, if found, or -1 if not found */
-
-int DML_lookup_site_rank(DML_SiteRank *t, int n, DML_SiteRank r){
-  int s1 = 0;
-  int s2 = n-1;
-  int snew;
+int64_t DML_lookup_site_rank(DML_SiteRank *t, int64_t n, DML_SiteRank r){
+  int64_t s1 = 0;
+  int64_t s2 = n-1;
+  int64_t snew;
 
   if(t[s1] > r || t[s2] < r)return -1;
   if(t[s1] == r)return s1;
@@ -834,6 +831,7 @@ int DML_lookup_site_rank(DML_SiteRank *t, int n, DML_SiteRank r){
   }
   return -1;
 }
+
 /*------------------------------------------------------------------*/
 /* Create the subset rank list for single-file parallel I/O.        */
 /* See DML_create_subset_rank below for a definition of this list   */
@@ -857,18 +855,18 @@ int DML_create_subset_rank_parallel(DML_SiteList *sites, DML_Layout *layout){
   int this_node = layout->this_node;
   int *upper = layout->hyperupper;
   int *lower = layout->hyperlower;
-  DML_SiteRank r, *ranklist;
+  DML_SiteRank r, *ranklist, s, t;
   int *coords,*ubound;
-  int d,s,t, dim;
+  int d, dim;
   char myname[] = "DML_create_subset_rank_parallel";
 
   sites->use_subset = 1;
 
-  sites->subset_rank = 
-    (int *)malloc(sizeof(int)*sites->number_of_io_sites); /* Could be less */
+  sites->subset_rank = (DML_SiteRank *)
+    malloc(sizeof(DML_SiteRank)*sites->number_of_io_sites); /* Could be less */
   if(sites->subset_rank == NULL)return 1;
 
-  ranklist = 
+  ranklist =
     (DML_SiteRank *)malloc(sizeof(DML_SiteRank)*sites->number_of_io_sites);
   if(ranklist == NULL)return 1;
 
@@ -909,7 +907,7 @@ int DML_create_subset_rank_parallel(DML_SiteList *sites, DML_Layout *layout){
       sites->subset_rank[s] = t;
     t++;
   } while(DML_lex_next(&dim, coords, latdim, lower, ubound));
-	  
+
   free(coords);
   free(ubound);
   free(ranklist);
@@ -924,12 +922,11 @@ int DML_create_subset_rank_parallel(DML_SiteList *sites, DML_Layout *layout){
 /* Return value 0 for success and 1 for malloc failure */
 int DML_create_subset_rank_serial(DML_SiteList *sites, DML_Layout *layout){
 
-  DML_SiteRank r;
-  int s;
+  DML_SiteRank r, s;
 
   sites->use_subset = 1;
-  sites->subset_rank = 
-    (int *)malloc(sizeof(int)*sites->number_of_io_sites);  /* Could be less */
+  sites->subset_rank = (DML_SiteRank *)
+    malloc(sizeof(DML_SiteRank)*sites->number_of_io_sites);  /* Could be less */
   if(sites->subset_rank == NULL)return 1;
   r = DML_init_site_loop(sites);
   s = 0;
@@ -1110,14 +1107,15 @@ DML_allocate_buf(size_t size, size_t *max_buf_sites)
 /*------------------------------------------------------------------*/
 /* Write buffer to the current position in the file */
 
-int DML_write_buf_current(LRL_RecordWriter *lrl_record_out, 
-			  char *lbuf, size_t buf_sites, size_t size, 
-			  uint64_t *nbytes, char *myname, 
+int DML_write_buf_current(LRL_RecordWriter *lrl_record_out,
+			  char *lbuf, size_t buf_sites, size_t size,
+			  uint64_t *nbytes, char *myname,
 			  int this_node){
 
-  if(LRL_write_bytes(lrl_record_out, lbuf, buf_sites*size)
-     != buf_sites*size){
-    printf("%s(%d) write error\n",myname,this_node);
+  uint64_t wrote = LRL_write_bytes(lrl_record_out, lbuf, buf_sites*size);
+  if(wrote != buf_sites*size){
+    printf("%s(%d) write error: wrote %lu bytes but wanted %lu\n",
+	   myname,this_node,wrote,buf_sites*size);
     return 1;
   }
   *nbytes += buf_sites*size;
@@ -1132,15 +1130,16 @@ int DML_write_buf_current(LRL_RecordWriter *lrl_record_out,
    sites are in the correct order for writing to the requested point
    in the file */
 
-int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out, 
-		       DML_SiteRank seeksite, 
+int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out,
+		       DML_SiteRank seeksite,
 		       char *lbuf, size_t buf_sites, size_t size,
 		       uint64_t *nbytes, char *myname, int this_node){
 
   /* Seek to the appropriate position */
   if(LRL_seek_write_record(lrl_record_out,(off_t)size*seeksite)
      != LRL_SUCCESS){
-    printf("%s(%d) seek error\n",myname,this_node);
+    printf("%s(%d) error while seeking to %lu\n",
+	   myname,this_node,size*seeksite);
     return 1;
   }
 
@@ -1736,7 +1735,12 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   outbuf_coords = snd_coords;
   /* The subset_rank locates the datum for outbuf_coords in the
      record our I/O partition is writing */
-  subset_rank = (DML_SiteRank)DML_subset_rank(outbuf_coords, sites);
+  subset_rank = DML_subset_rank(outbuf_coords, sites);
+  if(subset_rank<0) {
+    printf("%s(%d): Output rank %lu unexpectedly missing from subset list\n",
+	   myname,this_node,outbuf_coords);
+    return 0;
+  }
 
   do {
     /* Convert lexicographic rank to coordinates */
@@ -1748,7 +1752,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     /* A node sends its message buffer to the io_node when changing
        nodes or when its message buffer is full or when the
        lexicographic order is broken */
-    if(new_node != current_node || 
+    if(new_node != current_node ||
        tbuf_sites >= max_tbuf_sites ||
        snd_coords != prev_coords + 1){
       if(tbuf_sites > 0){
@@ -1767,24 +1771,30 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	  if(buf_sites > max_buf_sites - max_tbuf_sites ||
 	     snd_coords != prev_coords + 1){
 	    timestart(dtwrite);
-	    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank, 
+	    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
 			     outbuf, buf_sites, size, &nbytes, this_node);
 	    timestop(dtwrite);
+	    if(status != 0) {
+	      free(outbuf); free(tbuf); free(scratch_buf); free(coords);
+	      return 0;
+	    }
 	    buf_sites = 0;
 	    outbuf_coords = snd_coords;
-	    subset_rank = (DML_SiteRank)DML_subset_rank(outbuf_coords, sites);
-	    if(status != 0) {
-	      free(outbuf); free(tbuf); free(scratch_buf); free(coords); 
+	    subset_rank = DML_subset_rank(outbuf_coords, sites);
+	    if(subset_rank<0) {
+	      printf("%s(%d): Output rank %lu unexpectedly missing from subset list\n",
+		     myname,this_node,outbuf_coords);
+	      free(outbuf); free(tbuf); free(scratch_buf); free(coords);
 	      return 0;
 	    }
 	  }
 	}
 	tbuf_sites = 0;
       }
-      
+
       /* Send nodes must wait for a ready signal from the I/O node
 	 to prevent message pileups on the I/O node */
-      
+
       /* CTS only if changing data source node */
       if(new_node != current_node){
 	timestart(dtsend);
@@ -1827,7 +1837,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     buf_sites += tbuf_sites;
     tbuf_sites = 0;
     timestart(dtwrite);
-    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank, 
+    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
 			      outbuf, buf_sites, size, &nbytes, this_node);
     timestop(dtwrite);
     buf_sites = 0;
@@ -1977,7 +1987,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	DML_get_bytes(buf,size,current_node);
 	buf_sites++;
       }
-    
+
       /* All other nodes send the data */
       if(this_node == current_node){
 	DML_send_bytes(buf,size,my_io_node);
@@ -1987,32 +1997,35 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     }
 
     /* Now write data */
-    if(this_node == my_io_node)
-    {
+    if(this_node == my_io_node) {
       /* Do byte reordering before checksum */
       if (! DML_big_endian())
 	DML_byterevn(buf, size, word_size);
-      
+
       /* Update checksum */
       DML_checksum_accum(checksum, snd_coords, buf, size);
-      
-      /* Write the buffer when full */
 
-      if( (buf_sites >= max_buf_sites) || (isite == max_dest_sites-1) )
-	{
-	  /* The subset_rank locates the datum for snd_coords in the
-	     record that our I/O partition is writing */
-	  subset_rank = (DML_SiteRank)DML_subset_rank(snd_coords, sites);
-	  status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
-				   outbuf, buf_sites, size, &nbytes, 
-				   this_node);
-	  buf_sites = 0;
-	  if(status != 0) {free(outbuf); free(coords); return 0;}
+      /* Write the buffer when full */
+      if( (buf_sites >= max_buf_sites) || (isite == max_dest_sites-1) ) {
+	/* The subset_rank locates the datum for snd_coords in the
+	   record that our I/O partition is writing */
+	subset_rank = (DML_SiteRank)DML_subset_rank(snd_coords, sites);
+	if(subset_rank<0) {
+	  printf("%s(%d): Output rank %lu unexpectedly missing from subset list\n",
+		 myname,this_node,snd_coords);
+	  free(outbuf); free(coords);
+	  return 0;
 	}
+	status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
+				  outbuf, buf_sites, size, &nbytes,
+				  this_node);
+	buf_sites = 0;
+	if(status != 0) {free(outbuf); free(coords); return 0;}
+      }
     }
     isite++;
   } while(DML_next_subset_site(&snd_coords, sites));
-  
+
   free(coords);
   free(scratch_buf);
   free(outbuf);
@@ -2537,6 +2550,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
   size_t nbytes=0, max_buf_sites=1;
+  char myname[] = "DML_partition_in";
 
   timestart(dtall);
 
@@ -2580,13 +2594,19 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
   int *node_index = (int*)DML_allocate_buf(sizeof(*node_index),&max_buf_sites);
   int notdone = 1;
   while(notdone) {
-    int k = 0;
+    int64_t k = 0;
     do { // get list of file contiguous sites
       /* The subset_rank locates the datum for rcv_coords in the
 	 record our I/O partition is reading */
       DML_SiteRank subset_rank = nextrank;
-      if(serpar == DML_PARALLEL)
+      if(serpar == DML_PARALLEL) {
 	subset_rank = (DML_SiteRank) DML_subset_rank(rcv_coords, sites);
+	if(subset_rank<0){
+	  printf("%s(%d): Input rank %lu unexpectedly missing from subset list\n",
+		 myname,this_node,rcv_coords);
+	  return 0;
+	}
+      }
       if(k==0) firstrank = subset_rank;
       else if(subset_rank!=firstrank+k) break;
       /* Convert lexicographic rank to coordinates */
@@ -2641,9 +2661,10 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
   free(inbuf);
 
   timestop(dtall);
-  if(this_node==0)
+  if(QIO_verbosity()>=QIO_VERB_LOW && this_node==layout->master_io_node) {
     printf("%s times: read %.2f  send %.2f  total %.2f\n",
 	   __func__, dtread, dtsend, dtall);
+  }
   /* return the number of bytes read by this node only */
   return nbytes;
 }

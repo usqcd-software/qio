@@ -99,8 +99,8 @@ typedef struct {
 
   /* Constant for a record */
   int use_subset;
-  int *subset_rank;     /* Rank order of sites in subset */
-  int subset_io_sites;
+  DML_SiteRank *subset_rank;     /* Rank order of sites in subset */
+  size_t subset_io_sites;
 } DML_SiteList;
 
 
@@ -284,6 +284,8 @@ void DML_sync(void);
 /* I/O layout */
 typedef int (*DML_io_node_t)(const int);
 typedef int (*DML_master_io_node_t)(void);
+typedef int (*DML_io_node_ext)(const int, void *arg);
+typedef int (*DML_master_io_node_ext)(void *arg);
 
 int DML_io_node(const int node);
 int DML_master_io_node(void);
