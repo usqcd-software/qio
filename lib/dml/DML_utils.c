@@ -1624,13 +1624,13 @@ static void DML_flush_tbuf_to_outbuf(size_t size,
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
    PARTFILE/PARTFILE_DIR modes. */
 
-uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out, 
+uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	   void (*get)(char *buf, size_t index, int count, void *arg),
-	   int count, size_t size, int word_size, void *arg, 
-	   DML_Layout *layout, DML_SiteList *sites, int volfmt, 
+	   int count, size_t size, int word_size, void *arg,
+	   DML_Layout *layout, DML_SiteList *sites, int volfmt,
 	   int serpar, DML_Checksum *checksum)
 {
-  double dtall=0, dtwrite=0, dtsend=0;
+  double dtall=0, dtwrite=0, dtsend=0, dtproc=0, dtcalc=0;
   char *buf,*outbuf = NULL,*tbuf = NULL, *scratch_buf;
   int current_node, new_node;
   int *coords;
@@ -1703,28 +1703,28 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   /* Allocate lattice coordinate */
   coords = DML_allocate_coords(latdim, myname, this_node);
   if(!coords){free(outbuf);free(tbuf);free(scratch_buf);return 0;}
-  
+
   /* Initialize checksum */
   DML_checksum_init(checksum);
-  
+
 #ifdef DML_DEBUG
   if (! DML_big_endian())
     printf("%s(%d): byte reversing %d\n",myname,this_node,word_size);
 #endif
-  
+
   /* Maximum number of sites to be processed */
   //max_dest_sites = sites->subset_io_sites;
   isite = 0;  /* Running count of all sites */
-  
+
   current_node = my_io_node;
-  
+
   /* Loop over the sending coordinates */
   buf = outbuf;
   buf_sites = 0;   /* Count of sites in the output buffer */
   tbuf_sites = 0;  /* Count of sites in the message tbuf */
 
   if(DML_init_subset_site_loop(&snd_coords, sites) == 0){
-    free(outbuf); free(tbuf); free(scratch_buf); free(coords); 
+    free(outbuf); free(tbuf); free(scratch_buf); free(coords);
     return 0;
   }
 
@@ -1743,11 +1743,13 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   }
 
   do {
+    timestart(dtcalc);
     /* Convert lexicographic rank to coordinates */
     DML_lex_coords(coords, latdim, latsize, snd_coords);
 
     /* Node that sends data */
     new_node = layout->node_number_ext(coords, layout->arg);
+    timestop(dtcalc);
 
     /* A node sends its message buffer to the io_node when changing
        nodes or when its message buffer is full or when the
@@ -1778,6 +1780,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	      free(outbuf); free(tbuf); free(scratch_buf); free(coords);
 	      return 0;
 	    }
+	    timestart(dtcalc);
 	    buf_sites = 0;
 	    outbuf_coords = snd_coords;
 	    subset_rank = DML_subset_rank(outbuf_coords, sites);
@@ -1787,6 +1790,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	      free(outbuf); free(tbuf); free(scratch_buf); free(coords);
 	      return 0;
 	    }
+	    timestop(dtcalc);
 	  }
 	}
 	tbuf_sites = 0;
@@ -1806,13 +1810,16 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 
     /* The node with the data just appends it to its message buffer */
     if(this_node == current_node){
+      timestart(dtproc);
       /* Fetch to the message buffer */
       buf = tbuf + size*tbuf_sites;
-      get(buf,layout->node_index_ext(coords,layout->arg),count,arg);
+      DML_Index ni = layout->node_index_ext(coords,layout->arg);
+      get(buf,ni,count,arg);
 
       /* Do byte reordering and update checksum */
       if (! DML_big_endian()) DML_byterevn(buf, size, word_size);
       DML_checksum_accum(checksum, snd_coords, buf, size);
+      timestop(dtproc);
     }
 
     /* The I/O node and current node count sites together */
@@ -1851,8 +1858,8 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 
   timestop(dtall);
   if(QIO_verbosity()>=QIO_VERB_LOW && this_node==layout->master_io_node) {
-    printf("%s times: write %.2f  send %.2f  total %.2f\n",
-	   myname, dtwrite, dtsend, dtall);
+    printf("%s times: calc %.2f  write %.2f  send %.2f  process %.2f  total %.2f\n",
+	   myname, dtcalc, dtwrite, dtsend, dtproc, dtall);
   }
   /* Number of bytes written by this node only */
   return nbytes;
@@ -2318,18 +2325,16 @@ DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in,
   else
     max_buf_sites = 1;
 
- 
   inbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!inbuf){
     printf("%s(%d) can't malloc inbuf\n",myname,this_node);
     return 0;
   }
- 
 
   /* Allocate coordinate counter */
   coords = DML_allocate_coords(latdim, myname, this_node);
   if(!coords){free(inbuf); return 0;}
-  
+
   /* Initialize checksum */
   DML_checksum_init(checksum);
 
@@ -2542,7 +2547,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
 		 DML_Layout *layout, DML_SiteList *sites, int volfmt,
 		 int serpar, DML_Checksum *checksum)
 {
-  double dtall=0, dtread=0, dtsend=0;
+  double dtall=0, dtread=0, dtsend=0, dtproc=0, dtcalc=0;
   char *buf, *inbuf;
   int my_io_node;
   int *coords;
@@ -2594,6 +2599,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
   int *node_index = (int*)DML_allocate_buf(sizeof(*node_index),&max_buf_sites);
   int notdone = 1;
   while(notdone) {
+    timestart(dtcalc);
     int64_t k = 0;
     do { // get list of file contiguous sites
       /* The subset_rank locates the datum for rcv_coords in the
@@ -2618,6 +2624,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
       k++;
       notdone = DML_next_subset_site(&rcv_coords, sites);
     } while(k<max_buf_sites && notdone);
+    timestop(dtcalc);
 
     /* I/O node reads the next value */
     if(this_node == my_io_node) {
@@ -2643,6 +2650,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
 	DML_route_bytes(buf, size, my_io_node, dest_node[i]);
 	timestop(dtsend);
       }
+      timestart(dtproc);
       /* Process data before inserting */
       if(this_node == dest_node[i]) {
 	/* Accumulate checksum */
@@ -2652,6 +2660,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
 	/* Store the data */
 	put(buf, node_index[i], count, arg);
       }
+      timestop(dtproc);
     }
   }
   free(dest_node);
@@ -2662,8 +2671,8 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
 
   timestop(dtall);
   if(QIO_verbosity()>=QIO_VERB_LOW && this_node==layout->master_io_node) {
-    printf("%s times: read %.2f  send %.2f  total %.2f\n",
-	   __func__, dtread, dtsend, dtall);
+    printf("%s times: calc %.2f  read %.2f  send %.2f  process %.2f  total %.2f\n",
+	   __func__, dtcalc, dtread, dtsend, dtproc, dtall);
   }
   /* return the number of bytes read by this node only */
   return nbytes;
