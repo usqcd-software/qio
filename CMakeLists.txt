@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(QIO VERSION 2.5.0)
+project(QIO VERSION 2.5.0 LANGUAGES C)
 
 include(GNUInstallDirs)
 include(CheckIncludeFile)
@@ -7,39 +7,29 @@ include(CheckSymbolExists)
 include(CheckTypeSize)
 
 option(QIO_ENABLE_PARALLEL_IO    "Enable Parallel I/O" OFF)
-option(QIO_ENABLE_PARALLEL_BUILD "Enable building for a parallel architecture" ON)
+option(QIO_ENABLE_PARALLEL_BUILD "Enable building for a parallel architecture" OFF)
 option(QIO_ENABLE_QMP_ROUTE  "Enable using QMP_route" OFF)
 option(QIO_ENABLE_OUTPUT_BUFFERING "Enable OutputBuffering" OFF)
 option(QIO_ENABLE_FAST_ROUTE "Enable James Osborns Fast DML route" OFF)
 
 set(QIO_DML_BUF_BYTES "262144"  CACHE STRING "Maximum DML Buffer Size in bytes")
 set(QMP_DIR "" CACHE STRING "QMP Install Directory")
-
+set(CLime_DIR "" CACHE STRING "C-Lime library DIrectory")
 
 if(QIO_ENABLE_PARALLEL_BUILD)
   message(STATUS "Setting Parallel arch to parscalar")
   set(PARALLEL_ARCH "parscalar")
   set(LOCAL_PARALLEL_ARCH "parscalar")
   set(ARCHDEF_SUBSTITUTION "ARCH_PARSCALAR")
-else(QIO_ENABLE_PARALLEL_BUILD)
+  find_package(QMP REQUIRED)
+else()
   message(STATUS "Setting Parallel arch to scalar")
   set(PARALLEL_ARCH "scalar")
   set(LOCAL_PARALLEL_ARCH "scalar")
   set(ARCHDEF_SUBSTITUTION "ARCH_SCALAR")
 endif()
 
-if(QMP_DIR)
-  if( NOT QIO_ENABLE_PARALLEL_BUILD )
-    message(FATAL_ERROR "Attempting to use QMP in a Non-parallel build!!!")
-  endif()
-
-  list(APPEND ${CMAKE_PREFIX_PATH} ${QMP_DIR})
-  find_package(QMP REQUIRED)
-  if(QMP_FOUND)
-    message(STATUS "Found QMP")   
-  endif(QMP_FOUND)
-endif()
-
+   
 if( QIO_ENABLE_PARALLEL_IO )
   message(STATUS "Enabling Paralle I/O")
   set(QIO_USE_PARALLEL_READ "1")
@@ -88,30 +78,29 @@ check_type_size("unsigned short" SIZEOF_UNSIGNED_SHORT)
 
 configure_file(include/qio_config_internal.cmake.h.in include/qio_config_internal.h)
 
-add_subdirectory(other_libs/c-lime)
+if(CLime_DIR)
+ 
+  find_package(CLime CONFIG REQUIRED)
+else()
+  set(QIO_INTERNAL_CLIME TRUE)
+  add_subdirectory(other_libs/c-lime)
+endif()
+
 add_subdirectory(lib)
 add_subdirectory(examples)
 
-# Install the library and the targets 
-# into the export for the targets
-install(TARGETS qio EXPORT QIOTargets
-  ARCHIVE DESTINATION lib
-  LIBRARY  DESTINATION lib
-  RUNTIME DESTINATION bin
-  INCLUDES DESTINATION include)
+
   
-# Install the export for the targets into lib/cmake/QIO/QIOTargets.cmake
-install(EXPORT QIOTargets NAMESPACE QIO:: DESTINATION lib/cmake/QIO)
 
 # Install the headers
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTALL_PREFIX})
 
 # Install the generated headers
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/qio_config_internal.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/)
-set(QIO_INCLUDE_DIR ${CMAKE_INSTALL_PREFIX}/include)
-message(STATUS "Setting QIO_INCLUDE_DIR: ${QIO_INCLUDE_DIR}")
+
 # Make the config file
-configure_package_config_file(QIOConfig.cmake.in QIOConfig.cmake INSTALL_DESTINATION lib/cmake/QIO PATH_VARS QIO_INCLUDE_DIR)
+include(CMakePackageConfigHelpers)
+configure_package_config_file(QIOConfig.cmake.in QIOConfig.cmake INSTALL_DESTINATION lib/cmake/QIO)
 
 # Make the version file
 include(CMakePackageConfigHelpers)
@@ -122,3 +111,4 @@ write_basic_package_version_file(
     )
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/QIOVersion.cmake ${CMAKE_CURRENT_BINARY_DIR}/QIOConfig.cmake DESTINATION lib/cmake/QIO)
+

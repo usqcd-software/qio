@@ -5,11 +5,20 @@
 #
 include(CMakeFindDependencyMacro)
 set(QIO_ENABLE_PARALLEL_BUILD @QIO_ENABLE_PARALLEL_BUILD@)
+set(QIO_INTERNAL_CLIME @QIO_INTERNAL_CLIME@)
 
-find_dependency(C-Lime REQUIRED)
+if(QIO_INTERNAL_CLIME)
+  list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_LIST_DIR}/../CLime)
+endif()
+
+find_dependency(CLime REQUIRED)
+
+ check_required_components (CLime)
 if(QIO_ENABLE_PARALLEL_BUILD)
   find_dependency(QMP REQUIRED)
+  check_required_components(QMP)
 endif()
 
 # Include the generated exported targets
 include(${CMAKE_CURRENT_LIST_DIR}/QIOTargets.cmake)
+check_required_components(QIO)

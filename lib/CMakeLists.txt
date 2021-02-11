@@ -1,4 +1,6 @@
-set(QIO_SRCS qio/QIO_close_read.c
+add_library(qio)
+target_sources(qio PRIVATE  
+   qio/QIO_close_read.c
    qio/QIO_close_read.c
    qio/QIO_close_write.c
    qio/QIO_info.c
@@ -17,30 +19,27 @@ set(QIO_SRCS qio/QIO_close_read.c
    qio/QIO_utils.c
    qio/QIO_write.c
    qio/QIO_host_file_conversion.c
-   qio/QIO_host_utils.c)
+   qio/QIO_host_utils.c
+   dml/DML_crc32.c 
+   dml/DML_utils.c
+   lrl/LRL_main.c
+)
    
-set(DML_GENERIC dml/DML_crc32.c dml/DML_utils.c)
-set(DML_PARSCALAR dml/DML_parscalar.c dml/DML_route.c)
-set(DML_SCALAR dml/DML_scalar.c)
-
-set(LRL_SRCS lrl/LRL_main.c)
-
-LIST(APPEND QIO_SRCS ${LRL_SRCS} ${DML_GENERIC})
-
 if( QIO_ENABLE_PARALLEL_BUILD )
- LIST(APPEND QIO_SRCS ${DML_PARSCALAR})
+  target_sources(qio PRIVATE 
+  	dml/DML_parscalar.c 
+  	dml/DML_route.c
+  )
 else()
- LIST(APPEND QIO_SRCS ${DML_SCALAR})
+  target_sources(qio PRIVATE
+  	dml/DML_scalar.c 
+  ) 
 endif()
 
-add_library(qio ${QIO_SRCS})
 
-
-
-
-target_link_libraries(qio PUBLIC lime)
+target_link_libraries(qio PUBLIC CLime::lime)
 if(QIO_ENABLE_PARALLEL_BUILD)
-  target_link_libraries(qio PUBLIC qmp)
+  target_link_libraries(qio PUBLIC QMP::qmp)
 endif()
 
 target_include_directories(qio PUBLIC
@@ -55,3 +54,23 @@ target_include_directories(qio PUBLIC
  
 set_target_properties(qio PROPERTIES C_STANDARD 99)
 set_target_properties(qio PROPERTIES C_EXTENSIONS OFF)
+
+# Install the library and the targets 
+# into the export for the targets
+install(TARGETS qio EXPORT QIOTargets
+  ARCHIVE DESTINATION lib
+  LIBRARY  DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+)
+
+#install the export description of the targets
+install(EXPORT QIOTargets
+		FILE QIOTargets.cmake
+		NAMESPACE QIO::
+		DESTINATION lib/cmake/QIO)  
+
+add_library(QIO::qio ALIAS qio)
+
+# Install the export for the targets into lib/cmake/QIO/QIOTargets.cmake
+install(EXPORT QIOTargets NAMESPACE QIO:: DESTINATION lib/cmake/QIO)
