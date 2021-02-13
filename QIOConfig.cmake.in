@@ -16,7 +16,7 @@ if(@QIO_INTERNAL_CLIME@)
 endif()
 
 find_dependency(CLime REQUIRED)
-check_required_components (CLime)
+check_required_components(CLime)
 
 set(QIO_ENABLE_PARALLEL_BUILD @QIO_ENABLE_PARALLEL_BUILD@)
 # If parallel build we need to check for QMP
