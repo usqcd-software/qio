@@ -1,3 +1,13 @@
+cmake_minimum_required(VERSION 3.17)
+PROJECT(QIOExamples VERSION 1.0.0
+	LANGUAGES C)
+
+get_directory_property(SubBuild PARENT_DIRECTORY)
+
+if(NOT SubBuild)
+	find_package(QIO REQUIRED)
+endif()
+
 set(QIO_MESH_LIST 
 	qio-convert-mesh.c 
   	qio-mesh-utilities.c 
