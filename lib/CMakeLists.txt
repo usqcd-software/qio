@@ -71,6 +71,3 @@ install(EXPORT QIOTargets
 		DESTINATION lib/cmake/QIO)  
 
 add_library(QIO::qio ALIAS qio)
-
-# Install the export for the targets into lib/cmake/QIO/QIOTargets.cmake
-install(EXPORT QIOTargets NAMESPACE QIO:: DESTINATION lib/cmake/QIO)
