@@ -93,10 +93,10 @@ add_subdirectory(examples)
   
 
 # Install the headers
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION . )
 
 # Install the generated headers
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/qio_config_internal.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/qio_config_internal.h DESTINATION include)
 
 # Make the config file
 include(CMakePackageConfigHelpers)
