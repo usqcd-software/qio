@@ -54,7 +54,10 @@ target_include_directories(qio PUBLIC
  
 set_target_properties(qio PROPERTIES C_STANDARD 99)
 set_target_properties(qio PROPERTIES C_EXTENSIONS OFF)
-
+if( QIO_SANITIZER_OPTS )
+  target_compile_options(lime PUBLIC ${QIO_SANITIZER_OPTS} )
+  target_link_options(lime PUBLIC ${QIO_SANITIZER_OPTS} )
+endif()
 # Install the library and the targets 
 # into the export for the targets
 install(TARGETS qio EXPORT QIOTargets

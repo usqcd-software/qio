@@ -11,6 +11,7 @@ option(QIO_ENABLE_PARALLEL_BUILD "Enable building for a parallel architecture" O
 option(QIO_ENABLE_QMP_ROUTE  "Enable using QMP_route" OFF)
 option(QIO_ENABLE_OUTPUT_BUFFERING "Enable OutputBuffering" OFF)
 option(QIO_ENABLE_FAST_ROUTE "Enable James Osborns Fast DML route" OFF)
+option(QIO_ENABLE_SANITIZERS "Enable Undefined Behaviour and Address Sanitizers" OFF)
 
 set(QIO_DML_BUF_BYTES "262144"  CACHE STRING "Maximum DML Buffer Size in bytes")
 set(QMP_DIR "" CACHE STRING "QMP Install Directory")
@@ -78,11 +79,22 @@ check_type_size("unsigned short" SIZEOF_UNSIGNED_SHORT)
 
 configure_file(include/qio_config_internal.cmake.h.in include/qio_config_internal.h)
 
-if(CLime_DIR)
- 
+# Deal with Sanitizer
+if( QIO_ENABLE_SANITIZERS )
+  if( ( CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 3.1)
+     OR ( CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 4.8) )
+      message(STATUS "QIO: Setting Sanitizer options")
+      set(QIO_SANITIZER_OPTS "-fsanitize=address,undefined")
+  else()
+    message(STATUS "Don't know how to enable sanitizers for ${CMAKE_C_COMPILER}... Ignoring")
+  endif()
+endif()  
+
+if(CLime_DIR) 
   find_package(CLime CONFIG REQUIRED)
 else()
   set(QIO_INTERNAL_CLIME TRUE)
+  set(LIME_ENABLE_SANITIZERS ${QIO_ENABLE_SANITIZERS})
   add_subdirectory(other_libs/c-lime)
 endif()
 
