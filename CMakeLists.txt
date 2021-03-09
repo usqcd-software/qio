@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.17)
 project(QIO VERSION 2.5.0 LANGUAGES C)
 
 include(GNUInstallDirs)
