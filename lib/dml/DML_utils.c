@@ -825,8 +825,10 @@ int DML_init_subset_site_loop(DML_SiteRank *rank, DML_SiteList *sites){
   /* If we are doing a subset and our first site is not in that
      subset, scan forward to find the first site in the subset */
   if(sites->use_subset)
-    if(sites->subset_rank[sites->current_index] < 0)
-      return DML_next_subset_site(rank, sites);
+    if(sites->subset_rank[sites->current_index] < 0) {
+      int status = DML_next_subset_site(rank, sites);
+      return status;
+    }
   return 1;
 }
 
@@ -1722,7 +1724,11 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 
   /* Allocate lattice coordinate */
   coords = DML_allocate_coords(latdim, myname, this_node);
-  if(!coords){free(outbuf);free(tbuf);free(scratch_buf);return 0;}
+  if(!coords){
+    printf("%s(%d) can't allocate coords\n",myname,this_node);
+    free(outbuf);free(tbuf);free(scratch_buf);
+    return 0;
+  }
 
   /* Initialize checksum */
   DML_checksum_init(checksum);
@@ -1744,6 +1750,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   tbuf_sites = 0;  /* Count of sites in the message tbuf */
 
   if(DML_init_subset_site_loop(&snd_coords, sites) == 0){
+    printf("%s(%d): DML_init_subset_site_loop returned 0\n",myname,this_node);
     free(outbuf); free(tbuf); free(scratch_buf); free(coords);
     return 0;
   }
@@ -1796,6 +1803,8 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
 			     outbuf, buf_sites, size, &nbytes, this_node);
 	    if(status != 0) {
+	      printf("%s(%d): DML_flush_outbuf returned status %i\n",
+		     myname,this_node,status);
 	      free(outbuf); free(tbuf); free(scratch_buf); free(coords);
 	      return 0;
 	    }
@@ -1885,11 +1894,11 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     dtsend2 *= s;
     dtproc2 *= s;
 #if 1
-    QMP_max_double(&dtcalc2);
-    QMP_max_double(&dtwrite2);
-    QMP_max_double(&dtsend2);
-    QMP_max_double(&dtproc2);
-    QMP_max_double(&dtall);
+    //QMP_max_double(&dtcalc2);
+    //QMP_max_double(&dtwrite2);
+    //QMP_max_double(&dtsend2);
+    //QMP_max_double(&dtproc2);
+    //QMP_max_double(&dtall);
     if(this_node==layout->master_io_node) {
       printf("%s times: calc %.2f  write %.2f  send %.2f  process %.2f  total %.2f\n",
 	     myname, dtcalc2, dtwrite2, dtsend2, dtproc2, dtall);
@@ -2054,7 +2063,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
       if( (buf_sites >= max_buf_sites) || (isite == max_dest_sites-1) ) {
 	/* The subset_rank locates the datum for snd_coords in the
 	   record that our I/O partition is writing */
-	subset_rank = (DML_SiteRank)DML_subset_rank(snd_coords, sites);
+	subset_rank = DML_subset_rank(snd_coords, sites);
 	if(subset_rank<0) {
 	  printf("%s(%d): Output rank %lu unexpectedly missing from subset list\n",
 		 myname,this_node,snd_coords);
@@ -2716,11 +2725,11 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
     dtread2 *= s;
     dtsend2 *= s;
     dtproc2 *= s;
-    QMP_max_double(&dtcalc2);
-    QMP_max_double(&dtread2);
-    QMP_max_double(&dtsend2);
-    QMP_max_double(&dtproc2);
-    QMP_max_double(&dtall);
+    //QMP_max_double(&dtcalc2);
+    //QMP_max_double(&dtread2);
+    //QMP_max_double(&dtsend2);
+    //QMP_max_double(&dtproc2);
+    //QMP_max_double(&dtall);
     if(this_node==layout->master_io_node) {
       printf("%s times: calc %.2f  read %.2f  send %.2f  process %.2f  total %.2f\n",
 	     __func__, dtcalc2, dtread2, dtsend2, dtproc2, dtall);
