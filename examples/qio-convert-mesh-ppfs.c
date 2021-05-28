@@ -205,7 +205,8 @@ static QIO_Filesystem *create_multi_ppfs(void){
     if(j == 1) fs->node_path[i][0] = '\0';
     /* Otherwise, copy the path to the table */
     else{
-      strncpy(fs->node_path[i], path, PATHLENGTH);
+      /*      strncpy(fs->node_path[i], path, PATHLENGTH); */
+      sprintf(fs->node_path[i],"%s",path);
       fs->node_path[i][PATHLENGTH] = '\0';
     }
 

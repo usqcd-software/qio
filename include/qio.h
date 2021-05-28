@@ -75,6 +75,7 @@
 #define QIO_LIMETYPE_ILDG_BINARY_DATA   "ildg-binary-data"
 #define QIO_LIMETYPE_ILDG_DATA_LFN      "ildg-data-lfn"
 
+#define QIO_MAX_FILENAME_LENGTH   512
 #ifdef __cplusplus
 extern "C"
 {

@@ -52,11 +52,20 @@ int QIO_verbosity(){
 char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
 
   /* Caller must clean up returned filename */
-  int n = strlen(filename) + 12;
-  char *newfilename = (char *)malloc(n);
+  char *newfilename = NULL;
   const char *dirname_end;
   int dirname_len;
-
+ 
+  size_t old_n = strlen(filename);
+  if( old_n+12 > QIO_MAX_FILENAME_LENGTH ) {
+    printf("QIO_filename_edit: input filename has size %lu.  Output filename would be greater "
+	 "than QIO_MAX_FILENAME_LENGHT( %lu ). Failing!\n", 
+		    old_n + 12, (size_t)QIO_MAX_FILENAME_LENGTH);
+    return NULL;
+  }
+	
+  size_t n = (old_n + 12);
+  newfilename = (char *)malloc(n);
   if(!newfilename){
     printf("QIO_filename_edit: Can't malloc newfilename\n");
     return NULL;
@@ -64,8 +73,11 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
 
   /* No change for singlefile format */
   if(volfmt == QIO_SINGLEFILE){
-    strncpy(newfilename,filename,strlen(filename));
-    newfilename[strlen(filename)] = '\0';
+    /* We now that newfilename is longer than filename so 
+     * and that the old filename is null terminated within QIO_MAX_FILENAME_LENTGH
+     * so strcpy is safe */ 
+    strcpy(newfilename,filename);
+    newfilename[old_n] = '\0';
   }
   /* Add volume suffix for multifile and partfile formats */
   else if (volfmt == QIO_PARTFILE_DIR) {

@@ -309,30 +309,30 @@ char *QIO_set_filepath(QIO_Filesystem *fs,
 		  const char * const filename, int node)
 {
   char *path, *newfilename=NULL;
-  int fnlength = strlen(filename);
-  int drlength;
+  size_t fnlength = strlen(filename);
+  size_t drlength;
   
-  if (fs->type == QIO_MULTI_PATH)
-    {
-      path = fs->node_path[node];
-      drlength = strlen(path);
-      newfilename = (char *) malloc(fnlength+drlength+2);
-      if(!newfilename){
-	printf("QIO_set_filepath: Can't malloc newfilename\n");
-	return NULL;
-      }
-      newfilename[0] = '\0';
-      if(drlength > 0){
-	strncpy(newfilename, path, drlength+1);
-	strncat(newfilename, "/", 2);
-      }
-      strncat(newfilename, filename, fnlength+1);
+  if (fs->type == QIO_MULTI_PATH) {
+    path = fs->node_path[node];
+    drlength = strlen(path);
+    newfilename = (char *) malloc(fnlength+drlength+2);
+    if(!newfilename){
+      printf("QIO_set_filepath: Can't malloc newfilename\n");
+      return NULL;
     }
-  else if (fs->type == QIO_SINGLE_PATH)
-    {
-      newfilename = (char *) malloc(fnlength+1);
-      strncpy(newfilename,filename,fnlength+1);
+    newfilename[0] = '\0';
+    if(drlength > 0){
+      sprintf(newfilename, "%s/%s",path,filename);
     }
+  }
+  else if (fs->type == QIO_SINGLE_PATH) {
+    newfilename = (char *) malloc(fnlength+1);
+    if(!newfilename){
+      printf("QIO_set_filepath: Can't malloc newfilename\n");
+      return NULL;
+    }
+    sprintf(newfilename,"%s", filename);
+  }
   
   return newfilename;
 }
@@ -1080,7 +1080,8 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 
 	  /* Copy LIME type */
 	  lime_type_out = (char *)malloc(strlen(lime_type_in)+1);
-	  strncpy(lime_type_out,lime_type_in,strlen(lime_type_in)+1);
+	  if( lime_type_out == NULL ) return QIO_BAD_ARG;
+	  sprintf(lime_type_out,"%s",lime_type_in);
 
 	  /* Now close the master ionode file.  We will reread the
 	     private and user file xml later */
