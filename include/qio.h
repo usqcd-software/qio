@@ -345,4 +345,8 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 }
 #endif
 
+#ifndef _QIO_UNUSED_PARAM
+#define _QIO_UNUSED_PARAM(p)  (void)(p)
+#endif
+
 #endif /* QIO_H */

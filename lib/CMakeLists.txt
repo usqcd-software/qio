@@ -37,6 +37,10 @@ else()
 endif()
 
 
+set_target_properties(qio PROPERTIES 
+		C_STANDARD 99
+		C_EXTENSIONS OFF)
+
 target_link_libraries(qio PUBLIC CLime::lime)
 if(QIO_ENABLE_PARALLEL_BUILD)
   target_link_libraries(qio PUBLIC QMP::qmp)

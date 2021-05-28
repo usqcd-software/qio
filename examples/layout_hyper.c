@@ -56,6 +56,9 @@ static int *mcoord;
 #define MAXPRIMES (sizeof(prime)/sizeof(int))
 
 static void setup_qmp_grid(int len[], int nd, int numnodes){
+  _QIO_UNUSED_PARAM(nd);
+  _QIO_UNUSED_PARAM(numnodes);
+
   int ndim2, i;
   const int *nsquares2;
 
@@ -77,6 +80,7 @@ static void setup_qmp_grid(int len[], int nd, int numnodes){
 
 void setup_hyper_prime(int len[], int nd, int numnodes)
 {
+  _QIO_UNUSED_PARAM(nd);
   int i, j, k, n;
 
   /* Figure out dimensions of rectangle */
@@ -244,5 +248,6 @@ void get_coords(int x[], int node, int index)
 
 /* The number of sites on the specified node */
 int num_sites(int node){
+  _QIO_UNUSED_PARAM(node);
   return sites_on_node;
 }
