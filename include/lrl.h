@@ -5,7 +5,17 @@
 #include <qio_stdint.h>
 #include <stdio.h>
 #include <sys/types.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <lime.h>
+
+#ifdef __cplusplus
+}
+#endif
 
 /* Return codes */
 #define LRL_SUCCESS      ( 0)

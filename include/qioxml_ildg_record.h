@@ -3,6 +3,11 @@
 
 #define QIO_ILDGFORMATVERSION "1.0"
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /*******************************************************************/
 /* Top level wrapper for ILDG Lattice XML
 
@@ -84,5 +89,9 @@ int QIO_get_ildgformat_lt(QIO_ILDGFormatInfo *ildg_info);
 
 QIO_ILDGFormatInfo *QIO_create_ildg_format_info(int precision, int *dims);
 void QIO_destroy_ildg_format_info(QIO_ILDGFormatInfo *ildg_info);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* QIOXML_ILDG_RECORD_H */
