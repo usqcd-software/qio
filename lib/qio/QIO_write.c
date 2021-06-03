@@ -35,7 +35,7 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
               size_t datum_size, int word_size,
 	      QIO_String *xml_record, 
 	      int *msg_begin, int *msg_end){
-
+  _QIO_UNUSED_PARAM(word_size);
   QIO_String *xml_record_private;
   QIO_String *xml_ildg_format;
   QIO_ILDGFormatInfo *ildg_info;
@@ -50,7 +50,7 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
      private record metadata and the byte count per site to be written */
   if(datum_size != QIO_get_typesize(record_info) * count)
     {
-      printf("%s(%d): bytes per site mismatch %lu != %d * %d\n",
+      printf("%s(%d): bytes per site mismatch %lu != %lu * %d\n",
 	     myname,this_node,(unsigned long)datum_size,
 	     QIO_get_typesize(record_info),
 	     QIO_get_datacount(record_info));

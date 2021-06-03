@@ -75,6 +75,7 @@
 #define QIO_LIMETYPE_ILDG_BINARY_DATA   "ildg-binary-data"
 #define QIO_LIMETYPE_ILDG_DATA_LFN      "ildg-data-lfn"
 
+#define QIO_MAX_FILENAME_LENGTH   512
 #ifdef __cplusplus
 extern "C"
 {
@@ -343,6 +344,10 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 	    const LIME_type lime_type);
 #ifdef __cplusplus
 }
+#endif
+
+#ifndef _QIO_UNUSED_PARAM
+#define _QIO_UNUSED_PARAM(p)  (void)(p)
 #endif
 
 #endif /* QIO_H */

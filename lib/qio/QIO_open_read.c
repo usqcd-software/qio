@@ -581,6 +581,7 @@ int
 QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
 			QIO_Iflag *iflag)
 {
+  _QIO_UNUSED_PARAM(iflag);
   DML_Layout *dml_layout = qio_in->layout;
   int this_node = dml_layout->this_node;
   LRL_FileReader *lrl_file_in = NULL;
