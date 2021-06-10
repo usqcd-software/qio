@@ -13,17 +13,12 @@
 
 /* Sum a uint64_t over all nodes (for 64 bit byte counts) */
 
-void DML_peq_uint64_t(uint64_t *subtotal, uint64_t *addend)
-{
-  *subtotal += *addend;
-}
 
-void DML_sum_uint64_t(uint64_t *ipt)
+void DML_sum_uint64_t(n_uint64_t *ipt)
 {
-  uint64_t work = *ipt;
-  QMP_binary_reduction((void *)(&work), sizeof(work), 
-		       (QMP_binary_func)DML_peq_uint64_t);
-  *ipt = work;
+  long double work = (long double)(*ipt); 
+  QMP_sum_long_double(&work);
+  *ipt =(n_uint64_t) work; 
 }
 
 /* Sum an int over all nodes (16 or 32 bit) */

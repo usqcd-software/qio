@@ -140,6 +140,7 @@ char *DML_allocate_msg(size_t size, char *myname, int this_node){
 /*------------------------------------------------------------------*/
 /* Accessor: Pointer to datum member of msg */
 char *DML_msg_datum(char *msg, size_t size){
+  _QIO_UNUSED_ARGUMENT(size);
   return msg;
 }
 
@@ -512,6 +513,8 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
 		      LIME_type *lime_type){
+  _QIO_UNUSED_ARGUMENT(volfmt);
+
   uint64_t check, check32, announced_rec_size;
   int this_node = layout->this_node;
   LRL_RecordReader *lrl_record_in;
@@ -1135,7 +1138,7 @@ int DML_write_buf_current(LRL_RecordWriter *lrl_record_out,
 
   uint64_t wrote = LRL_write_bytes(lrl_record_out, lbuf, buf_sites*size);
   if(wrote != buf_sites*size){
-    printf("%s(%d) write error: wrote %lu bytes but wanted %lu\n",
+    printf("%s(%d) write error: wrote %lld bytes but wanted %lu\n",
 	   myname,this_node,wrote,buf_sites*size);
     return 1;
   }
@@ -1159,7 +1162,7 @@ int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out,
   /* Seek to the appropriate position */
   if(LRL_seek_write_record(lrl_record_out,(off_t)size*seeksite)
      != LRL_SUCCESS){
-    printf("%s(%d) error while seeking to %lu\n",
+    printf("%s(%d) error while seeking to %llu\n",
 	   myname,this_node,size*seeksite);
     return 1;
   }
@@ -1533,7 +1536,7 @@ int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
   /* Convert lexicographic index for this partition to the physical
      rank in the record */
   if(DML_lookup_subset_rank(&subset_rank, snd_coords, sites)!= 0){
-    printf("%s(%d) Request to write a site %ld not planned for the record.\n",
+    printf("%s(%d) Request to write a site %lld not planned for the record.\n",
 	   myname, this_node, snd_coords);
     return 1;
   }
@@ -2065,7 +2068,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	   record that our I/O partition is writing */
 	subset_rank = DML_subset_rank(snd_coords, sites);
 	if(subset_rank<0) {
-	  printf("%s(%d): Output rank %lu unexpectedly missing from subset list\n",
+	  printf("%s(%d): Output rank %llu unexpectedly missing from subset list\n",
 		 myname,this_node,snd_coords);
 	  free(outbuf); free(coords);
 	  return 0;
@@ -2100,6 +2103,8 @@ size_t DML_global_out(LRL_RecordWriter *lrl_record_out,
            DML_Layout *layout, int volfmt, 
 	   DML_Checksum *checksum)
 {
+  _QIO_UNUSED_ARGUMENT(volfmt);
+
   char *buf;
   int this_node = layout->this_node;
   size_t nbytes = 0;
@@ -2239,6 +2244,8 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 	     int count, size_t size, int word_size, void *arg, 
 	     DML_Layout *layout, DML_Checksum *checksum)
 {
+  _QIO_UNUSED_ARGUMENT(sitelist);
+
   size_t buf_sites, buf_extract, max_buf_sites;
   size_t isite, max_send_sites;
   uint64_t nbytes = 0;
@@ -2522,7 +2529,7 @@ int DML_partition_sitedata_in(DML_RecordReader *dml_record_in,
   /* Convert lexicographic index for this partition to the physical
      rank in the record */
   if(DML_lookup_subset_rank(&subset_rank, rcv_coords, sites)!= 0){
-    printf("%s(%d) Request for a site %ld not found in the record.\n",
+    printf("%s(%d) Request for a site %lld not found in the record.\n",
 	   myname, this_node, rcv_coords);
   return 1;
   }
@@ -2543,7 +2550,8 @@ int DML_partition_allsitedata_in(DML_RecordReader *dml_record_in,
 	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
 	  DML_Checksum *checksum)
 {
-
+  _QIO_UNUSED_ARGUMENT(volfmt);
+  _QIO_UNUSED_ARGUMENT(checksum);
   DML_SiteRank rcv_coords;
 
   if(DML_init_subset_site_loop(&rcv_coords, sites) == 0)
@@ -2601,7 +2609,8 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
   int this_node = layout->this_node;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
-  size_t nbytes=0, max_buf_sites=1;
+  size_t nbytes=0;
+  size_t max_buf_sites=1;
   char myname[] = "DML_partition_in";
 
   timestart(dtall);
@@ -2648,7 +2657,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
   int notdone = 1;
   while(notdone) {
     timestart2(dtcalc2);
-    int64_t k = 0;
+    size_t k = 0;
     do { // get list of file contiguous sites
       /* The subset_rank locates the datum for rcv_coords in the
 	 record our I/O partition is reading */
@@ -2656,13 +2665,13 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
       if(serpar == DML_PARALLEL) {
 	subset_rank = (DML_SiteRank) DML_subset_rank(rcv_coords, sites);
 	if(subset_rank<0){
-	  printf("%s(%d): Input rank %lu unexpectedly missing from subset list\n",
+	  printf("%s(%d): Input rank %llu unexpectedly missing from subset list\n",
 		 myname,this_node,rcv_coords);
 	  return 0;
 	}
       }
       if(k==0) firstrank = subset_rank;
-      else if(subset_rank!=firstrank+k) break;
+      else if(subset_rank!=firstrank+(DML_SiteRank)k) break;
       /* Convert lexicographic rank to coordinates */
       DML_lex_coords(coords, latdim, latsize, rcv_coords);
       rcoords[k] = rcv_coords;
@@ -2690,7 +2699,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
     }
     nextrank = firstrank + k;
 
-    for(int i=0; i<k; i++) {
+    for(size_t i=0; i<k; i++) {
       buf = inbuf + i*size;
       /* Send result to destination node. Avoid I/O node sending to itself. */
       if (dest_node[i] != my_io_node) {
@@ -2751,6 +2760,7 @@ size_t DML_global_in(LRL_RecordReader *lrl_record_in,
           DML_Layout* layout, int volfmt, int broadcast_globaldata,
 	  DML_Checksum *checksum)
 {
+  _QIO_UNUSED_ARGUMENT(volfmt);
   char *buf;
   int this_node = layout->this_node;
   size_t nbytes = 0;
