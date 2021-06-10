@@ -14,11 +14,9 @@
 /* Sum a uint64_t over all nodes (for 64 bit byte counts) */
 
 
-void DML_sum_uint64_t(n_uint64_t *ipt)
+void DML_sum_uint64_t(uint64_t *ipt)
 {
-  long double work = (long double)(*ipt); 
-  QMP_sum_long_double(&work);
-  *ipt =(n_uint64_t) work; 
+  QMP_sum_uint64_t(ipt);
 }
 
 /* Sum an int over all nodes (16 or 32 bit) */

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project(QIO VERSION 2.5.0 LANGUAGES C)
+project(QIO VERSION 2.5.1 LANGUAGES C)
 
 include(GNUInstallDirs)
 include(CheckIncludeFile)
@@ -22,7 +22,7 @@ if(QIO_ENABLE_PARALLEL_BUILD)
   set(PARALLEL_ARCH "parscalar")
   set(LOCAL_PARALLEL_ARCH "parscalar")
   set(ARCHDEF_SUBSTITUTION "ARCH_PARSCALAR")
-  find_package(QMP REQUIRED)
+  find_package(QMP 2.5.3 REQUIRED)
 else()
   message(STATUS "Setting Parallel arch to scalar")
   set(PARALLEL_ARCH "scalar")
@@ -92,6 +92,13 @@ endif()
 
 if(CLime_DIR) 
   find_package(CLime CONFIG REQUIRED)
+  find_library( CLime_LIB_FILE  liblime.a liblime.so liblime.dylib PATHS ${CLime_DIR}/../.. NO_DEFAULT_PATH )
+  message(STATUS "Lime Library found at ${CLime_LIB_FILE}" )
+  get_filename_component(CLime_LIBDIR ${CLime_LIB_FILE} DIRECTORY )
+  message(STATUS "Lime library directory is ${CLime_LIBDIR}")
+  find_file( CLime_HEADER_FILE lime.h PATHS ${CLime_LIBDIR}/../include NO_DEFAULT_PATH )
+  get_filename_component(CLime_INCDIR  ${CLime_HEADER_FILE} DIRECTORY )
+  message(STATUS "Lime inc directory is ${CLime_INCDIR}")
 else()
   set(QIO_INTERNAL_CLIME TRUE)
   set(LIME_ENABLE_SANITIZERS ${QIO_ENABLE_SANITIZERS})
@@ -101,8 +108,9 @@ endif()
 add_subdirectory(lib)
 add_subdirectory(examples)
 
-
-  
+configure_file(bin/qio-config.cmake.in ./bin/qio-config)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/bin/qio-config DESTINATION bin/ PERMISSIONS
+          OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 # Install the headers
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION . )
@@ -117,10 +125,10 @@ configure_package_config_file(QIOConfig.cmake.in QIOConfig.cmake INSTALL_DESTINA
 # Make the version file
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-    QIOVersion.cmake
+    QIOConfigVersion.cmake
     VERSION ${PACKAGE_VERSION}
     COMPATIBILITY AnyNewerVersion
     )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/QIOVersion.cmake ${CMAKE_CURRENT_BINARY_DIR}/QIOConfig.cmake DESTINATION lib/cmake/QIO)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/QIOConfigVersion.cmake ${CMAKE_CURRENT_BINARY_DIR}/QIOConfig.cmake DESTINATION lib/cmake/QIO)
 
