@@ -330,9 +330,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   memcpy(&(out->last_checksum),&checksum,sizeof(DML_Checksum));
 
   /* Sum the bytes written by all nodes */
-  printf("%s(%d): before sum: %llu\n", myname, this_node, nbytes);
   DML_sum_uint64_t(&nbytes);
-  printf("%s(%d): after sum: %llu\n", myname, this_node, nbytes);
 
   /* Compute and compare byte count with expected record size */
   volume = out->layout->subsetvolume;

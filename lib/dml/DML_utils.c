@@ -15,8 +15,6 @@
 #include <sys/types.h>
 #include <qio_stdint.h>
 #include <sys/time.h>
-//#include <time.h>
-#include <qmp.h>
 
 #undef DML_DEBUG
 
@@ -810,7 +808,6 @@ int DML_next_subset_site(DML_SiteRank *rank, DML_SiteList *sites)
 DML_SiteRank
 DML_subset_rank(DML_SiteRank rank, DML_SiteList *sites)
 {
-  //printf("node %i rank %i\n", QMP_get_node_number(), rank);
   if(sites->use_subset)
     return sites->subset_rank[sites->current_index];
   else
@@ -1178,7 +1175,6 @@ int
 DML_read_buf(LRL_RecordReader *lrl_record_in, char *buf,
 	     DML_SiteRank firstrank, size_t size, int num, int doseek)
 {
-  //printf("node %i firstrank %i size %li num %i doseek %i\n", QMP_get_node_number(), firstrank, size, num, doseek);
   if(doseek) {
     if(LRL_seek_read_record(lrl_record_in,(off_t)size*firstrank)
        != LRL_SUCCESS) {
@@ -1897,11 +1893,6 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     dtsend2 *= s;
     dtproc2 *= s;
 #if 1
-    //QMP_max_double(&dtcalc2);
-    //QMP_max_double(&dtwrite2);
-    //QMP_max_double(&dtsend2);
-    //QMP_max_double(&dtproc2);
-    //QMP_max_double(&dtall);
     if(this_node==layout->master_io_node) {
       printf("%s times: calc %.2f  write %.2f  send %.2f  process %.2f  total %.2f\n",
 	     myname, dtcalc2, dtwrite2, dtsend2, dtproc2, dtall);
@@ -2734,11 +2725,6 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
     dtread2 *= s;
     dtsend2 *= s;
     dtproc2 *= s;
-    //QMP_max_double(&dtcalc2);
-    //QMP_max_double(&dtread2);
-    //QMP_max_double(&dtsend2);
-    //QMP_max_double(&dtproc2);
-    //QMP_max_double(&dtall);
     if(this_node==layout->master_io_node) {
       printf("%s times: calc %.2f  read %.2f  send %.2f  process %.2f  total %.2f\n",
 	     __func__, dtcalc2, dtread2, dtsend2, dtproc2, dtall);
