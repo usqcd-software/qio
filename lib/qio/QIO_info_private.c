@@ -705,7 +705,7 @@ int QIO_get_spins(QIO_RecordInfo *record_info){
   return record_info->spins.value;
 }
 
-int QIO_get_typesize(QIO_RecordInfo *record_info){
+size_t QIO_get_typesize(QIO_RecordInfo *record_info){
   return record_info->typesize.value;
 }
 
@@ -968,7 +968,7 @@ int QIO_compare_record_info(QIO_RecordInfo *found, QIO_RecordInfo *expect){
     if(!QIO_defined_typesize(found) &&
        QIO_get_typesize(found) != QIO_get_typesize(expect))
       {
-	printf("%s:Typesize mismatch expected %d found %d \n",myname,
+	printf("%s:Typesize mismatch expected %lu found %lu \n",myname,
 	       QIO_get_typesize(expect),QIO_get_typesize(found));
 	return QIO_ERR_REC_INFO;
       }

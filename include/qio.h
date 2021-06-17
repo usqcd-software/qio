@@ -358,5 +358,5 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 #ifdef __cplusplus
 }
 #endif
-
+#define _QIO_UNUSED_ARGUMENT(x) ((void)(x))
 #endif /* QIO_H */

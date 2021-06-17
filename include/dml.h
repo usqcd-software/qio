@@ -52,7 +52,7 @@ typedef struct {
 typedef uint32_t DML_SiteRank32;
 typedef int64_t DML_SiteRank;
 
-typedef int64_t DML_Index;
+typedef n_uint64_t DML_Index;
 /* For collecting and passing layout information */
 /* See qio.h for QIO_Layout */
 typedef struct {

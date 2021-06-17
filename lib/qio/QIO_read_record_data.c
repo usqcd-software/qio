@@ -86,7 +86,7 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   count = QIO_get_datacount(record_info);
   if(datum_size !=  QIO_get_typesize(record_info) * count)
     {
-      printf("%s(%d): requested byte count %lu disagrees with the record %d * %d\n",
+      printf("%s(%d): requested byte count %lu disagrees with the record %lu * %d\n",
 	     myname,this_node,(unsigned long)datum_size,
 	     QIO_get_typesize(record_info), count);
       

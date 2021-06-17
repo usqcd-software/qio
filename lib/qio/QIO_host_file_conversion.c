@@ -142,6 +142,9 @@ int QIO_host_master_io_node( void )
    to the field */
 void QIO_scalar_put( char *s1 , size_t scalar_index, int count, void *s2 )
 {
+  _QIO_UNUSED_ARGUMENT(scalar_index);
+  _QIO_UNUSED_ARGUMENT(count);
+
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   size_t datum_size = field->datum_size;
@@ -158,6 +161,8 @@ void QIO_scalar_put( char *s1 , size_t scalar_index, int count, void *s2 )
 void QIO_scalar_put_global( char *s1 , size_t scalar_index, 
 			    int count, void *s2 )
 {
+  _QIO_UNUSED_ARGUMENT(scalar_index);
+  _QIO_UNUSED_ARGUMENT(count);
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
 
@@ -206,6 +211,9 @@ void QIO_scalar_get( char *s1, size_t ionode_index, int count, void *s2 )
 void QIO_scalar_get_global( char *s1 , size_t ionode_index, 
 			    int count, void *s2 )
 {
+  _QIO_UNUSED_ARGUMENT(ionode_index);
+  _QIO_UNUSED_ARGUMENT(count);
+
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field     = arg->field;
   int node           = arg->node;
@@ -220,6 +228,8 @@ void QIO_scalar_get_global( char *s1 , size_t ionode_index,
 
 void QIO_part_get( char *s1 , size_t scalar_index, int count, void *s2 )
 {
+  _QIO_UNUSED_ARGUMENT(scalar_index);
+  _QIO_UNUSED_ARGUMENT(count);
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   size_t datum_size = field->datum_size;
@@ -269,6 +279,8 @@ void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
    to the field */
 void QIO_part_put_global( char *s1 , size_t ionode_index, int count, void *s2 )
 {
+  _QIO_UNUSED_ARGUMENT(ionode_index);
+  _QIO_UNUSED_ARGUMENT(count);
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   int node = arg->node;
@@ -312,12 +324,12 @@ char *QIO_set_filepath(QIO_Filesystem *fs,
 	strncpy(newfilename, path, drlength+1);
 	strncat(newfilename, "/", 2);
       }
-      strncat(newfilename, filename, fnlength+1);
+      strcat(newfilename, filename);
     }
   else if (fs->type == QIO_SINGLE_PATH)
     {
       newfilename = (char *) malloc(fnlength+1);
-      strncpy(newfilename,filename,fnlength+1);
+      strcpy(newfilename,filename);
     }
   
   return newfilename;
@@ -1066,7 +1078,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 
 	  /* Copy LIME type */
 	  lime_type_out = (char *)malloc(strlen(lime_type_in)+1);
-	  strncpy(lime_type_out,lime_type_in,strlen(lime_type_in)+1);
+	  strcpy(lime_type_out,lime_type_in);
 
 	  /* Now close the master ionode file.  We will reread the
 	     private and user file xml later */
