@@ -81,20 +81,16 @@ configure_file(include/qio_config_internal.cmake.h.in include/qio_config_interna
 
 # Deal with Sanitizer
 if( QIO_ENABLE_SANITIZERS )
-  if( ( CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 3.1)
-     OR ( CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 4.8) )
-      message(STATUS "QIO: Setting Sanitizer options")
-      set(QIO_SANITIZER_OPTS "-fsanitize=address,undefined")
-  else()
-    message(STATUS "Don't know how to enable sanitizers for ${CMAKE_C_COMPILER}... Ignoring")
-  endif()
+  include(cmake/CheckSanitizeOpts.cmake)
+  check_sanitizer_options( "${QIO_ENABLE_SANITIZERS}" QIO_SANITIZER_OPTS )
+  message(STATUS "QIO: Setting Sanitizer options: ${QIO_SANITIZER_OPTS}")
+  set(LIME_ENABLE_SANITIZERS ${QIO_ENABLE_SANITIZERS})
 endif()  
 
 if(CLime_DIR) 
   find_package(CLime CONFIG REQUIRED)
 else()
   set(QIO_INTERNAL_CLIME TRUE)
-  set(LIME_ENABLE_SANITIZERS ${QIO_ENABLE_SANITIZERS})
   add_subdirectory(other_libs/c-lime)
 endif()
 
@@ -117,10 +113,10 @@ configure_package_config_file(QIOConfig.cmake.in QIOConfig.cmake INSTALL_DESTINA
 # Make the version file
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-    QIOVersion.cmake
+    QIOConfigVersion.cmake
     VERSION ${PACKAGE_VERSION}
     COMPATIBILITY AnyNewerVersion
     )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/QIOVersion.cmake ${CMAKE_CURRENT_BINARY_DIR}/QIOConfig.cmake DESTINATION lib/cmake/QIO)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/QIOConfigVersion.cmake ${CMAKE_CURRENT_BINARY_DIR}/QIOConfig.cmake DESTINATION lib/cmake/QIO)
 
