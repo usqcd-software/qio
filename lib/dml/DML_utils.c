@@ -17,6 +17,8 @@
 #include <sys/time.h>
 //#include <time.h>
 #include <qmp.h>
+#include <stdint.h>
+#include <limits.h>
 
 #undef DML_DEBUG
 
@@ -993,6 +995,28 @@ void DML_destroy_subset_rank(DML_SiteList *sites){
 
 /*------------------------------------------------------------------*/
 /* Checksum "class" */
+
+/* A safe and nearly constant time bitwise rotate which 
+ * avoids Undefined Behaviour.
+ *
+ * This implementation follows this Wikipedia entry: 
+ * https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
+ *
+ * and is based on the work of:
+ * 	John Regehr https://blog.regehr.org/archives/1063
+ * and
+ *  Peter Cordes in his stack overflow answers:
+ *
+ *   https://stackoverflow.com/questions/776508/best-practices-for-circular-shift-rotate-operations-in-c/776523#776523
+ *   https://stackoverflow.com/questions/31387778/near-constant-time-rotate-that-does-not-violate-the-standards/31488147#31488147
+ */
+uint32_t DML_rank_rotl32(uint32_t work, DML_SiteRank rank) 
+{
+    const unsigned int mask =  CHAR_BIT * sizeof(work) - 1;
+    rank  &= mask;
+    return (work << rank) | (work >> (-rank & mask));
+}
+
 /* We do a crc32 sum on the site data -- then do two lexicographic-
    rank-based bit rotations and XORs on the resulting crc32
    checksum */
@@ -1013,8 +1037,12 @@ void DML_checksum_accum(DML_Checksum *checksum, DML_SiteRank rank,
 
   rank29 %= 29; rank31 %= 31;
 
-  checksum->suma ^= work<<rank29 | work>>(32-rank29);
-  checksum->sumb ^= work<<rank31 | work>>(32-rank31);
+  /*
+    checksum->suma ^= work<<rank29 | work>>(32-rank29);
+    checksum->sumb ^= work<<rank31 | work>>(32-rank31);
+  */
+	checksum->suma ^= DML_rank_rotl32(work, rank29);
+	checksum->sumb ^= DML_rank_rotl32(work, rank31);
 }
 
 /* Combine checksums over all nodes */
