@@ -81,13 +81,9 @@ configure_file(include/qio_config_internal.cmake.h.in include/qio_config_interna
 
 # Deal with Sanitizer
 if( QIO_ENABLE_SANITIZERS )
-  if( ( CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 3.1)
-     OR ( CMAKE_C_COMPILER_ID MATCHES "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 4.8) )
-      message(STATUS "QIO: Setting Sanitizer options")
-      set(QIO_SANITIZER_OPTS "-fsanitize=address,undefined")
-  else()
-    message(STATUS "Don't know how to enable sanitizers for ${CMAKE_C_COMPILER}... Ignoring")
-  endif()
+ include(cmake/CheckSanitizeOpts.cmake)
+  check_sanitizer_options( "${QIO_ENABLE_SANITIZERS}" QIO_SANITIZER_OPTS )
+  message(STATUS "QIO: Setting Sanitizer options: ${QIO_SANITIZER_OPTS}")
 endif()  
 
 if(CLime_DIR) 
