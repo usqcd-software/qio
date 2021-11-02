@@ -82,9 +82,10 @@ configure_file(include/qio_config_internal.cmake.h.in include/qio_config_interna
 
 # Deal with Sanitizer
 if( QIO_ENABLE_SANITIZERS )
- include(cmake/CheckSanitizeOpts.cmake)
+  include(cmake/CheckSanitizeOpts.cmake)
   check_sanitizer_options( "${QIO_ENABLE_SANITIZERS}" QIO_SANITIZER_OPTS )
   message(STATUS "QIO: Setting Sanitizer options: ${QIO_SANITIZER_OPTS}")
+  set(LIME_ENABLE_SANITIZERS ${QIO_ENABLE_SANITIZERS})
 endif()  
 
 if(CLime_DIR) 
@@ -98,7 +99,6 @@ if(CLime_DIR)
   message(STATUS "Lime inc directory is ${CLime_INCDIR}")
 else()
   set(QIO_INTERNAL_CLIME TRUE)
-  set(LIME_ENABLE_SANITIZERS ${QIO_ENABLE_SANITIZERS})
   add_subdirectory(other_libs/c-lime)
 endif()
 
