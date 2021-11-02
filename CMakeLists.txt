@@ -12,6 +12,7 @@ option(QIO_ENABLE_QMP_ROUTE  "Enable using QMP_route" OFF)
 option(QIO_ENABLE_OUTPUT_BUFFERING "Enable OutputBuffering" OFF)
 option(QIO_ENABLE_FAST_ROUTE "Enable James Osborns Fast DML route" OFF)
 option(QIO_ENABLE_SANITIZERS "Enable Undefined Behaviour and Address Sanitizers" OFF)
+option(QIO_BUILD_TESTS "Enable building of test programs" ON)
 
 set(QIO_DML_BUF_BYTES "262144"  CACHE STRING "Maximum DML Buffer Size in bytes")
 set(QMP_DIR "" CACHE STRING "QMP Install Directory")
@@ -102,7 +103,9 @@ else()
 endif()
 
 add_subdirectory(lib)
-add_subdirectory(examples)
+if( QIO_BUILD_TESTS )
+  add_subdirectory(examples)
+endif()
 
 configure_file(bin/qio-config.cmake.in ./bin/qio-config)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/bin/qio-config DESTINATION bin/ PERMISSIONS

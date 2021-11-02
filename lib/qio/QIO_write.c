@@ -347,7 +347,7 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   {
     if(nbytes != total_bytes)
     {
-      printf("%s(%d): bytes written %lld != expected rec_size %lld\n",
+      printf("%s(%d): bytes written %ld != expected rec_size %ld\n",
 	     myname, this_node, nbytes, 
 	     total_bytes);
       return QIO_ERR_BAD_WRITE_BYTES;

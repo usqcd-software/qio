@@ -649,7 +649,7 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
 	lrl_file_in = LRL_open_read_file(newfilename);
 	if(QIO_verbosity() >= QIO_VERB_DEBUG)
 	  printf("%s(%d): LRL_open_read_file returns %p\n",myname,this_node,
-		 lrl_file_in);
+		 (void *)lrl_file_in);
 	if(lrl_file_in == NULL){
 	  printf("%s(%d): Can't open %s for reading\n",myname,this_node,
 		 newfilename);

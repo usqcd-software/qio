@@ -1161,7 +1161,7 @@ int DML_write_buf_current(LRL_RecordWriter *lrl_record_out,
 
   uint64_t wrote = LRL_write_bytes(lrl_record_out, lbuf, buf_sites*size);
   if(wrote != buf_sites*size){
-    printf("%s(%d) write error: wrote %lld bytes but wanted %lu\n",
+    printf("%s(%d) write error: wrote %lu bytes but wanted %lu\n",
 	   myname,this_node,wrote,buf_sites*size);
     return 1;
   }
@@ -1185,7 +1185,7 @@ int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out,
   /* Seek to the appropriate position */
   if(LRL_seek_write_record(lrl_record_out,(off_t)size*seeksite)
      != LRL_SUCCESS){
-    printf("%s(%d) error while seeking to %llu\n",
+    printf("%s(%d) error while seeking to %lu\n",
 	   myname,this_node,size*seeksite);
     return 1;
   }
@@ -1558,7 +1558,7 @@ int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
   /* Convert lexicographic index for this partition to the physical
      rank in the record */
   if(DML_lookup_subset_rank(&subset_rank, snd_coords, sites)!= 0){
-    printf("%s(%d) Request to write a site %lld not planned for the record.\n",
+    printf("%s(%d) Request to write a site %ld not planned for the record.\n",
 	   myname, this_node, snd_coords);
     return 1;
   }
@@ -2085,7 +2085,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	   record that our I/O partition is writing */
 	subset_rank = DML_subset_rank(snd_coords, sites);
 	if(subset_rank<0) {
-	  printf("%s(%d): Output rank %llu unexpectedly missing from subset list\n",
+	  printf("%s(%d): Output rank %ld unexpectedly missing from subset list\n",
 		 myname,this_node,snd_coords);
 	  free(outbuf); free(coords);
 	  return 0;
@@ -2546,7 +2546,7 @@ int DML_partition_sitedata_in(DML_RecordReader *dml_record_in,
   /* Convert lexicographic index for this partition to the physical
      rank in the record */
   if(DML_lookup_subset_rank(&subset_rank, rcv_coords, sites)!= 0){
-    printf("%s(%d) Request for a site %lld not found in the record.\n",
+    printf("%s(%d) Request for a site %ld not found in the record.\n",
 	   myname, this_node, rcv_coords);
   return 1;
   }
@@ -2682,7 +2682,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
       if(serpar == DML_PARALLEL) {
 	subset_rank = (DML_SiteRank) DML_subset_rank(rcv_coords, sites);
 	if(subset_rank<0){
-	  printf("%s(%d): Input rank %llu unexpectedly missing from subset list\n",
+	  printf("%s(%d): Input rank %ld unexpectedly missing from subset list\n",
 		 myname,this_node,rcv_coords);
 	  return 0;
 	}
