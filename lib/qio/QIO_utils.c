@@ -64,7 +64,7 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_node){
 
   /* No change for singlefile format */
   if(volfmt == QIO_SINGLEFILE){
-    strncpy(newfilename,filename,n);
+    strcpy(newfilename,filename);
     newfilename[n-1] = '\0';
   }
   /* Add volume suffix for multifile and partfile formats */
@@ -179,7 +179,7 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 
   // check if we can fit each site index in 32 bits
   int use32 = 1;
-  size_t max32 = UINT32_MAX;
+  int64_t max32 = UINT32_MAX;
   for(size_t i=0; i<sites->number_of_io_sites; i++) {
     if(sites->list[i] > max32) {
       use32 = 0;

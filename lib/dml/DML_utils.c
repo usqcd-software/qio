@@ -15,9 +15,8 @@
 #include <sys/types.h>
 #include <qio_stdint.h>
 #include <sys/time.h>
-//#include <time.h>
-#include <qmp.h>
-
+#include <stdint.h>
+#include <limits.h>
 #undef DML_DEBUG
 
 // duplicate hack to avoid XLC bug
@@ -140,6 +139,7 @@ char *DML_allocate_msg(size_t size, char *myname, int this_node){
 /*------------------------------------------------------------------*/
 /* Accessor: Pointer to datum member of msg */
 char *DML_msg_datum(char *msg, size_t size){
+  _QIO_UNUSED_ARGUMENT(size);
   return msg;
 }
 
@@ -512,6 +512,8 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
 		      LIME_type *lime_type){
+  _QIO_UNUSED_ARGUMENT(volfmt);
+
   uint64_t check, check32, announced_rec_size;
   int this_node = layout->this_node;
   LRL_RecordReader *lrl_record_in;
@@ -807,7 +809,6 @@ int DML_next_subset_site(DML_SiteRank *rank, DML_SiteList *sites)
 DML_SiteRank
 DML_subset_rank(DML_SiteRank rank, DML_SiteList *sites)
 {
-  //printf("node %i rank %i\n", QMP_get_node_number(), rank);
   if(sites->use_subset)
     return sites->subset_rank[sites->current_index];
   else
@@ -997,6 +998,27 @@ void DML_destroy_subset_rank(DML_SiteList *sites){
    rank-based bit rotations and XORs on the resulting crc32
    checksum */
 
+/* A safe and nearly constant time bitwise rotate which
+ * avoids Undefined Behaviour.
+ *
+ * This implementation follows this Wikipedia entry:
+ * https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
+ *
+ * and is based on the work of:
+ *  John Regehr https://blog.regehr.org/archives/1063
+ * and
+ *  Peter Cordes in his stack overflow answers:
+ *
+ *   https://stackoverflow.com/questions/776508/best-practices-for-circular-shift-rotate-operations-in-c/776523#776523
+ *   https://stackoverflow.com/questions/31387778/near-constant-time-rotate-that-does-not-violate-the-standards/31488147#31488147
+ */
+uint32_t DML_rank_rotl32(uint32_t work, DML_SiteRank rank)
+{
+    const unsigned int mask =  CHAR_BIT * sizeof(work) - 1;
+    rank  &= mask;
+    return (work << rank) | (work >> (-rank & mask));
+}
+
 /* Initialize checksums */
 void DML_checksum_init(DML_Checksum *checksum){
   checksum->suma = 0;
@@ -1013,8 +1035,12 @@ void DML_checksum_accum(DML_Checksum *checksum, DML_SiteRank rank,
 
   rank29 %= 29; rank31 %= 31;
 
-  checksum->suma ^= work<<rank29 | work>>(32-rank29);
-  checksum->sumb ^= work<<rank31 | work>>(32-rank31);
+ /*
+    checksum->suma ^= work<<rank29 | work>>(32-rank29);
+    checksum->sumb ^= work<<rank31 | work>>(32-rank31);
+  */
+  checksum->suma ^= DML_rank_rotl32(work, rank29);
+  checksum->sumb ^= DML_rank_rotl32(work, rank31);
 }
 
 /* Combine checksums over all nodes */
@@ -1175,7 +1201,6 @@ int
 DML_read_buf(LRL_RecordReader *lrl_record_in, char *buf,
 	     DML_SiteRank firstrank, size_t size, int num, int doseek)
 {
-  //printf("node %i firstrank %i size %li num %i doseek %i\n", QMP_get_node_number(), firstrank, size, num, doseek);
   if(doseek) {
     if(LRL_seek_read_record(lrl_record_in,(off_t)size*firstrank)
        != LRL_SUCCESS) {
@@ -1894,11 +1919,6 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     dtsend2 *= s;
     dtproc2 *= s;
 #if 1
-    //QMP_max_double(&dtcalc2);
-    //QMP_max_double(&dtwrite2);
-    //QMP_max_double(&dtsend2);
-    //QMP_max_double(&dtproc2);
-    //QMP_max_double(&dtall);
     if(this_node==layout->master_io_node) {
       printf("%s times: calc %.2f  write %.2f  send %.2f  process %.2f  total %.2f\n",
 	     myname, dtcalc2, dtwrite2, dtsend2, dtproc2, dtall);
@@ -2065,7 +2085,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	   record that our I/O partition is writing */
 	subset_rank = DML_subset_rank(snd_coords, sites);
 	if(subset_rank<0) {
-	  printf("%s(%d): Output rank %lu unexpectedly missing from subset list\n",
+	  printf("%s(%d): Output rank %ld unexpectedly missing from subset list\n",
 		 myname,this_node,snd_coords);
 	  free(outbuf); free(coords);
 	  return 0;
@@ -2100,6 +2120,8 @@ size_t DML_global_out(LRL_RecordWriter *lrl_record_out,
            DML_Layout *layout, int volfmt, 
 	   DML_Checksum *checksum)
 {
+  _QIO_UNUSED_ARGUMENT(volfmt);
+
   char *buf;
   int this_node = layout->this_node;
   size_t nbytes = 0;
@@ -2239,6 +2261,8 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 	     int count, size_t size, int word_size, void *arg, 
 	     DML_Layout *layout, DML_Checksum *checksum)
 {
+  _QIO_UNUSED_ARGUMENT(sitelist);
+
   size_t buf_sites, buf_extract, max_buf_sites;
   size_t isite, max_send_sites;
   uint64_t nbytes = 0;
@@ -2543,7 +2567,8 @@ int DML_partition_allsitedata_in(DML_RecordReader *dml_record_in,
 	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
 	  DML_Checksum *checksum)
 {
-
+  _QIO_UNUSED_ARGUMENT(volfmt);
+  _QIO_UNUSED_ARGUMENT(checksum);
   DML_SiteRank rcv_coords;
 
   if(DML_init_subset_site_loop(&rcv_coords, sites) == 0)
@@ -2601,7 +2626,8 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
   int this_node = layout->this_node;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
-  size_t nbytes=0, max_buf_sites=1;
+  size_t nbytes=0;
+  size_t max_buf_sites=1;
   char myname[] = "DML_partition_in";
 
   timestart(dtall);
@@ -2648,7 +2674,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
   int notdone = 1;
   while(notdone) {
     timestart2(dtcalc2);
-    int64_t k = 0;
+    size_t k = 0;
     do { // get list of file contiguous sites
       /* The subset_rank locates the datum for rcv_coords in the
 	 record our I/O partition is reading */
@@ -2656,13 +2682,13 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
       if(serpar == DML_PARALLEL) {
 	subset_rank = (DML_SiteRank) DML_subset_rank(rcv_coords, sites);
 	if(subset_rank<0){
-	  printf("%s(%d): Input rank %lu unexpectedly missing from subset list\n",
+	  printf("%s(%d): Input rank %ld unexpectedly missing from subset list\n",
 		 myname,this_node,rcv_coords);
 	  return 0;
 	}
       }
       if(k==0) firstrank = subset_rank;
-      else if(subset_rank!=firstrank+k) break;
+      else if(subset_rank!=firstrank+(DML_SiteRank)k) break;
       /* Convert lexicographic rank to coordinates */
       DML_lex_coords(coords, latdim, latsize, rcv_coords);
       rcoords[k] = rcv_coords;
@@ -2690,7 +2716,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
     }
     nextrank = firstrank + k;
 
-    for(int i=0; i<k; i++) {
+    for(size_t i=0; i<k; i++) {
       buf = inbuf + i*size;
       /* Send result to destination node. Avoid I/O node sending to itself. */
       if (dest_node[i] != my_io_node) {
@@ -2725,11 +2751,6 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
     dtread2 *= s;
     dtsend2 *= s;
     dtproc2 *= s;
-    //QMP_max_double(&dtcalc2);
-    //QMP_max_double(&dtread2);
-    //QMP_max_double(&dtsend2);
-    //QMP_max_double(&dtproc2);
-    //QMP_max_double(&dtall);
     if(this_node==layout->master_io_node) {
       printf("%s times: calc %.2f  read %.2f  send %.2f  process %.2f  total %.2f\n",
 	     __func__, dtcalc2, dtread2, dtsend2, dtproc2, dtall);
@@ -2751,6 +2772,7 @@ size_t DML_global_in(LRL_RecordReader *lrl_record_in,
           DML_Layout* layout, int volfmt, int broadcast_globaldata,
 	  DML_Checksum *checksum)
 {
+  _QIO_UNUSED_ARGUMENT(volfmt);
   char *buf;
   int this_node = layout->this_node;
   size_t nbytes = 0;

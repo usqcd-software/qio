@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17)
-project(QIO VERSION 2.5.0 LANGUAGES C)
+project(QIO VERSION 2.5.1 LANGUAGES C)
 
 include(GNUInstallDirs)
 include(CheckIncludeFile)
@@ -12,6 +12,7 @@ option(QIO_ENABLE_QMP_ROUTE  "Enable using QMP_route" OFF)
 option(QIO_ENABLE_OUTPUT_BUFFERING "Enable OutputBuffering" OFF)
 option(QIO_ENABLE_FAST_ROUTE "Enable James Osborns Fast DML route" OFF)
 option(QIO_ENABLE_SANITIZERS "Enable Undefined Behaviour and Address Sanitizers" OFF)
+option(QIO_BUILD_TESTS "Enable building of test programs" ON)
 
 set(QIO_DML_BUF_BYTES "262144"  CACHE STRING "Maximum DML Buffer Size in bytes")
 set(QMP_DIR "" CACHE STRING "QMP Install Directory")
@@ -22,7 +23,7 @@ if(QIO_ENABLE_PARALLEL_BUILD)
   set(PARALLEL_ARCH "parscalar")
   set(LOCAL_PARALLEL_ARCH "parscalar")
   set(ARCHDEF_SUBSTITUTION "ARCH_PARSCALAR")
-  find_package(QMP REQUIRED)
+  find_package(QMP 2.5.3 REQUIRED)
 else()
   message(STATUS "Setting Parallel arch to scalar")
   set(PARALLEL_ARCH "scalar")
@@ -89,16 +90,26 @@ endif()
 
 if(CLime_DIR) 
   find_package(CLime CONFIG REQUIRED)
+  find_library( CLime_LIB_FILE  liblime.a liblime.so liblime.dylib PATHS ${CLime_DIR}/../.. NO_DEFAULT_PATH )
+  message(STATUS "Lime Library found at ${CLime_LIB_FILE}" )
+  get_filename_component(CLime_LIBDIR ${CLime_LIB_FILE} DIRECTORY )
+  message(STATUS "Lime library directory is ${CLime_LIBDIR}")
+  find_file( CLime_HEADER_FILE lime.h PATHS ${CLime_LIBDIR}/../include NO_DEFAULT_PATH )
+  get_filename_component(CLime_INCDIR  ${CLime_HEADER_FILE} DIRECTORY )
+  message(STATUS "Lime inc directory is ${CLime_INCDIR}")
 else()
   set(QIO_INTERNAL_CLIME TRUE)
   add_subdirectory(other_libs/c-lime)
 endif()
 
 add_subdirectory(lib)
-add_subdirectory(examples)
+if( QIO_BUILD_TESTS )
+  add_subdirectory(examples)
+endif()
 
-
-  
+configure_file(bin/qio-config.cmake.in ./bin/qio-config)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/bin/qio-config DESTINATION bin/ PERMISSIONS
+          OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 
 # Install the headers
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include DESTINATION . )

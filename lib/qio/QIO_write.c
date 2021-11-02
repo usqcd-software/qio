@@ -35,7 +35,7 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
               size_t datum_size, int word_size,
 	      QIO_String *xml_record, 
 	      int *msg_begin, int *msg_end){
-
+  _QIO_UNUSED_ARGUMENT(word_size);
   QIO_String *xml_record_private;
   QIO_String *xml_ildg_format;
   QIO_ILDGFormatInfo *ildg_info;
@@ -50,7 +50,7 @@ int QIO_write_record_info(QIO_Writer *out, QIO_RecordInfo *record_info,
      private record metadata and the byte count per site to be written */
   if(datum_size != QIO_get_typesize(record_info) * count)
     {
-      printf("%s(%d): bytes per site mismatch %lu != %d * %d\n",
+      printf("%s(%d): bytes per site mismatch %lu != %lu * %d\n",
 	     myname,this_node,(unsigned long)datum_size,
 	     QIO_get_typesize(record_info),
 	     QIO_get_datacount(record_info));
@@ -306,19 +306,19 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
 	      size_t datum_size, int word_size, void *arg){
 
   DML_Checksum checksum;
-  uint64_t nbytes;
+  n_uint64_t nbytes=0;
   int this_node = out->layout->this_node;
   int msg_begin, msg_end;
   int status;
   int recordtype;
-  uint64_t total_bytes;
+  n_uint64_t total_bytes;
   size_t volume;
   char myname[] = "QIO_write";
 
   status = QIO_generic_write(out, record_info, xml_record, get, datum_size, 
 			     word_size, arg, &checksum, &nbytes, 
 			     &msg_begin, &msg_end);
-
+  
  if(status != QIO_SUCCESS)return status;
 
   recordtype = out->layout->recordtype;
@@ -347,9 +347,9 @@ int QIO_write(QIO_Writer *out, QIO_RecordInfo *record_info,
   {
     if(nbytes != total_bytes)
     {
-      printf("%s(%d): bytes written %llu != expected rec_size %llu\n",
-	     myname, this_node, (unsigned long long)nbytes, 
-	     (unsigned long long)total_bytes);
+      printf("%s(%d): bytes written %ld != expected rec_size %ld\n",
+	     myname, this_node, nbytes, 
+	     total_bytes);
       return QIO_ERR_BAD_WRITE_BYTES;
     }
   }

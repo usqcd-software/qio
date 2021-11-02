@@ -134,9 +134,9 @@ void QIO_string_copy(QIO_String *dest, QIO_String *src)
 }
 
 /* Non-destructive string reallocation */
-void QIO_string_realloc(QIO_String *qs, int length)
+void QIO_string_realloc(QIO_String *qs, size_t length)
 {
-  int i,min;
+  size_t i,min;
   char *tmp;
 
   /* If NULL string is passed just return */
@@ -153,7 +153,7 @@ void QIO_string_realloc(QIO_String *qs, int length)
   if(tmp == NULL) {
     /* Returning here is a bad idea as the string is not really
        realloced */
-    printf("QIO_string_realloc: Can't malloc size %d\n",length);
+    printf("QIO_string_realloc: Can't malloc size %lu\n",length);
     fflush(stdout);
     exit(-1);
     /* return */
@@ -175,7 +175,7 @@ void QIO_string_realloc(QIO_String *qs, int length)
 }
 
 void QIO_string_append(QIO_String *qs, const char *const string){
-  int len, totlen;
+  size_t len, totlen;
 
   if(qs == NULL || string == NULL)return;
   len = strlen(string);
