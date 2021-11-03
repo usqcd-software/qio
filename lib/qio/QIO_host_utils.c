@@ -382,7 +382,7 @@ void QIO_delete_ionode_layout(QIO_Layout *layout){
 /* The fake scalar layout structure */
 /* All sites are stored in lexicographic order on the host, "node 0" */
 int QIO_scalar_node_number(const int coords[]){
-  _QIO_UNUSED_PARAM(coords);
+  _QIO_UNUSED_ARGUMENT(coords);
   return 0;
 }
 
@@ -396,14 +396,14 @@ int QIO_scalar_node_index(const int coords[]){
 }
 
 void QIO_scalar_get_coords(int coords[], int node, int index){
-  _QIO_UNUSED_PARAM(node);
+  _QIO_UNUSED_ARGUMENT(node);
   int latdim = QIO_mpp_layout.latdim;
   int *latsize = QIO_mpp_layout.latsize;
   DML_lex_coords(coords, latdim, latsize, (DML_SiteRank)index);
 }
 
 int QIO_scalar_num_sites(int node){
-  _QIO_UNUSED_PARAM(node);
+  _QIO_UNUSED_ARGUMENT(node);
   return QIO_mpp_layout.volume;
 }
 
@@ -439,7 +439,8 @@ int QIO_scalar_to_ionode_index(int scalar_node, int scalar_index){
    with sites in lexicographic order */
 /* We really don't need the fs parameter */
 QIO_Layout *QIO_create_scalar_layout(QIO_Layout *layout, QIO_Filesystem *fs){
-  _QIO_UNUSED_PARAM(fs);
+  _QIO_UNUSED_ARGUMENT(fs);
+
   QIO_Layout *scalar_layout;
   char myname[] = "QIO_create_scalar_layout";
 

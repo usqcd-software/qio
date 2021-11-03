@@ -36,7 +36,6 @@ else()
   ) 
 endif()
 
-
 set_target_properties(qio PROPERTIES 
 		C_STANDARD 99
 		C_EXTENSIONS OFF)
@@ -59,8 +58,13 @@ target_include_directories(qio PUBLIC
 set_target_properties(qio PROPERTIES C_STANDARD 99)
 set_target_properties(qio PROPERTIES C_EXTENSIONS OFF)
 if( QIO_SANITIZER_OPTS )
+<<<<<<< HEAD
   target_compile_options(lime PUBLIC ${QIO_SANITIZER_OPTS} )
   target_link_options(lime PUBLIC ${QIO_SANITIZER_OPTS} )
+=======
+  target_compile_options(qio PRIVATE ${QIO_SANITIZER_OPTS} )
+  target_link_options(qio PUBLIC ${QIO_SANITIZER_OPTS} )
+>>>>>>> origin/extended
 endif()
 # Install the library and the targets 
 # into the export for the targets

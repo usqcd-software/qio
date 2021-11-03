@@ -142,8 +142,9 @@ int QIO_host_master_io_node( void )
    to the field */
 void QIO_scalar_put( char *s1 , size_t scalar_index, int count, void *s2 )
 {
-  _QIO_UNUSED_PARAM(scalar_index);
-  _QIO_UNUSED_PARAM(count);
+
+  _QIO_UNUSED_ARGUMENT(scalar_index);
+  _QIO_UNUSED_ARGUMENT(count);
 
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
@@ -161,9 +162,9 @@ void QIO_scalar_put( char *s1 , size_t scalar_index, int count, void *s2 )
 void QIO_scalar_put_global( char *s1 , size_t scalar_index, 
 			    int count, void *s2 )
 {
-  _QIO_UNUSED_PARAM(scalar_index);
-  _QIO_UNUSED_PARAM(count);
 
+  _QIO_UNUSED_ARGUMENT(scalar_index);
+  _QIO_UNUSED_ARGUMENT(count);
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
 
@@ -212,8 +213,9 @@ void QIO_scalar_get( char *s1, size_t ionode_index, int count, void *s2 )
 void QIO_scalar_get_global( char *s1 , size_t ionode_index, 
 			    int count, void *s2 )
 {
-  _QIO_UNUSED_PARAM(ionode_index);
-  _QIO_UNUSED_PARAM(count);
+
+  _QIO_UNUSED_ARGUMENT(ionode_index);
+  _QIO_UNUSED_ARGUMENT(count);
 
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field     = arg->field;
@@ -229,8 +231,9 @@ void QIO_scalar_get_global( char *s1 , size_t ionode_index,
 
 void QIO_part_get( char *s1 , size_t scalar_index, int count, void *s2 )
 {
-  _QIO_UNUSED_PARAM(scalar_index);
-  _QIO_UNUSED_PARAM(count);
+
+  _QIO_UNUSED_ARGUMENT(scalar_index);
+  _QIO_UNUSED_ARGUMENT(count);
 
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
@@ -281,8 +284,9 @@ void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
    to the field */
 void QIO_part_put_global( char *s1 , size_t ionode_index, int count, void *s2 )
 {
-  _QIO_UNUSED_PARAM(ionode_index);
-  _QIO_UNUSED_PARAM(count);
+
+  _QIO_UNUSED_ARGUMENT(ionode_index);
+  _QIO_UNUSED_ARGUMENT(count);
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   int node = arg->node;
@@ -305,37 +309,39 @@ int QIO_set_this_node(QIO_Filesystem *fs, const QIO_Layout *layout, int node)
 }
 
 /* Append the file name to a possibly node-dependent directory path */
-char *QIO_set_filepath(QIO_Filesystem *fs, 
-		  const char * const filename, int node)
-{
-  char *path, *newfilename=NULL;
-  size_t fnlength = strlen(filename);
-  size_t drlength;
-  
-  if (fs->type == QIO_MULTI_PATH) {
-    path = fs->node_path[node];
-    drlength = strlen(path);
-    newfilename = (char *) malloc(fnlength+drlength+2);
-    if(!newfilename){
-      printf("QIO_set_filepath: Can't malloc newfilename\n");
-      return NULL;
-    }
-    newfilename[0] = '\0';
-    if(drlength > 0){
-      sprintf(newfilename, "%s/%s",path,filename);
-    }
-  }
-  else if (fs->type == QIO_SINGLE_PATH) {
-    newfilename = (char *) malloc(fnlength+1);
-    if(!newfilename){
-      printf("QIO_set_filepath: Can't malloc newfilename\n");
-      return NULL;
-    }
-    sprintf(newfilename,"%s", filename);
-  }
-  
-  return newfilename;
-}
+	char *QIO_set_filepath(QIO_Filesystem *fs, 
+			  const char * const filename, int node)
+	{
+	  char *path, *newfilename=NULL;
+	  size_t fnlength = strlen(filename);
+	  size_t drlength;
+	  
+		if (fs->type == QIO_MULTI_PATH) {
+		  path = fs->node_path[node];
+		  drlength = strlen(path);
+		  newfilename = (char *) malloc(fnlength+drlength+2);
+	    if(!newfilename) {
+			  printf("QIO_set_filepath: Can't malloc newfilename\n");
+			  return NULL;
+		  }
+		  newfilename[0] = '\0';
+		  if(drlength > 0){
+			  strncpy(newfilename, path, drlength+1);
+			  strncat(newfilename, "/", 2);
+		  }
+		  strcat(newfilename, filename);
+		}
+	  else if (fs->type == QIO_SINGLE_PATH) {
+	    newfilename = (char *) malloc(fnlength+1);
+	    if(!newfilename){
+	      printf("QIO_set_filepath: Can't malloc newfilename\n");
+	      return NULL;
+	    }
+		  strcpy(newfilename,filename);
+	  }
+	  
+	  return newfilename;
+	}
 
 
 /* Open a partition file for reading and read the file header and sitelist */
@@ -1081,7 +1087,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 	  /* Copy LIME type */
 	  lime_type_out = (char *)malloc(strlen(lime_type_in)+1);
 	  if( lime_type_out == NULL ) return QIO_BAD_ARG;
-	  sprintf(lime_type_out,"%s",lime_type_in);
+	  strcpy(lime_type_out,lime_type_in);
 
 	  /* Now close the master ionode file.  We will reread the
 	     private and user file xml later */

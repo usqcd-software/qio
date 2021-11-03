@@ -21,6 +21,7 @@ int QIO_close_read(QIO_Reader *in){
     free(in->layout->latsize);
     if(in->layout->hyperupper)free(in->layout->hyperupper);
     if(in->layout->hyperlower)free(in->layout->hyperlower);
+    QIO_free_layout_ext(in->layout);
     free(in->layout);
   }
   DML_free_sitelist(in->sites);
