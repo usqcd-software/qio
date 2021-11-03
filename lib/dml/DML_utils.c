@@ -34,7 +34,7 @@ double QIO_time2 (void)
   //return 1e-9*(double)tsc;
 }
 
-#ifdef __x86_64__
+#if defined(__x86_64__) && !defined(__NVCOMPILER)
 #include <x86intrin.h>
 int64_t tics(void)
 {
@@ -503,7 +503,6 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
 	   myname, this_node, volfmt);
     return 1;
   }
-  return 0;
 }
 
 /*------------------------------------------------------------------*/
