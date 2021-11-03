@@ -139,11 +139,7 @@ char *DML_allocate_msg(size_t size, char *myname, int this_node){
 /*------------------------------------------------------------------*/
 /* Accessor: Pointer to datum member of msg */
 char *DML_msg_datum(char *msg, size_t size){
-<<<<<<< HEAD
-  _QIO_UNUSED_PARAM(size);
-=======
   _QIO_UNUSED_ARGUMENT(size);
->>>>>>> origin/extended
   return msg;
 }
 
@@ -429,11 +425,7 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
   int node;
-<<<<<<< HEAD
-  size_t node_sites;
-=======
   DML_Index node_sites;
->>>>>>> origin/extended
   int this_node = layout->this_node;
   int my_io_node = layout->ionode(this_node);
   int number_of_nodes = layout->number_of_nodes;
@@ -520,14 +512,10 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
 		      LIME_type *lime_type){
-<<<<<<< HEAD
-  _QIO_UNUSED_PARAM(volfmt);
-  uint64_t check, announced_rec_size;
-=======
+
   _QIO_UNUSED_ARGUMENT(volfmt);
 
   uint64_t check, check32, announced_rec_size;
->>>>>>> origin/extended
   int this_node = layout->this_node;
   LRL_RecordReader *lrl_record_in;
   DML_SiteRank *inputlist;
@@ -2133,12 +2121,8 @@ size_t DML_global_out(LRL_RecordWriter *lrl_record_out,
            DML_Layout *layout, int volfmt, 
 	   DML_Checksum *checksum)
 {
-<<<<<<< HEAD
-  _QIO_UNUSED_PARAM(volfmt);
-=======
   _QIO_UNUSED_ARGUMENT(volfmt);
 
->>>>>>> origin/extended
   char *buf;
   int this_node = layout->this_node;
   size_t nbytes = 0;
@@ -2278,12 +2262,8 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 	     int count, size_t size, int word_size, void *arg, 
 	     DML_Layout *layout, DML_Checksum *checksum)
 {
-<<<<<<< HEAD
-  _QIO_UNUSED_PARAM(sitelist);
-=======
   _QIO_UNUSED_ARGUMENT(sitelist);
 
->>>>>>> origin/extended
   size_t buf_sites, buf_extract, max_buf_sites;
   size_t isite, max_send_sites;
   uint64_t nbytes = 0;
@@ -2588,13 +2568,8 @@ int DML_partition_allsitedata_in(DML_RecordReader *dml_record_in,
 	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
 	  DML_Checksum *checksum)
 {
-<<<<<<< HEAD
-  _QIO_UNUSED_PARAM(volfmt);
-  _QIO_UNUSED_PARAM(checksum);
-=======
   _QIO_UNUSED_ARGUMENT(volfmt);
   _QIO_UNUSED_ARGUMENT(checksum);
->>>>>>> origin/extended
   DML_SiteRank rcv_coords;
 
   if(DML_init_subset_site_loop(&rcv_coords, sites) == 0)
@@ -2699,10 +2674,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
   int *node_index = (int*)DML_allocate_buf(sizeof(*node_index),&max_buf_sites);
   int notdone = 1;
   while(notdone) {
-<<<<<<< HEAD
-=======
     timestart2(dtcalc2);
->>>>>>> origin/extended
     size_t k = 0;
     do { // get list of file contiguous sites
       /* The subset_rank locates the datum for rcv_coords in the
@@ -2801,11 +2773,7 @@ size_t DML_global_in(LRL_RecordReader *lrl_record_in,
           DML_Layout* layout, int volfmt, int broadcast_globaldata,
 	  DML_Checksum *checksum)
 {
-<<<<<<< HEAD
-  _QIO_UNUSED_PARAM(volfmt);
-=======
   _QIO_UNUSED_ARGUMENT(volfmt);
->>>>>>> origin/extended
   char *buf;
   int this_node = layout->this_node;
   size_t nbytes = 0;

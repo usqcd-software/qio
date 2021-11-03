@@ -369,13 +369,9 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 #ifdef __cplusplus
 }
 #endif
-<<<<<<< HEAD
 
-#ifndef _QIO_UNUSED_PARAM
-#define _QIO_UNUSED_PARAM(p)  (void)(p)
+#ifndef _QIO_UNUSED_ARGUMENT
+#define _QIO_UNUSED_ARGUMENT(x) ((void)(x))
 #endif
 
-=======
-#define _QIO_UNUSED_ARGUMENT(x) ((void)(x))
->>>>>>> origin/extended
 #endif /* QIO_H */

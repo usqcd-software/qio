@@ -19,10 +19,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <qio.h>
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/extended
 static int sites_on_node;
 static int *squaresize;   /* dimensions of hypercubes */
 static int *nsquares;     /* number of hypercubes in each direction */
@@ -187,10 +183,6 @@ get_coords(int x[], int node, int index)
 
 /* The number of sites on the specified node */
 int num_sites(int node){
-<<<<<<< HEAD
-  _QIO_UNUSED_PARAM(node);
-=======
   _QIO_UNUSED_ARGUMENT(node);
->>>>>>> origin/extended
   return sites_on_node;
 }

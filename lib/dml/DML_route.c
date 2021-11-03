@@ -41,10 +41,7 @@ QMP_status_t DML_grid_route(void* buffer, size_t count,
 
   int i,j;                   /* Loop Counters. Use for directions too */
   size_t me;                    /* My node */
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/extended
 
   int n_hops;                      /* Number of hops */
   int  direction_sign;       /* Direction of hops */
