@@ -130,11 +130,10 @@ QCDheader * qcdhdr_get_hdr(FILE *in)
   char *p, *q;
 
   /* Begin reading, and check for "BEGIN_HEADER" token */
-  fgets(line,MAX_LINE_LENGTH,in);
-  /*
-  if (strcmp(line,"BEGIN_HEADER\n")!=0)
-    error_exit("qcdhdr_get_hdr: Missing \"BEGIN_HEADER\"; punting \n");
-  */
+  if( fgets(line,MAX_LINE_LENGTH,in) == NULL ){
+    fprintf(stderr,"Error reading header\n");
+    return NULL;
+  }
   /* Allocate space for QCDheader and its pointers */
   tokens = (char **) malloc(MAX_TOKENS*sizeof(char *));
   values = (char **) malloc(MAX_TOKENS*sizeof(char *));
@@ -150,7 +149,10 @@ QCDheader * qcdhdr_get_hdr(FILE *in)
   n = 0;
   printf("Archive header:\n");
   while (1) {
-    fgets(line,MAX_LINE_LENGTH,in);
+    if( fgets(line,MAX_LINE_LENGTH,in) == NULL ) {
+      fprintf(stderr,"Error reading archive header\n");
+      return NULL;
+    }
     printf("%s", line);
 
     if (strcmp(line,"END_HEADER\n")==0) break;
@@ -622,7 +624,7 @@ void r_serial_reader(char *buf, size_t index, int count, void *arg)
       if(dataformat == ARCHIVE_3x2) complete_U(U);
 
       state->crc = 
-	DML_crc32(state->crc, (char *)U, 18*sizeof(float));
+	DML_crc32(state->crc, (unsigned char *)U, 18*sizeof(float));
 
       memcpy(buf + mu*18*sizeof(float), U, 18*sizeof(float));
 
@@ -649,7 +651,7 @@ void r_serial_reader(char *buf, size_t index, int count, void *arg)
       if(dataformat == ARCHIVE_3x2) complete_Ud(Ud);
       
       state->crc = 
-	DML_crc32(state->crc, (char *)Ud, 18*sizeof(double));
+	DML_crc32(state->crc, (unsigned char *)Ud, 18*sizeof(double));
 
       memcpy(buf + mu*18*sizeof(double), Ud, 18*sizeof(double));
     }
@@ -864,7 +866,7 @@ int main(int argc, char *argv[])
   printf("SciDAC checksums %x %x\n",
 	 QIO_get_writer_last_checksuma(outfile),
 	 QIO_get_writer_last_checksumb(outfile));
-  printf("ILDG crc32 checksum %lu\n",state.crc);
+  printf("ILDG crc32 checksum %u\n",state.crc);
 
   /* Close the SciDAC file */
   QIO_close_write(outfile);

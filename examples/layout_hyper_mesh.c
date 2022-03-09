@@ -183,6 +183,6 @@ get_coords(int x[], int node, int index)
 
 /* The number of sites on the specified node */
 int num_sites(int node){
-  _QIO_UNUSED_PARAM(node);
+  _QIO_UNUSED_ARGUMENT(node);
   return sites_on_node;
 }

@@ -706,7 +706,7 @@ int QIO_get_spins(QIO_RecordInfo *record_info){
 }
 
 size_t QIO_get_typesize(QIO_RecordInfo *record_info){
-  return (size_t)(record_info->typesize.value);
+  return record_info->typesize.value;
 }
 
 int QIO_get_datacount(QIO_RecordInfo *record_info){

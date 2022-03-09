@@ -7,7 +7,7 @@
 /* Usage
 
    qio-convert-mesh-pfs <part_sing> <filename> [<ildgLFN>]< layoutfile
- 
+
     where
 
       <part_sing> = 0 to convert single to partition format
@@ -29,7 +29,7 @@
          for each logical node.  The first value is the logical node
          number and the second is the path.
 
-      line 3: 0 /pfs/r22c0/R22/C0/B0/M0/D0/A0  
+      line 3: 0 /pfs/r22c0/R22/C0/B0/M0/D0/A0
       line 4: 1 /pfs/r22c0/R22/C0/B0/M0/D0/A1
       line 5:       etc
 
@@ -61,7 +61,7 @@ static char *errmsg(void)
 static QIO_Filesystem *create_multi_pfs(int numnodes){
   QIO_Filesystem *fs;
   int i, k;
-  struct stat dir_stat;
+  //struct stat dir_stat;
   mode_t dir_mode = BASE_DIRMODE;
 
   /* Build the QIO file system structure */
@@ -83,7 +83,7 @@ static QIO_Filesystem *create_multi_pfs(int numnodes){
     printf("Path table malloc failed\n");
     return NULL;
   }
-  
+
   for(i = 0; i < numnodes; i++){
     fs->node_path[i] = (char *)calloc(PATHLENGTH, sizeof(char));
     if(!fs->node_path[i]){
@@ -102,12 +102,15 @@ static QIO_Filesystem *create_multi_pfs(int numnodes){
       return NULL;
     }
     /* Read and create the corresponding directory path if need be */
-    scanf("%s",fs->node_path[k]);
-    if( mkdir(fs->node_path[k], dir_mode) < 0){
-      if( errno != EEXIST ){
-	printf("Can't make %s: %s\n", fs->node_path[k], errmsg());
-	return NULL;
+    if( scanf("%s",fs->node_path[k]) == 1 ){
+      if( mkdir(fs->node_path[k], dir_mode) < 0){
+	if( errno != EEXIST ){
+	  printf("Can't make %s: %s\n", fs->node_path[k], errmsg());
+	  return NULL;
+	}
       }
+    } else {
+      return NULL;
     }
   }
 
@@ -142,7 +145,7 @@ int main(int argc, char *argv[]){
   QIO_Filesystem *fs;
   int status;
   QIO_Mesh_Topology *mesh;
-  
+
   /* Check arguments and process layout parameters */
 
   if(argc < 3){

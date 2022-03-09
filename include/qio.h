@@ -19,8 +19,8 @@ extern "C"
 #endif
 
 #define QIO_UNKNOWN    DML_UNKNOWN
-#define QIO_SINGLEFILE DML_SINGLEFILE 
-#define QIO_MULTIFILE  DML_MULTIFILE  
+#define QIO_SINGLEFILE DML_SINGLEFILE
+#define QIO_MULTIFILE  DML_MULTIFILE
 #define QIO_PARTFILE   DML_PARTFILE
 #define QIO_PARTFILE_DIR    DML_PARTFILE_DIR
 
@@ -90,13 +90,23 @@ extern "C"
 extern "C"
 {
 #endif
-  
+
+#define QIO_HAS_EXTENDED_LAYOUT
+typedef DML_Index QIO_Index;
+
 /* For collecting and passing layout information */
 typedef struct {
   int (*node_number)(const int coords[]);
   int (*node_index)(const int coords[]);
   void (*get_coords)(int coords[], int node, int index);
   int (*num_sites)(int node);
+  /* begin extended fields */
+  int (*node_number_ext)(const int coords[], void *arg);
+  QIO_Index (*node_index_ext)(const int coords[], void *arg);
+  void (*get_coords_ext)(int coords[], int node, QIO_Index index, void *arg);
+  QIO_Index (*num_sites_ext)(int node, void *arg);
+  void *arg;
+  /* end extended fields */
   int *latsize;
   int latdim;
   size_t volume;
@@ -162,6 +172,9 @@ typedef struct {
   int type;                             /* Is node_path specified? */
   DML_io_node_t my_io_node;             /* Mapping as on compute nodes */
   DML_master_io_node_t master_io_node;  /* As on compute nodes */
+  DML_io_node_ext my_io_node_ext;             /* Mapping as on compute nodes */
+  DML_master_io_node_ext master_io_node_ext;  /* As on compute nodes */
+  void *arg;
   int *io_node;                         /* Only if number_io_nodes !=
 					 number_of_nodes */
   char **node_path;                     /* Only if type = QIO_MULTI_PATH */
@@ -265,7 +278,8 @@ int QIO_close_write_field(QIO_Writer *out, uint64_t *nbytes);
 double QIO_time(void);
 void QIO_wait(double sec);
 void QIO_suppress_global_broadcast(QIO_Reader *qio_in);
-
+QIO_Layout *QIO_check_layout_ext(QIO_Layout *layout);
+void QIO_free_layout_ext(DML_Layout *layout);
 QIO_Reader *QIO_open_read_master(const char *filename, QIO_Layout *layout,
 				 QIO_Iflag *iflag, int (*io_node)(int),
 				 int (*master_io_node)(void));
@@ -356,8 +370,8 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 }
 #endif
 
-#ifndef _QIO_UNUSED_PARAM
-#define _QIO_UNUSED_PARAM(p)  (void)(p)
+#ifndef _QIO_UNUSED_ARGUMENT
+#define _QIO_UNUSED_ARGUMENT(x) ((void)(x))
 #endif
 
 #endif /* QIO_H */

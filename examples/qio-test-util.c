@@ -170,8 +170,7 @@ void vget_R(char *buf, size_t index, int count, void *qfin)
 /* Internal factory function for array of real global data */
 void vput_r(char *buf, size_t index, int count, void *qfin)
 {
-  _QIO_UNUSED_PARAM(index);
-
+  _QIO_UNUSED_ARGUMENT(index);
   float *array = (float *)qfin;
   float *src = (float *)buf;
   int i;
@@ -185,8 +184,8 @@ void vput_r(char *buf, size_t index, int count, void *qfin)
 /* Internal factory function for array of real global data */
 void vget_r(char *buf, size_t index, int count, void *qfin)
 {
-  _QIO_UNUSED_PARAM(index);
 
+   _QIO_UNUSED_ARGUMENT(index);
   float *array = (float *)qfin;
   float *dest = (float *)buf;
   int i;
