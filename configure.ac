@@ -1,5 +1,5 @@
 AC_PREREQ(2.53)
-AC_INIT(qio, 2.5.0, detar@physics.utah.edu)
+AC_INIT(qio, 3.0.0, detar@physics.utah.edu)
 AC_CONFIG_AUX_DIR(config)
 
 AC_CONFIG_SRCDIR([include/qio.h])
@@ -39,7 +39,7 @@ AC_ARG_ENABLE(qmp-route,
      [Enable usage of QMP_route if it exists, default is off]),
   [ac_qmp_route=$enableval
    qio_conf_opts="$qio_conf_opts --enable-qmp-route=$enableval"],
-  [ac_qmp_route="no"] 
+  [ac_qmp_route="no"]
 )
 
 dnl
@@ -70,7 +70,7 @@ AC_ARG_ENABLE(dml-output-buffering,
 dnl
 dnl Enable changing DML buffersize
 dnl
-AC_ARG_ENABLE(dml-bufsize, 
+AC_ARG_ENABLE(dml-bufsize,
    AC_HELP_STRING(
      [--enable-dml-bufsize=X],
      [Set the DML buffer size to X bytes]
@@ -79,7 +79,7 @@ AC_ARG_ENABLE(dml-bufsize,
    AC_DEFINE_UNQUOTED([QIO_DML_BUF_BYTES], [$enableval], [Maximum DML Buffer Size in bytes])
    qio_conf_opts="$qio_conf_opts --enable-dml-bufsize=$enableval"
   ],
-  [AC_MSG_NOTICE([Setting DML_BUF_BYTES to 262144 bytes (256K) ]) 
+  [AC_MSG_NOTICE([Setting DML_BUF_BYTES to 262144 bytes (256K) ])
    AC_DEFINE([QIO_DML_BUF_BYTES], [262144], [Maximum DML buffer size in bytes])
   ]
 )
@@ -162,7 +162,7 @@ if test "X${QMP_CONFIG}X" != "XX" ; then
   AC_MSG_NOTICE([QMP linking flags: ${QMP_LDFLAGS}])
   AC_SUBST(QMP_LIBS,    "`${QMP_CONFIG} --libs`")
   AC_MSG_NOTICE([QMP libraries flags: ${QMP_LIBS}])
-else 
+else
   AC_MSG_WARN([QMP configuration program qmp-config not found.])
   AC_MSG_WARN([Set environment variables QMP_CFLAGS QMP_LDFAGS QMP_LIBS
     before configure])
@@ -242,7 +242,7 @@ AC_CHECK_HEADERS([stdint.h inttypes.h],
                  [AC_MSG_ERROR([stdint.h found but either uint16_t, uint32_t or uint64_t not found]) ]
                 )
 ],
-[ 
+[
   dnl no inttypes.h or stdint.h found check common unsigned types
   dnl for sizes and make appropriate decisions in the lime_fixed_types.h file
   AC_CHECK_SIZEOF(unsigned char)
@@ -254,7 +254,7 @@ AC_CHECK_HEADERS([stdint.h inttypes.h],
 )
 
 # Check for QMP route on parscalar
-if test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX" ; then 
+if test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX" ; then
    QMP_BKUP_CFLAGS="${CFLAGS}"
    QMP_BKUP_LDFLAGS="${LDFLAGS}"
    QMP_BKUP_LIBS="${LIBS}"
@@ -283,7 +283,7 @@ else
   AC_MSG_NOTICE([Disabling use of QMP route - even if it exists])
 fi
 
-# Now have all the options... Do some configuration 
+# Now have all the options... Do some configuration
 AM_CONDITIONAL(ARCH_SCALAR,    [test "X${LOCAL_PARALLEL_ARCH}X" = "XscalarX"])
 AM_CONDITIONAL(ARCH_PARSCALAR, [test "X${LOCAL_PARALLEL_ARCH}X" = "XparscalarX"])
 AM_CONDITIONAL(USING_QMP, [test "X${QMP_CONFIG}X" != "XX"])
