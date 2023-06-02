@@ -44,7 +44,7 @@ if( QIO_ENABLE_QMP_ROUTE )
 endif()
 
 if( QIO_ENABLE_OUTPUT_BUFFERING )
-  message(STATUS "Enaling QIO Output Buffering")
+  message(STATUS "Enabling QIO Output Buffering")
   set(QIO_OUTPUT_BUFFERING "1")
 endif()
 
