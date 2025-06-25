@@ -171,7 +171,7 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
 
   /* Space for a coordinate vector */
   coords = DML_allocate_coords(latdim, myname, this_node);
-  if(!coords)return 1;
+  if(!coords)return DML_FAILURE;
 
   /* Iterate over all nodes, adding up the sites my partition
      writes and counting the number of nodes in my partition */
@@ -300,7 +300,7 @@ void DML_free_sitelist(DML_SiteList *sites){
 
 /*------------------------------------------------------------------*/
 /* Fill the sitelist for multifile format */    
-/* Return code 0 = success; 1 = failure */
+
 int DML_fill_multifile_sitelist(DML_Layout *layout, DML_SiteList *sites){
   int *coords;
   int latdim = layout->latdim;
@@ -313,7 +313,7 @@ int DML_fill_multifile_sitelist(DML_Layout *layout, DML_SiteList *sites){
 
   /* Space for a coordinate vector */
   coords = DML_allocate_coords(latdim, myname, this_node);
-  if(!coords)return 1;
+  if(!coords)return DML_FAILURE;
   /* Iterate over sites in storage order on this node */
   for(index = 0; index < layout->sites_on_node; index++){
     /* Convert storage order to coordinates */
@@ -323,7 +323,7 @@ int DML_fill_multifile_sitelist(DML_Layout *layout, DML_SiteList *sites){
   }
 
   free(coords);
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -346,7 +346,7 @@ int DML_fill_partition_sitelist_try(DML_Layout *layout, DML_SiteList *sites){
 
   /* Space for a coordinate vector */
   coords = DML_allocate_coords(latdim, myname, this_node);
-  if(!coords)return 1;
+  if(!coords)return DML_FAILURE;
 
   /* Scan all the sites in the lattice to find the sites in our I/O
      partition */
@@ -366,11 +366,11 @@ int DML_fill_partition_sitelist_try(DML_Layout *layout, DML_SiteList *sites){
   if(index != number_of_io_sites){
     printf("%s(%d) Internal error. Can't count I/O sites\n",
 	   myname,this_node);
-    return 1;
+    return DML_FAILURE;
   }
 
   free(coords);
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -440,7 +440,7 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
 
   /* Space for a coordinate vector */
   coords = DML_allocate_coords(latdim, myname, this_node);
-  if(!coords)return 1;
+  if(!coords)return DML_FAILURE;
 
   /* Fill the list in storage order first */
   index = 0;
@@ -458,30 +458,30 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   if(index != number_of_io_sites){
     printf("%s(%d) Internal error. Can't count I/O sites\n",
 	   myname,this_node);
-    return 1;
+    return DML_FAILURE;
   }
 
   /* Put the site list in ascending lexicographic rank order */
   DML_hpsort(list, number_of_io_sites);
   free(coords);
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
 /* Create and populate the sitelist for output */
-/* Return code 0 = success; 1 = failure */
+
 int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
 		      DML_Layout *layout){
   int this_node = layout->this_node;
   char myname[] = "DML_fill_sitelist";
 
-  if(sites->use_list == 0)return 0;
+  if(sites->use_list == 0)return DML_SUCCESS;
 
   /* Allocate the list */
 
   sites->list = 
     (DML_SiteRank *)malloc(sizeof(DML_SiteRank)*sites->number_of_io_sites);
-  if(sites->list == NULL)return 1;
+  if(sites->list == NULL)return DML_FAILURE;
 
   /* Fill the list */
 
@@ -501,13 +501,13 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
     /* Bad volfmt */
     printf("%s(%d): bad volume format code = %d\n",
 	   myname, this_node, volfmt);
-    return 1;
+    return DML_FAILURE;
   }
 }
 
 /*------------------------------------------------------------------*/
 /* Read and check the sitelist for input */
-/* return 0 for success and 1 for failure */
+
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
 		      LIME_type *lime_type){
@@ -522,12 +522,12 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
   int status;
   char myname[] = "DML_read_sitelist";
 
-  if(sites->use_list == 0)return 0;
+  if(sites->use_list == 0)return DML_SUCCESS;
 
   /* Open sitelist record */
   lrl_record_in = LRL_open_read_record(lrl_file_in, &announced_rec_size,
 				       lime_type, &status);
-  if(!lrl_record_in)return 1;
+  if(!lrl_record_in)return DML_FAILURE;
 
   /* Require that the record size matches expectations */
   check32 = sites->number_of_io_sites * sizeof(DML_SiteRank32);
@@ -538,12 +538,15 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 	   myname, this_node, (unsigned long)announced_rec_size,
 	   (unsigned long)check, *lime_type);
     printf("%s(%d): latdim = %d\n",myname, this_node,layout->latdim);
-    return 1;
+    return DML_FAILURE;
   }
 
   /* Allocate check list according to record size */
   inputlist = (DML_SiteRank *)malloc(announced_rec_size);
-  if(inputlist == NULL)return 1;
+  if(inputlist == NULL){
+    printf("%s(%d): No room for input list\n", myname, this_node);
+    return DML_FAILURE;
+  }
 
   /* Read the site list and close the record */
   check = LRL_read_bytes(lrl_record_in, (char *)inputlist, announced_rec_size);
@@ -559,7 +562,7 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
     printf("%s(%d): bytes read %lu != expected rec_size %lu\n",
 	   myname, this_node, (unsigned long)check,
 	   (unsigned long)announced_rec_size);
-    free(inputlist); return 1;
+    free(inputlist); return DML_FAILURE;
   }
 
   if(check == check32) {  // sitelist is 32bit
@@ -580,19 +583,21 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 
   /* All input sitelists must agree exactly with what we expect */
   /* Unless we are reading in discovery mode */
-  if(!layout->discover_dims_mode) {
-    not_ok = DML_compare_sitelists(sites->list, inputlist,
-				   sites->number_of_io_sites);
-    if(not_ok)
-      printf("%s(%d): sitelist does not conform to I/O layout.\n",
-	     myname,this_node);
-
-    /* Return 1 if not OK and 0 if OK */
+  if(layout->discover_dims_mode) {
     free(inputlist);
-    return not_ok;
+    return DML_SUCCESS;
   }
-  else
-    return 0;
+
+  not_ok = DML_compare_sitelists(sites->list, inputlist,
+				 sites->number_of_io_sites);
+  free(inputlist);
+  if(not_ok){
+    printf("%s(%d): sitelist does not conform to I/O layout.\n",
+	   myname,this_node);
+    return DML_FAILURE;
+  }
+
+  return DML_SUCCESS;
 }
 
 
@@ -629,7 +634,7 @@ int DML_next_site(DML_SiteRank *rank, DML_SiteList *sites)
  
 /*------------------------------------------------------------------*/
 /* Copy subset data into DML layout structure                       */
-/* return 1 for failure (bad hypercube bounds) and 0 for success */
+
 int DML_insert_subset_data(DML_Layout *layout, int recordtype,
 			   int *lower, int *upper, int n)
 {
@@ -673,12 +678,12 @@ int DML_insert_subset_data(DML_Layout *layout, int recordtype,
 	subsetvolume *= (upper[i] - lower[i] + 1);
       else {
 	printf("DML_insert_subset_data(%d): Bad hypercube bounds\n", this_node);
-	return 1;
+	return DML_FAILURE;
       }
     }
     layout->subsetvolume = subsetvolume;
   }    
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -760,7 +765,7 @@ int64_t DML_table_lookup(DML_SiteRank list[], size_t n, DML_SiteRank r)
 
 /*------------------------------------------------------------------*/
 /* Find the physical location in the record of the site with
-   lexicographic index "rank".  Returns 1 on error.  0 for success. */
+   lexicographic index "rank".  */
 
 int DML_lookup_subset_rank(DML_SiteRank *seek, DML_SiteRank rank,
 			   DML_SiteList *sites)
@@ -771,19 +776,19 @@ int DML_lookup_subset_rank(DML_SiteRank *seek, DML_SiteRank rank,
     current_index = DML_table_lookup(sites->list, sites->number_of_io_sites,
 				     rank);
     if(current_index < 0)
-      return 1;
+      return DML_FAILURE;
   } else {
     current_index = rank;
   }
 
   if(sites->use_subset) {
     DML_SiteRank status = sites->subset_rank[current_index];
-    if(status < 0)return 1;
+    if(status < 0)return DML_FAILURE;
     *seek = status;
   } else {
     *seek = current_index;
   }
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -869,7 +874,6 @@ int64_t DML_lookup_site_rank(DML_SiteRank *t, int64_t n, DML_SiteRank r){
    list with an entry for all the sites in our partition.  We simply
    mark the entries that are not in the subset. */
 
-/* Return value 0 for success and 1 for malloc failure */
 int DML_create_subset_rank_parallel(DML_SiteList *sites, DML_Layout *layout){
 
   int latdim   = layout->latdim;
@@ -886,11 +890,11 @@ int DML_create_subset_rank_parallel(DML_SiteList *sites, DML_Layout *layout){
 
   sites->subset_rank = (DML_SiteRank *)
     malloc(sizeof(DML_SiteRank)*sites->number_of_io_sites); /* Could be less */
-  if(sites->subset_rank == NULL)return 1;
+  if(sites->subset_rank == NULL)return DML_FAILURE;
 
   ranklist =
     (DML_SiteRank *)malloc(sizeof(DML_SiteRank)*sites->number_of_io_sites);
-  if(ranklist == NULL)return 1;
+  if(ranklist == NULL)return DML_FAILURE0;
 
   /* Allocate lattice coordinate */
   coords = DML_allocate_coords(latdim, myname, this_node);
@@ -934,14 +938,13 @@ int DML_create_subset_rank_parallel(DML_SiteList *sites, DML_Layout *layout){
   free(ubound);
   free(ranklist);
 
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
 /* Create the subset rank list for serial reading (single/part/multifile). */
 /* See DML_create_subset_rank below for a definition of this list   */
 
-/* Return value 0 for success and 1 for malloc failure */
 int DML_create_subset_rank_serial(DML_SiteList *sites, DML_Layout *layout){
 
   DML_SiteRank r, s;
@@ -949,7 +952,7 @@ int DML_create_subset_rank_serial(DML_SiteList *sites, DML_Layout *layout){
   sites->use_subset = 1;
   sites->subset_rank = (DML_SiteRank *)
     malloc(sizeof(DML_SiteRank)*sites->number_of_io_sites);  /* Could be less */
-  if(sites->subset_rank == NULL)return 1;
+  if(sites->subset_rank == NULL)return DML_FAILURE;
   r = DML_init_site_loop(sites);
   s = 0;
   do {
@@ -961,7 +964,7 @@ int DML_create_subset_rank_serial(DML_SiteList *sites, DML_Layout *layout){
 
   sites->subset_io_sites = s;
 
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -972,12 +975,12 @@ int DML_create_subset_rank_serial(DML_SiteList *sites, DML_Layout *layout){
    There is one entry in this list for each site in the I/O partition
    to which this node belongs.  The order of entries is lexicographic
    by site coordinate.   */
-/* Return value 0 for success and 1 for malloc failure */
+
 int DML_create_subset_rank(DML_SiteList *sites, DML_Layout *layout,
 			   int volfmt, int serpar){
   sites->use_subset = 0;
   sites->subset_io_sites = sites->number_of_io_sites;
-  if(layout->recordtype == DML_FIELD)return 0;
+  if(layout->recordtype == DML_FIELD)return DML_SUCCESS;
 
   if(volfmt == DML_SINGLEFILE && serpar == DML_PARALLEL)
     return DML_create_subset_rank_parallel(sites, layout);
@@ -1057,7 +1060,7 @@ void DML_checksum_peq(DML_Checksum *total, DML_Checksum *checksum){
 }
 
 /*------------------------------------------------------------------*/
-/* Is this a big endian architecture? Return 1 or 0. */
+/* Is this a big endian architecture? return 1: true or 0: falst. */
 int DML_big_endian(void)
 {
   union {
@@ -1163,11 +1166,11 @@ int DML_write_buf_current(LRL_RecordWriter *lrl_record_out,
   if(wrote != buf_sites*size){
     printf("%s(%d) write error: wrote %lu bytes but wanted %lu\n",
 	   myname,this_node,wrote,buf_sites*size);
-    return 1;
+    return DML_FAILURE;
   }
   *nbytes += buf_sites*size;
 
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -1187,7 +1190,7 @@ int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out,
      != LRL_SUCCESS){
     printf("%s(%d) error while seeking to %lu\n",
 	   myname,this_node,size*seeksite);
-    return 1;
+    return DML_FAILURE;
   }
 
   /* Then write */
@@ -1204,14 +1207,14 @@ DML_read_buf(LRL_RecordReader *lrl_record_in, char *buf,
   if(doseek) {
     if(LRL_seek_read_record(lrl_record_in,(off_t)size*firstrank)
        != LRL_SUCCESS) {
-      return -1;
+      return DML_FAILURE;
     }
   }
   size *= num;
   if(LRL_read_bytes(lrl_record_in, buf, size) != size) {
-    return -1;
+    return DML_FAILURE;
   }
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -1233,7 +1236,7 @@ size_t DML_read_buf_seek(LRL_RecordReader *lrl_record_in,
 
   max_buf_sites = 1;  /* Force a max one-site buffer. Should be
 			 changed in the future. */
-  *err = 0;
+  *err = DML_SUCCESS;
 
   if(*buf_extract == buf_sites){  
     /* new buffer length  = remaining sites, but never bigger 
@@ -1244,7 +1247,7 @@ size_t DML_read_buf_seek(LRL_RecordReader *lrl_record_in,
     /* Seek to the appropriate position in the record */
     if(LRL_seek_read_record(lrl_record_in,(off_t)size*seeksite)
        != LRL_SUCCESS){
-      *err = -1;
+      *err = DML_FAILURE;
       return 0;
     }
 
@@ -1252,7 +1255,7 @@ size_t DML_read_buf_seek(LRL_RecordReader *lrl_record_in,
     if( LRL_read_bytes(lrl_record_in, lbuf, new_buf_sites*size) 
 	!= new_buf_sites*size){
       printf("%s(%d) read error\n", myname,this_node); 
-      *err = -1;
+      *err = DML_FAILURE;
       return 0;
     }
     *nbytes += new_buf_sites*size;
@@ -1274,7 +1277,7 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, size_t size,
   /* Number of available sites in read buffer */
   size_t new_buf_sites = buf_sites;   
 
-  *err = 0;
+  *err = DML_SUCCESS;
 
   if(*buf_extract == buf_sites){  
     /* new buffer length  = remaining sites, but never bigger 
@@ -1285,7 +1288,7 @@ size_t DML_read_buf_next(LRL_RecordReader *lrl_record_in, size_t size,
     if( LRL_read_bytes(lrl_record_in, lbuf, new_buf_sites*size) 
 	!= new_buf_sites*size){
       printf("%s(%d) read error\n", myname,this_node); 
-      *err = -1;
+      *err = DML_FAILURE;
       return 0;
     }
     *nbytes += new_buf_sites*size;
@@ -1313,7 +1316,8 @@ int DML_my_ionode(int volfmt, int serpar, DML_Layout *layout){
   }
   else {
     printf("DML_my_ionode: Bad volfmt code %d\n",volfmt);
-    return 0;
+    fflush(stdout);
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -1343,7 +1347,7 @@ int DML_synchronize_out(LRL_RecordWriter *lrl_record_out, DML_Layout *layout){
 
   LRL_destroy_writer_state_copy(state_ptr);
 
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -1396,7 +1400,7 @@ DML_RecordWriter *DML_partition_open_out(
   outbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!outbuf){
     printf("%s(%d) can't malloc outbuf\n",myname,this_node);
-    return 0;
+    return DML_FAILURE;
   }
 
   /* Allocate lattice coordinate */
@@ -1529,7 +1533,7 @@ int DML_partition_subset_sitedata_out(DML_RecordWriter *dml_record_out,
 				      outbuf, buf_sites, size, &nbytes,
 				      myname, this_node);
 	  buf_sites = 0;
-	  if(status !=  0) {return 1;}
+	  if(status ==  DML_FAILURE) {return DML_FAILURE;}
 	}
     }
   isite++;
@@ -1541,7 +1545,7 @@ int DML_partition_subset_sitedata_out(DML_RecordWriter *dml_record_out,
   dml_record_out->isite           = isite;
   dml_record_out->buf_sites       = buf_sites;
 
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -1557,16 +1561,14 @@ int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
 
   /* Convert lexicographic index for this partition to the physical
      rank in the record */
-  if(DML_lookup_subset_rank(&subset_rank, snd_coords, sites)!= 0){
+  if(DML_lookup_subset_rank(&subset_rank, snd_coords, sites) == DML_FAILURE){
     printf("%s(%d) Request to write a site %ld not planned for the record.\n",
 	   myname, this_node, snd_coords);
-    return 1;
+    return DML_FAILURE;
   }
-  if(DML_partition_subset_sitedata_out(dml_record_out, get, subset_rank, 
-            snd_coords, count, size, word_size, arg, layout) != 0)
-    return 1;
+  return DML_partition_subset_sitedata_out(dml_record_out, get, subset_rank, 
+	   snd_coords, count, size, word_size, arg, layout);
 
-  return 0;
 }
 
 /*------------------------------------------------------------------*/
@@ -1587,15 +1589,15 @@ int DML_partition_allsitedata_out(DML_RecordWriter *dml_record_out,
   /* Iterate over all sites processed by this I/O partition */
 
   if(DML_init_subset_site_loop(&snd_coords, sites)==0)
-    return 0;
+    return DML_SUCCESS;
   do {
     if(DML_partition_sitedata_out(dml_record_out, get, snd_coords, 
-		  count, size, word_size, arg, layout, sites) != 0)
-      return 1;
+		  count, size, word_size, arg, layout, sites) == DML_FAILURE)
+      return DML_FAILURE;
     
   } while(DML_next_subset_site(&snd_coords, sites));
   
-  return 0;
+  return DML_SUCCESS;
 }
 
   
@@ -1620,7 +1622,7 @@ uint64_t DML_partition_close_out(DML_RecordWriter *dml_record_out)
 }
 
 /*------------------------------------------------------------------*/
-/* Flush the outputbuffer to the file */
+/* Flush the output buffer to the file */
 static int DML_flush_outbuf(LRL_RecordWriter *lrl_record_out, int serpar,
 			    DML_SiteRank snd_coords, 
 			    char *outbuf, size_t buf_sites, size_t size,
@@ -1629,7 +1631,7 @@ static int DML_flush_outbuf(LRL_RecordWriter *lrl_record_out, int serpar,
   char myname[] = "DML_flush_outbuf";
   int status;
 
-  if(buf_sites == 0)return 0;
+  if(buf_sites == 0)return DML_SUCCESS;
 
   if(serpar == DML_SERIAL)
     status = DML_write_buf_current(lrl_record_out,
@@ -1827,7 +1829,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	    timestart2(dtwrite2);
 	    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
 			     outbuf, buf_sites, size, &nbytes, this_node);
-	    if(status != 0) {
+	    if(status == DML_FAILURE) {
 	      printf("%s(%d): DML_flush_outbuf returned status %i\n",
 		     myname,this_node,status);
 	      free(outbuf); free(tbuf); free(scratch_buf); free(coords);
@@ -1901,7 +1903,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
 			      outbuf, buf_sites, size, &nbytes, this_node);
     buf_sites = 0;
-    if(status !=  0) nbytes = 0;
+    if(status ==  DML_FAILURE) nbytes = 0;
     timestop2(dtwrite2);
   }
 
@@ -2094,7 +2096,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 				  outbuf, buf_sites, size, &nbytes,
 				  this_node);
 	buf_sites = 0;
-	if(status != 0) {free(outbuf); free(coords); return 0;}
+	if(status == DML_FAILURE) {free(outbuf); free(coords); return 0;}
       }
     }
     isite++;
@@ -2237,7 +2239,7 @@ uint64_t DML_multifile_out(LRL_RecordWriter *lrl_record_out,
 				       lbuf, buf_sites, size, &nbytes,
 				       myname, this_node);
 	buf_sites = 0;
-	if(status != 0) {free(lbuf); free(coords); return 0;}
+	if(status == DML_FAILURE) {free(lbuf); free(coords); return 0;}
       }
   } /* isite */
 
@@ -2304,7 +2306,7 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 				  &buf_extract, buf_sites, max_buf_sites, 
 				  isite, max_send_sites, &nbytes, 
 				  myname, this_node, &err);
-    if(err < 0){free(lbuf);free(coords);return 0;}
+    if(err == DML_FAILURE){free(lbuf);free(coords);return 0;}
     
     /* Copy data directly from the buffer */
     buf = lbuf + size*buf_extract;
@@ -2353,7 +2355,7 @@ int DML_synchronize_in(LRL_RecordReader *lrl_record_in, DML_Layout *layout){
 
   LRL_destroy_reader_state_copy(state_ptr);
 
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -2399,12 +2401,12 @@ DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in,
   inbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!inbuf){
     printf("%s(%d) can't malloc inbuf\n",myname,this_node);
-    return 0;
+    return NULL;
   }
 
   /* Allocate coordinate counter */
   coords = DML_allocate_coords(latdim, myname, this_node);
-  if(!coords){free(inbuf); return 0;}
+  if(!coords){free(inbuf); return DML_FAILURE;}
 
   /* Initialize checksum */
   DML_checksum_init(checksum);
@@ -2478,10 +2480,10 @@ int DML_partition_subset_sitedata_in(DML_RecordReader *dml_record_in,
 				  max_send_sites, &nbytes,
 				  myname, this_node, &err);
     
-    if(err < 0){
+    if(err == DML_FAILURE){
       printf("%s(%d) DML_read_buf_seek returns error\n",
 	     myname,this_node);
-      return 1;
+      return DML_FAILURE;
     }
 
     /* Location of new datum on I/O node */
@@ -2530,7 +2532,7 @@ int DML_partition_subset_sitedata_in(DML_RecordReader *dml_record_in,
   dml_record_in->buf_sites       = buf_sites;
   dml_record_in->buf_extract     = buf_extract;
 
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -2545,16 +2547,16 @@ int DML_partition_sitedata_in(DML_RecordReader *dml_record_in,
 
   /* Convert lexicographic index for this partition to the physical
      rank in the record */
-  if(DML_lookup_subset_rank(&subset_rank, rcv_coords, sites)!= 0){
+  if(DML_lookup_subset_rank(&subset_rank, rcv_coords, sites) == DML_FAILURE){
     printf("%s(%d) Request for a site %ld not found in the record.\n",
 	   myname, this_node, rcv_coords);
-  return 1;
+  return DML_FAILURE;
   }
   if(DML_partition_subset_sitedata_in(dml_record_in, put, subset_rank,
-	      rcv_coords, count, size, word_size, arg, layout) != 0)
-    return 1;
+	      rcv_coords, count, size, word_size, arg, layout) != DML_SUCCESS)
+    return DML_FAILURE;
 
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -2572,15 +2574,15 @@ int DML_partition_allsitedata_in(DML_RecordReader *dml_record_in,
   DML_SiteRank rcv_coords;
 
   if(DML_init_subset_site_loop(&rcv_coords, sites) == 0)
-    return 0;
+    return DML_SUCCESS;
   do {
     if(DML_partition_sitedata_in(dml_record_in, put, rcv_coords,
-		count, size, word_size, arg, layout, sites) != 0)
-      return 1;
+		count, size, word_size, arg, layout, sites) != DML_SUCCESS)
+      return DML_FAILURE;
 
   }  while(DML_next_subset_site(&rcv_coords, sites));
 
-  return 0;
+  return DML_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
@@ -2708,7 +2710,7 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
       timestop2(dtread2);
       nbytes += k*size;
 
-      if(err < 0) {
+      if(err == DML_FAILURE) {
         printf("%s(%d) DML_read_buf returns error\n", __func__, this_node);
         free(inbuf); free(coords);
         return 0;

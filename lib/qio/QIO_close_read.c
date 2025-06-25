@@ -16,7 +16,7 @@ int QIO_close_read(QIO_Reader *in){
 
   if(!in)return QIO_SUCCESS;
   status = LRL_close_read_file(in->lrl_file_in);
-  if(status != QIO_SUCCESS)return QIO_ERR_CLOSE;
+  if(status != LRL_SUCCESS)return QIO_ERR_CLOSE;
   if(in->layout){
     free(in->layout->latsize);
     if(in->layout->hyperupper)free(in->layout->hyperupper);

@@ -460,7 +460,7 @@ uint64_t LRL_write_bytes(LRL_RecordWriter *rw, char *buf,
   if( status != LIME_SUCCESS ) 
   { 
     printf("LRL_write_bytes: some error has occurred. status is: %d\n", status);
-    exit(EXIT_FAILURE);
+    return 0;
   }
 
   return nbyt;

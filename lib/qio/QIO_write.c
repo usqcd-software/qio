@@ -23,7 +23,7 @@ int QIO_writer_insert_hypercube_data(QIO_Writer *out,
 				  QIO_get_hyperlower(record_info),
 				  QIO_get_hyperupper(record_info),
 				  QIO_get_hyper_spacetime(record_info));
-  if(status != 0) return QIO_ERR_BAD_SUBSET;
+  if(status == DML_FAILURE) return QIO_ERR_BAD_SUBSET;
 
   return QIO_SUCCESS;
 }

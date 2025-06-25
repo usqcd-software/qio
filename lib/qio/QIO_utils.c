@@ -155,7 +155,7 @@ DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt, int serpar){
   /* Populate the sitelist */
   /* unless we are reading in discovery mode */
   if(!layout->discover_dims_mode){
-    if(DML_fill_sitelist(sites, volfmt, serpar, layout)){
+    if(DML_fill_sitelist(sites, volfmt, serpar, layout) == DML_FAILURE){
       printf("%s(%d): Error building the site list\n", 
 	     myname,layout->this_node);fflush(stdout);
       DML_free_sitelist(sites);
@@ -280,7 +280,7 @@ QIO_open_write_field(QIO_Writer *out,
     }
   } else{
     /* Create list of sites in subset for output and count them */
-    if(DML_create_subset_rank(out->sites, out->layout, volfmt, serpar) == 1){
+    if(DML_create_subset_rank(out->sites, out->layout, volfmt, serpar) == DML_FAILURE){
       printf("%s(%d) No room for subset rank list\n",
 	     myname,this_node);
       return NULL;
@@ -353,7 +353,7 @@ QIO_open_write_field(QIO_Writer *out,
 				     recordtype == QIO_HYPER)) {
     if(QIO_verbosity() >= QIO_VERB_DEBUG)
       printf("%s(%d): Doing parallel write sync\n",myname,this_node);
-    if(DML_synchronize_out(lrl_record_out,out->layout) != 0) {
+    if(DML_synchronize_out(lrl_record_out,out->layout) == DML_FAILURE) {
       printf("%s(%d): DML_synchronize returns error\n",
 	     myname,this_node);
       *status = QIO_ERR_OPEN_WRITE;
@@ -451,9 +451,9 @@ int QIO_seek_write_field_datum(QIO_Writer *out,
   status = DML_partition_sitedata_out(dml_record_out, get, snd_coords, 
 	      count, datum_size, word_size, arg, out->layout, out->sites);
 
-  if(status != QIO_SUCCESS){
+  if(status == DML_FAILURE){
     printf("%s(%d): Error writing site datum\n",myname,this_node);
-    return status;
+    return QIO_ERR_BAD_WRITE_BYTES;
   }
 
   return QIO_SUCCESS;
@@ -710,9 +710,10 @@ QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type)
     /* Time release */
     /* double lapse = 1;
        QIO_wait(this_node*lapse); */
-    status = DML_read_sitelist(in->sites, 
-			       in->lrl_file_in, in->volfmt, 
-			       in->layout, lime_type);
+    if(DML_read_sitelist(in->sites, 
+			 in->lrl_file_in, in->volfmt, 
+			 in->layout, lime_type) == DML_FAILURE)
+      status = QIO_ERR_BAD_SITELIST;
     /* QIO_wait((number_of_nodes - this_node)*lapse); */
   }
 
@@ -801,7 +802,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size,
      synchronize all the the readers to the master node reader. */
 
   if(in->serpar == DML_PARALLEL){
-    if(DML_synchronize_in(lrl_record_in,in->layout) != 0){
+    if(DML_synchronize_in(lrl_record_in,in->layout) != DML_SUCCESS){
       *status = QIO_ERR_OPEN_READ;
       return NULL;
     }
@@ -809,7 +810,7 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size,
 
   /* Create list of sites in subset for output and count them */
   if(recordtype != QIO_GLOBAL){
-    if(DML_create_subset_rank(in->sites, in->layout, volfmt, serpar) == 1){
+    if(DML_create_subset_rank(in->sites, in->layout, volfmt, serpar) == DML_FAILURE){
       printf("%s(%d) No room for subset rank list\n",
 	     myname,this_node);
       return NULL;
@@ -945,7 +946,7 @@ int QIO_seek_read_field_datum(QIO_Reader *in, DML_SiteRank rcv_coords,
 				     count, datum_size, word_size, arg, 
 				     in->layout, in->sites);
 
-  if(status != 0){
+  if(status != DML_SUCCESS){
     printf("%s(%d): DML error %d reading site datum\n",myname,this_node,
 	   status);
     return QIO_ERR_BAD_READ_BYTES;

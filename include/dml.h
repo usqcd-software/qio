@@ -6,6 +6,10 @@
 #include <qio_stdint.h>
 #include <stdlib.h>
 
+/* DML return codes */
+#define DML_SUCCESS  0
+#define DML_FAILURE  1
+
 /* File fragmentation */
 #define DML_UNKNOWN   -1
 #define DML_SINGLEFILE 0
