@@ -23,9 +23,15 @@
       line 2: mx my mz ...       Dimensions of the node-partitioned machine
       line 3: px py pz ...       Dimensions of the I/O partitioned machine
 
+      NOTE: These are the same dimensions known to the MILC code as
+      node_geom and ionode_geom, respectively.
+
          The remaining lines specify the host path to the file system
          for each logical node.  The first value is the logical node
          number and the second is the path.  The path can be empty.
+
+         NOTE: These lines may be omitted entirely if the files are in the
+         same directory and the volume numbers are standard.
 
       line 4:  0 path1
       line 5:  k pathk
@@ -73,18 +79,19 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <qio.h>
+#include <qmp.h>
 #include "qio-convert-mesh.h"
 
 #define PATHLENGTH 256
 #define LINELENGTH PATHLENGTH+16
 #define	BASE_DIRMODE	0775
 
-/* TODO move to a structure passed as void *arg to my_io_node_a [sns 2015/09/10] */
+/* TODO move to a structure passed as void *arg to my_io_node_ext [sns 2015/09/10] */
 static QIO_Mesh_Topology *mesh;
 static int *nodes_per_ionode;
 static int *io_node_coords;
 
-/* Initialize my_io_node_a data */
+/* Initialize my_io_node_ext data */
 
 static int init_my_io_node(){
   int i;
@@ -106,7 +113,7 @@ static int init_my_io_node(){
 }
 
 /* Map any node to its I/O node */
-static int my_io_node_a(int node, void *arg){
+static int my_io_node_ext(int node, void *arg){
   int i; 
 
   /* Get the machine coordinates for the specified node */
@@ -121,7 +128,7 @@ static int my_io_node_a(int node, void *arg){
   return (int)lex_rank(io_node_coords, mesh->machdim, mesh->machsize);
 }
 
-static int zero_master_io_node_a(void *arg){return 0;}
+static int zero_master_io_node_ext(void *arg){return 0;}
 
 static char *errmsg(void)
 {
@@ -131,12 +138,12 @@ static char *errmsg(void)
 
 static QIO_Filesystem *create_multi_ppfs(void){
   QIO_Filesystem *fs;
-  int i, j, k, d, numnodes;
+  int i, j, k, d;
   int *io_part_coords;
   mode_t dir_mode = BASE_DIRMODE;
   char myname[] = "create_multi_ppfs";
 
-  numnodes = mesh->numnodes;
+  //int numnodes = mesh->numnodes;
   char line[LINELENGTH];
   char path[PATHLENGTH+1];
   char *p;
@@ -149,8 +156,8 @@ static QIO_Filesystem *create_multi_ppfs(void){
   }
   fs->number_io_nodes = mesh->number_io_nodes;
   fs->type = QIO_MULTI_PATH;
-  fs->my_io_node_a = my_io_node_a;
-  fs->master_io_node_a = zero_master_io_node_a;
+  fs->my_io_node_ext = my_io_node_ext;
+  fs->master_io_node_ext = zero_master_io_node_ext;
   fs->arg = NULL;
   fs->io_node = NULL;
   fs->node_path = NULL;
@@ -200,7 +207,7 @@ static QIO_Filesystem *create_multi_ppfs(void){
     if(j == 1) fs->node_path[i][0] = '\0';
     /* Otherwise, copy the path to the table */
     else{
-      strncpy(fs->node_path[i], path, PATHLENGTH);
+      strncpy(fs->node_path[i], path, PATHLENGTH+1);
       fs->node_path[i][PATHLENGTH] = '\0';
     }
 
@@ -260,10 +267,30 @@ static void destroy_multi_ppfs(QIO_Filesystem *fs){
   }
 }
 
+static void
+init_qmp(int *argc, char **argv[])
+{
+  QMP_status_t status;
+  QMP_thread_level_t req, prv;
+
+  /* Start QMP */
+  req = QMP_THREAD_SINGLE;
+  status = QMP_init_msg_passing (argc, argv, req, &prv);
+
+  if (status != QMP_SUCCESS) {
+    QMP_error ("QMP_init failed: %s\n", QMP_error_string(status));
+    QMP_abort(1);
+  }
+}
+
+static void quit_qmp(void){
+  QMP_finalize_msg_passing ();
+}
+
 int main(int argc, char *argv[]){
   QIO_Filesystem *fs;
   int status;
-  
+
   /* Check arguments and process layout parameters */
 
   if(argc < 3){
@@ -271,10 +298,13 @@ int main(int argc, char *argv[]){
     return 1;
   }
 
+  /* Initialize QMP */
+  init_qmp(&argc, &argv);
+
   /* Read topology */
   mesh = qio_read_topology(0);
 
-  /* Initialize data for the my_io_node_a function */
+  /* Initialize data for the my_io_node_ext function */
   status = init_my_io_node();
   if(status != 0)return status;
 
@@ -288,6 +318,8 @@ int main(int argc, char *argv[]){
   destroy_multi_ppfs(fs);
 
   qio_destroy_topology(mesh);
+
+  quit_qmp();
 
   return status;
 }

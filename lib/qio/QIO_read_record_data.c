@@ -86,7 +86,7 @@ int QIO_generic_read_record_data(QIO_Reader *in,
   count = QIO_get_datacount(record_info);
   if(datum_size !=  QIO_get_typesize(record_info) * count)
     {
-      printf("%s(%d): requested byte count %lu disagrees with the record %d * %d\n",
+      printf("%s(%d): requested byte count %lu disagrees with the record %lu * %d\n",
 	     myname,this_node,(unsigned long)datum_size,
 	     QIO_get_typesize(record_info), count);
       
@@ -174,8 +174,8 @@ QIO_ChecksumInfo *QIO_read_checksum(QIO_Reader *in)
     if(in->format == QIO_SCIDAC_NATIVE){
       xml_checksum = QIO_string_create();
       QIO_string_realloc(xml_checksum,QIO_STRINGALLOC);
-      if((status=QIO_read_string(in, xml_checksum, &lime_type))
-	 !=QIO_SUCCESS){
+      status = QIO_read_string(in, xml_checksum, &lime_type);
+      if(status != QIO_SUCCESS){
 	printf("%s(%d): Error reading checksum\n",myname,this_node);
 	return NULL;
       }
@@ -184,8 +184,8 @@ QIO_ChecksumInfo *QIO_read_checksum(QIO_Reader *in)
 	       QIO_string_ptr(xml_checksum));
       }
       /* Extract checksum */
-      if((status=QIO_decode_checksum_info(checksum_info_expect, xml_checksum))
-	 !=0){
+      status = QIO_decode_checksum_info(checksum_info_expect, xml_checksum);
+      if(status != 0){
 	printf("%s(%d): bad checksum record\n",myname,this_node);
 	return NULL;
       }

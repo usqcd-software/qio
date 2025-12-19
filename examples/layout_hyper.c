@@ -26,9 +26,9 @@
 
 /*
    setup_layout_a(void *arg)  sets up layout
-   node_number_a(void *arg)   returns the node number on which a site lives
-   node_index_a(void *arg)    returns the index of the site on the node
-   get_coords_a(void *arg)    gives lattice coords from node & index
+   node_number_ext(void *arg)   returns the node number on which a site lives
+   node_index_ext(void *arg)    returns the index of the site on the node
+   get_coords_ext(int coords[], int node, DML_Index index, void *arg)    gives lattice coords from node & index
 */
 
 
@@ -56,6 +56,9 @@ static int *mcoord;
 #define MAXPRIMES (sizeof(prime)/sizeof(int))
 
 static void setup_qmp_grid(int len[], int nd, int numnodes){
+  _QIO_UNUSED_ARGUMENT(nd);
+  _QIO_UNUSED_ARGUMENT(numnodes);
+
   int ndim2, i;
   const int *nsquares2;
 
@@ -77,6 +80,8 @@ static void setup_qmp_grid(int len[], int nd, int numnodes){
 
 void setup_hyper_prime(int len[], int nd, int numnodes)
 {
+
+  _QIO_UNUSED_ARGUMENT(nd);
   int i, j, k, n;
 
   /* Figure out dimensions of rectangle */
@@ -165,8 +170,9 @@ int setup_layout(int len[], int nd, int numnodes){
   return 0;
 }
 
-int node_number_a(const int x[], void *a)
+int node_number_ext(const int x[], void *a)
 {
+  _QIO_UNUSED_ARGUMENT(a);
   int i;
 
   for(i=0; i<ndim; i++) {
@@ -175,8 +181,9 @@ int node_number_a(const int x[], void *a)
   return QMP_get_node_number_from(mcoord);
 }
 
-int node_index_a(const int x[], void *a)
+QIO_Index node_index_ext(const int x[], void *a)
 {
+  _QIO_UNUSED_ARGUMENT(a);
   int i, r=0, p=0;
 
   for(i=ndim-1; i>=0; --i) {
@@ -192,8 +199,9 @@ int node_index_a(const int x[], void *a)
   return r;
 }
 
-void get_coords_a(int x[], int node, int index, void *a)
+void get_coords_ext(int x[], int node, QIO_Index index, void *a)
 {
+  _QIO_UNUSED_ARGUMENT(a);
   int i, s, si;
   int *m;
 
@@ -227,7 +235,7 @@ void get_coords_a(int x[], int node, int index, void *a)
   free(m);
 
   /* Check the result */
-  if(node_index_a(x, NULL)!=si) {
+  if(node_index_ext(x, NULL)!=si) {
     if(this_node==0) {
       fprintf(stderr,"get_coords: error in layout!\n");
       for(i=0; i<ndim; i++) {
@@ -243,6 +251,8 @@ void get_coords_a(int x[], int node, int index, void *a)
 }
 
 /* The number of sites on the specified node */
-int num_sites_a(int node, void *a){
+QIO_Index num_sites_ext(int node, void *a){
+  _QIO_UNUSED_ARGUMENT(a);
+  _QIO_UNUSED_ARGUMENT(node);
   return sites_on_node;
 }

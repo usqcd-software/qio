@@ -294,8 +294,8 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
   float diff_field = 0, diff_array = 0, diff_su3 = 0, diff_subset = 0;
   QMP_thread_level_t provided;
   int status;
-  int sites_on_node = 0;
-  int i,volume;
+  QIO_Index sites_on_node = 0;
+  QIO_Index i,volume;
   char filename[] = "binary_test";
   int dim = 4;
   int lower[4] = {1, 0, 0, 2};
@@ -325,13 +325,17 @@ int qio_test(int output_volfmt, int output_serpar, int ildgstyle,
     return 1;
   printf("%s(%d) layout set for %d nodes\n",myname,this_node,
 	 QMP_get_number_of_nodes());
-  sites_on_node = num_sites_a(this_node, NULL);
+  sites_on_node = num_sites_ext(this_node, NULL);
 
   /* Build the layout structure */
-  layout.node_number_a  = node_number_a;
-  layout.node_index_a   = node_index_a;
-  layout.get_coords_a   = get_coords_a;
-  layout.num_sites_a    = num_sites_a;
+  layout->node_number   = NULL;
+  layout->node_index    = NULL;
+  layout->get_coords    = NULL;
+  layout->num_sites     = NULL;
+  layout->node_number_ext = node_number_ext;
+  layout->node_index_ext  = node_index_ext;
+  layout->get_coords_ext  = get_coords_ext;
+  layout->num_sites_ext   = num_sites_ext;
   layout.arg            = NULL;
   layout.latsize        = lattice_size;
   layout.latdim         = lattice_dim;

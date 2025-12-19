@@ -34,7 +34,8 @@
 /* Size of message buffers (bytes).  Doesn't usually need to be bigger
    than the x dimension of the local subvolume times the size of the
    data per site */
-#define DML_TBUF_BYTES 65536
+//#define DML_TBUF_BYTES 65536
+#define DML_TBUF_BYTES (DML_BUF_BYTES/4)
 
 #ifdef __cplusplus
 extern "C"
@@ -48,16 +49,25 @@ typedef struct {
 
 /* Type for sitelist values */
 /* Change only if creating new file format */
-typedef uint32_t DML_SiteRank;
+typedef uint32_t DML_SiteRank32;
+typedef int64_t DML_SiteRank;
 
+typedef n_uint64_t DML_Index;
 /* For collecting and passing layout information */
 /* See qio.h for QIO_Layout */
 typedef struct {
   /* Data distribution fixed for the entire file */
-  int (*node_number_a)(const int coords[], void *arg);
-  int (*node_index_a)(const int coords[], void *arg);
-  void (*get_coords_a)(int coords[], int node, const int index, void *arg);
-  int (*num_sites_a)(int node, void *arg);
+  /* old site-node index functions: given priority if not NULL for backward compat  
+   * set to NULL to use new site-node index functions */
+  int (*node_number)(const int coords[]);
+  int (*node_index)(const int coords[]);
+  void (*get_coords)(int coords[], int node, const int index);
+  int (*num_sites)(int node);
+  /* new site-node index functions: allow multi-lattice, no global-var dependence */
+  int (*node_number_ext)(const int coords[], void *arg);
+  DML_Index (*node_index_ext)(const int coords[], void *arg);
+  void (*get_coords_ext)(int coords[], int node, DML_Index index, void *arg);
+  DML_Index (*num_sites_ext)(int node, void *arg);
   void *arg;
   int *latsize;
   int latdim;
@@ -76,7 +86,7 @@ typedef struct {
   size_t subsetvolume;
 
   /* I/O partitions */
-  int (*ionode_a)(int node, void *arg);
+  int (*ionode_ext)(int node, void *arg);     /* new index func */
   void *fs_arg;
   int master_io_node;
 } DML_Layout;
@@ -94,8 +104,8 @@ typedef struct {
 
   /* Constant for a record */
   int use_subset;
-  int *subset_rank;     /* Rank order of sites in subset */
-  int subset_io_sites;
+  DML_SiteRank *subset_rank;     /* Rank order of sites in subset */
+  size_t subset_io_sites;
 } DML_SiteList;
 
 
@@ -184,9 +194,9 @@ int DML_create_subset_rank(DML_SiteList *sites, DML_Layout *layout,
 void DML_destroy_subset_rank(DML_SiteList *sites);
 void DML_global_xor(uint32_t *x);
 int DML_big_endian(void);
-void DML_byterevn(char *buf, size_t size, int word_size);
+void DML_byterevn(void *buf, size_t size, int word_size);
 size_t DML_max_buf_sites(size_t size, int factor);
-char *DML_allocate_buf(size_t size, size_t *max_buf_sites);
+void *DML_allocate_buf(size_t size, size_t *max_buf_sites);
 int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out, 
 		       DML_SiteRank seeksite, 
 		       char *lbuf, size_t buf_sites, size_t size,
@@ -277,11 +287,16 @@ int DML_clear_to_send(char *buf, size_t size, int my_io_node, int tonode);
 void DML_sync(void);
 
 /* I/O layout */
-typedef int (*DML_io_node_a_t)(const int, void *);
-typedef int (*DML_master_io_node_a_t)(void *);
+/* old style - depend on global var; hope to do without them */
+/* typedef int (*DML_io_node_t)(const int); */
+/* typedef int (*DML_master_io_node_t)(void); */
+typedef int (*DML_io_node_ext_t)(const int, void *arg);
+typedef int (*DML_master_io_node_ext_t)(void *arg);
 
-int DML_io_node_a(const int node, void *arg);
-int DML_master_io_node_a(void *arg);
+int DML_default_ionode_ext(const int node, void *arg);
+int DML_default_master_ionode_ext(void *arg);
+
+int DML_ionode_ext(int node, DML_Layout *layout);
 
 uint32_t DML_crc32(uint32_t crc, const unsigned char *buf, uint32_t len);
 

@@ -16,11 +16,11 @@
 /* Build QIO_Reader and open master file */
 /*****************************************/
 
-QIO_Reader *
+static QIO_Reader *
 QIO_create_reader(const char *filename, 
                   QIO_Layout *layout, QIO_Iflag *iflag,
-                  DML_io_node_a_t io_node_a, 
-                  DML_master_io_node_a_t master_io_node_a,
+                  DML_io_node_ext_t io_node_ext, 
+                  DML_master_io_node_ext_t master_io_node_ext,
                   void *fs_arg)
 {
   QIO_Reader *qio_in;
@@ -30,7 +30,7 @@ QIO_create_reader(const char *filename,
   int *latsize, *upper, *lower;
   int latdim = layout->latdim;
   int this_node = layout->this_node;
-  int master_ionode = master_io_node_a(fs_arg);
+  int master_ionode = master_io_node_ext(fs_arg);
   char *newfilename;
   char myname[] = "QIO_create_reader";
 
@@ -110,7 +110,8 @@ QIO_create_reader(const char *filename,
         if (this_node == master_ionode)
           printf("%s(%d): opened %s as PARTFILE_DIR\n",
                   myname, this_node, newfilename);
-        volfmt = QIO_PARTFILE_DIR;
+        if (volfmt == QIO_UNKNOWN /*|| qio_in->volfmt == QIO_PARTFILE*/ )
+          volfmt = QIO_PARTFILE_DIR;
       }
       free(newfilename);
     }
@@ -142,10 +143,14 @@ QIO_create_reader(const char *filename,
   if (dml_layout == NULL || layout == NULL)
     return NULL;
 
-  dml_layout->node_number_a        = layout->node_number_a;
-  dml_layout->node_index_a         = layout->node_index_a;
-  dml_layout->get_coords_a         = layout->get_coords_a;
-  dml_layout->num_sites_a          = layout->num_sites_a;
+  dml_layout->node_number          = layout->node_number;
+  dml_layout->node_index           = layout->node_index;
+  dml_layout->get_coords           = layout->get_coords;
+  dml_layout->num_sites            = layout->num_sites;
+  dml_layout->node_number_ext      = layout->node_number_ext;
+  dml_layout->node_index_ext       = layout->node_index_ext;
+  dml_layout->get_coords_ext       = layout->get_coords_ext;
+  dml_layout->num_sites_ext        = layout->num_sites_ext;
   dml_layout->arg                  = layout->arg;
   dml_layout->latsize              = latsize;
   dml_layout->latdim               = layout->latdim;
@@ -161,7 +166,7 @@ QIO_create_reader(const char *filename,
   dml_layout->hyperupper           = upper;
   dml_layout->subsetvolume         = layout->volume;
 
-  dml_layout->ionode_a             = io_node_a;
+  dml_layout->ionode_ext           = io_node_ext;
   dml_layout->fs_arg               = fs_arg;
   dml_layout->master_io_node       = master_ionode;
 
@@ -205,7 +210,8 @@ void QIO_suppress_global_broadcast(QIO_Reader *qio_in){
 /* Read private file info from master file */
 /*******************************************/
 
-QIO_FileInfo *QIO_read_private_file_info(QIO_Reader *qio_in)
+static QIO_FileInfo *
+QIO_read_private_file_info(QIO_Reader *qio_in)
 {
   QIO_String *xml_file_private;
   QIO_FileInfo *file_info_found = NULL;
@@ -374,7 +380,8 @@ void QIO_set_record_info(QIO_Reader *in, QIO_RecordInfo *rec_info){
    set the QIO_Reader lattice dimensions */
 /*****************************************/
 
-int QIO_set_latdim(QIO_Reader *qio_in, int latdim, int *latsize)
+static int 
+QIO_set_latdim(QIO_Reader *qio_in, int latdim, int *latsize)
 {
 
   DML_Layout *dml_layout = qio_in->layout;
@@ -471,8 +478,8 @@ int QIO_check_file_info(DML_Layout *dml_layout, QIO_FileInfo *file_info_found)
 QIO_Reader *
 QIO_open_read_master(const char *filename, 
                      QIO_Layout *layout, QIO_Iflag *iflag,
-                     DML_io_node_a_t io_node_a, 
-                     DML_master_io_node_a_t master_io_node_a,
+                     DML_io_node_ext_t io_node_ext, 
+                     DML_master_io_node_ext_t master_io_node_ext,
                      void *fs_arg)
 {
   QIO_Reader *qio_in;
@@ -485,7 +492,7 @@ QIO_open_read_master(const char *filename,
   /* First, only the global master node opens the file, regardless of
      whether it will be read by all nodes */
 
-  qio_in = QIO_create_reader(filename, layout, iflag, io_node_a, master_io_node_a, fs_arg);
+  qio_in = QIO_create_reader(filename, layout, iflag, io_node_ext, master_io_node_ext, fs_arg);
   if(!qio_in)return NULL;
 
   dml_layout = qio_in->layout;
@@ -531,7 +538,8 @@ QIO_open_read_master(const char *filename,
   return qio_in;
 }
 
-int QIO_broadcast_file_reader_info(QIO_Reader *qio_in, int discover_dims)
+static int 
+QIO_broadcast_file_reader_info(QIO_Reader *qio_in, int discover_dims, int master_ionode)
 {
   DML_Layout *dml_layout = qio_in->layout;
   int this_node = dml_layout->this_node;
@@ -541,7 +549,7 @@ int QIO_broadcast_file_reader_info(QIO_Reader *qio_in, int discover_dims)
   /* Master I/O node broadcasts the volume format to all the nodes, */
   /* inserting the value in the qio_in structure */
   DML_broadcast_bytes((char *)(&qio_in->volfmt), sizeof(int),
-                      this_node, DML_master_io_node_a(NULL));
+                      this_node, master_ionode); 
   if(QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d): volume format info was broadcast\n",
            myname,this_node);fflush(stdout);
@@ -552,12 +560,12 @@ int QIO_broadcast_file_reader_info(QIO_Reader *qio_in, int discover_dims)
 
   /* Master node calls for discovery */
   DML_broadcast_bytes((char *)(&discover), sizeof(int),
-                      this_node, DML_master_io_node_a(NULL));
+                      this_node, master_ionode);
 
   if(discover){
     /* Set the lattice dimension from the master */
     DML_broadcast_bytes((char *)(&dml_layout->latdim),
-                        sizeof(int), this_node, DML_master_io_node_a(NULL));
+                        sizeof(int), this_node, master_ionode);
     /* Adjust space for the lattice dimensions */
     dml_layout->latsize = (int *)realloc(dml_layout->latsize,
                                          sizeof(int)*dml_layout->latdim);
@@ -568,7 +576,7 @@ int QIO_broadcast_file_reader_info(QIO_Reader *qio_in, int discover_dims)
     /* Broadcast the lattice dimensions */
     DML_broadcast_bytes((char *)(dml_layout->latsize),
                         sizeof(int)*dml_layout->latdim, 
-                        this_node, DML_master_io_node_a(NULL));
+                        this_node, master_ionode);
     if(QIO_verbosity() >= QIO_VERB_DEBUG){
       printf("%s(%d): lattice dimension info was broadcast\n",
              myname,this_node);fflush(stdout);
@@ -588,6 +596,7 @@ int
 QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
                         QIO_Iflag *iflag)
 {
+  _QIO_UNUSED_ARGUMENT(iflag);
   DML_Layout *dml_layout = qio_in->layout;
   int this_node = dml_layout->this_node;
   LRL_FileReader *lrl_file_in = NULL;
@@ -612,7 +621,7 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
     /* If parallel read, all io nodes (except master) open the file */
     if( qio_in->serpar == QIO_PARALLEL &&
         this_node != dml_layout->master_io_node &&
-        this_node == dml_layout->ionode_a(this_node, dml_layout->fs_arg) ) {
+        this_node == dml_layout->ionode_ext(this_node, dml_layout->fs_arg) ) {
       lrl_file_in = LRL_open_read_file(filename);
       if(lrl_file_in == NULL){
         printf("%s(%d): Can't open %s\n",myname,this_node,filename);
@@ -637,7 +646,7 @@ QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
     }
 
     /* All the partition I/O nodes open their files.  */
-    if(this_node == dml_layout->ionode_a(this_node, dml_layout->fs_arg)){
+    if(this_node == dml_layout->ionode_ext(this_node, dml_layout->fs_arg)){
       /* (The global master has already opened its file) */
       if(this_node != dml_layout->master_io_node){
         /* Construct the file name based on the partition I/O node number */
@@ -785,30 +794,22 @@ QIO_open_read(QIO_String *xml_file, const char *filename,
   int this_node = layout->this_node;
   int status;
   int length;
-  DML_io_node_a_t my_io_node_a;
-  DML_master_io_node_a_t master_io_node_a;
+  DML_io_node_ext_t my_io_node_ext;
+  DML_master_io_node_ext_t master_io_node_ext;
   void *fs_arg = NULL;
 
   /* Assign default behavior for io_node functions if needed */
-  if(fs == NULL) {
-    my_io_node_a = DML_io_node_a;
-    master_io_node_a = DML_master_io_node_a;
-  } else {
-    fs_arg = fs->arg;
-    if(fs->my_io_node_a == NULL)
-      my_io_node_a = DML_io_node_a;
-    else
-      my_io_node_a = fs->my_io_node_a;
-    if(fs->master_io_node_a == NULL)
-      master_io_node_a = DML_master_io_node_a;
-    else
-      master_io_node_a = fs->master_io_node_a;
-  }
+  my_io_node_ext    = (NULL == fs || NULL == fs->my_io_node_ext) 
+                  ? DML_default_ionode_ext : fs->my_io_node_ext;
+  master_io_node_ext= (NULL == fs || NULL == fs->master_io_node_ext)
+                  ? DML_default_master_ionode_ext : fs->master_io_node_ext;
+  fs_arg            = (NULL == fs ) ? NULL : fs->arg;
+  int master_ionode = master_io_node_ext(fs_arg);
 
   /* On the compute nodes, we use DML calls to specify the I/O nodes
      and the master I/O node */
   qio_in = QIO_open_read_master(filename, layout, iflag,
-                                my_io_node_a, master_io_node_a, fs_arg);
+                                my_io_node_ext, master_io_node_ext, fs_arg);
   if(qio_in == NULL) return NULL;
 
   /* Master I/O node broadcasts the volume format to all the nodes, */
@@ -816,7 +817,8 @@ QIO_open_read(QIO_String *xml_file, const char *filename,
   /* In discovery mode the master also broadcasts the lattice
      dimensions to all the nodes */
   status = QIO_broadcast_file_reader_info(qio_in, 
-                                          qio_in->layout->discover_dims_mode);
+                                          qio_in->layout->discover_dims_mode,
+                                          master_ionode);
 
   /* Read the rest of the header */
   status = QIO_open_read_nonmaster(qio_in, filename, iflag);

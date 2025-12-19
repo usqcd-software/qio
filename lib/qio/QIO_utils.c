@@ -52,11 +52,20 @@ int QIO_verbosity(){
 char *QIO_filename_edit(const char *filename, int volfmt, int this_volume){
 
   /* Caller must clean up returned filename */
-  int n = strlen(filename) + 12;
-  char *newfilename = (char *)malloc(n);
+  char *newfilename = NULL;
   const char *dirname_end;
   int dirname_len;
-
+ 
+  size_t old_n = strlen(filename);
+  if( old_n+12 > QIO_MAX_FILENAME_LENGTH ) {
+    printf("QIO_filename_edit: input filename has size %lu.  Output filename would be greater "
+	 "than QIO_MAX_FILENAME_LENGHT( %lu ). Failing!\n", 
+		    old_n + 12, (size_t)QIO_MAX_FILENAME_LENGTH);
+    return NULL;
+  }
+	
+  size_t n = (old_n + 12);
+  newfilename = (char *)malloc(n);
   if(!newfilename){
     printf("QIO_filename_edit: Can't malloc newfilename\n");
     return NULL;
@@ -64,8 +73,11 @@ char *QIO_filename_edit(const char *filename, int volfmt, int this_volume){
 
   /* No change for singlefile format */
   if(volfmt == QIO_SINGLEFILE){
-    strncpy(newfilename,filename,strlen(filename));
-    newfilename[strlen(filename)] = '\0';
+    /* We now that newfilename is longer than filename so 
+     * and that the old filename is null terminated within QIO_MAX_FILENAME_LENTGH
+     * so strcpy is safe */ 
+    strcpy(newfilename,filename);
+    newfilename[n-1] = '\0';
   }
   /* Add volume suffix for multifile and partfile formats */
   else if (volfmt == QIO_PARTFILE_DIR) {
@@ -158,7 +170,7 @@ DML_SiteList *QIO_create_sitelist(DML_Layout *layout, int volfmt, int serpar){
 /* Write list of sites (used with multifile and partitioned file formats) */
 /* Returns number of bytes written */
 
-int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end, 
+int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 		       const LIME_type lime_type){
   LRL_RecordWriter *lrl_record_out;
   uint64_t nbytes;
@@ -175,11 +187,25 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 
   if(volfmt == QIO_SINGLEFILE)return 0;
   if(volfmt == QIO_PARTFILE || volfmt == QIO_PARTFILE_DIR)
-    if(this_node != out->layout->ionode_a(this_node, out->layout->fs_arg))return 0;
+    if(this_node != DML_ionode_ext(this_node, out->layout))return 0;
+
+  // check if we can fit each site index in 32 bits
+  int use32 = 1;
+  int64_t max32 = UINT32_MAX;
+  for(size_t i=0; i<sites->number_of_io_sites; i++) {
+    if(sites->list[i] > max32) {
+      use32 = 0;
+      break;
+    }
+  }
 
   /* Make a copy in case we have to byte reverse */
-  rec_size = sites->number_of_io_sites * sizeof(DML_SiteRank);
-  if(this_node == DML_master_io_node_a(NULL) && QIO_verbosity() >= QIO_VERB_DEBUG){
+  if(use32) {
+    rec_size = sites->number_of_io_sites * sizeof(DML_SiteRank32);
+  } else {
+    rec_size = sites->number_of_io_sites * sizeof(DML_SiteRank);
+  }
+  if(this_node == DML_default_master_ionode_ext(NULL) && QIO_verbosity() >= QIO_VERB_DEBUG){
     printf("%s(%d) allocating %llu for output sitelist\n",myname,this_node,
 	   (unsigned long long)rec_size);fflush(stdout);
   }
@@ -191,11 +217,19 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
     return QIO_ERR_ALLOC;
   }
 
-  memcpy(outputlist, sites->list, rec_size);
-
-  /* Byte reordering for entire sitelist */
-  if (! DML_big_endian())
-    DML_byterevn((char *)outputlist, rec_size, sizeof(DML_SiteRank));
+  if(use32) {
+    DML_SiteRank32 *ol32 = (DML_SiteRank32 *)outputlist;
+    for(size_t i=0; i<sites->number_of_io_sites; i++) {
+      ol32[i] = sites->list[i];
+    }
+    if (! DML_big_endian())
+      DML_byterevn(ol32, rec_size, sizeof(DML_SiteRank32));
+  } else {
+    memcpy(outputlist, sites->list, rec_size);
+    /* Byte reordering for entire sitelist */
+    if (! DML_big_endian())
+      DML_byterevn(outputlist, rec_size, sizeof(DML_SiteRank));
+  }
 
   /* Write site list */
   lrl_record_out = LRL_open_write_record(out->lrl_file_out, msg_begin,
@@ -203,7 +237,7 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
   nbytes = LRL_write_bytes(lrl_record_out, (char *)outputlist, rec_size);
 
   if(nbytes != rec_size){
-    printf("%s(%d): Error writing site list. Wrote %llu bytes expected %lu\n", 
+    printf("%s(%d): Error writing site list. Wrote %llu bytes expected %lu\n",
 	   myname,out->layout->this_node,
 	   (unsigned long long)nbytes,(unsigned long)rec_size);
     free(outputlist);
@@ -212,23 +246,23 @@ int QIO_write_sitelist(QIO_Writer *out, int msg_begin, int msg_end,
 
   if(QIO_verbosity() >= QIO_VERB_DEBUG)
     printf("%s(%d): wrote sitelist\n", myname, out->layout->this_node);
-  
+
   /* Close record when done and clean up*/
   LRL_close_write_record(lrl_record_out);
 
-  free(outputlist); 
+  free(outputlist);
   return QIO_SUCCESS;
 }
 
 /*------------------------------------------------------------------*/
 
 LRL_RecordWriter *
-QIO_open_write_field(QIO_Writer *out, 
+QIO_open_write_field(QIO_Writer *out,
 		     int msg_begin, int msg_end, size_t datum_size,
 		     const LIME_type lime_type, int *do_output, int *status)
 {
   LRL_RecordWriter *lrl_record_out = NULL;
-  uint64_t planned_rec_size;
+  uint64_t planned_rec_size = 0;
   int this_node = out->layout->this_node;
   int recordtype = out->layout->recordtype;
   int volfmt = out->volfmt;
@@ -244,8 +278,7 @@ QIO_open_write_field(QIO_Writer *out,
       printf("%s(%d): global data: size %lu\n",myname,this_node,
 	     (unsigned long)datum_size);
     }
-  }
-  else{
+  } else{
     /* Create list of sites in subset for output and count them */
     if(DML_create_subset_rank(out->sites, out->layout, volfmt, serpar) == 1){
       printf("%s(%d) No room for subset rank list\n",
@@ -253,23 +286,25 @@ QIO_open_write_field(QIO_Writer *out,
       return NULL;
     }
     /* Field or subset data */
-    if(out->serpar == QIO_SERIAL)
+    if(out->serpar == QIO_SERIAL) {
       /* Serial output.  Record size equals the size we write. */
       planned_rec_size = ((uint64_t)sites->subset_io_sites) * datum_size;
-    else
+      if(QIO_verbosity() >= QIO_VERB_DEBUG){
+	printf("%s(%d): field data: sites %lu datum %lu\n",
+	       myname, this_node, sites->subset_io_sites, datum_size);
+      }
+    } else {
       /* Parallel output.  Record size equals the total volume
 	 NOTE: If we later decide to write partitions in parallel,
 	 this has to be changed to the size for the partition. */
       planned_rec_size = ((uint64_t)out->layout->subsetvolume) * datum_size;
-    
-    if(QIO_verbosity() >= QIO_VERB_DEBUG){
-      printf("%s(%d): field data: sites %lu datum %lu\n",
-	     myname,this_node,
-	     (unsigned long)sites->subset_io_sites,
-	     (unsigned long)datum_size);
+      if(QIO_verbosity() >= QIO_VERB_DEBUG){
+	printf("%s(%d): field data: sites %lu datum %lu\n",
+	       myname, this_node, sites->subset_io_sites, datum_size);
+      }
     }
   }
-  
+
   /* For global data only the master node opens and writes the record.
      Otherwise, all nodes process output, even though only some nodes
      actually write */
@@ -287,7 +322,7 @@ QIO_open_write_field(QIO_Writer *out,
     /* For serial output, the io_nodes open their records */
     /* For parallel output, only the master node opens its record */
     if( ( out->serpar == DML_SERIAL && 
-	  this_node == out->layout->ionode_a(this_node, out->layout->fs_arg) ) ||
+	  this_node == DML_ionode_ext(this_node, out->layout) ) ||
 	( out->serpar == DML_PARALLEL &&
 	  this_node == out->layout->master_io_node ) ) {
       if(QIO_verbosity() >= QIO_VERB_DEBUG)
@@ -355,12 +390,12 @@ QIO_open_write_field(QIO_Writer *out,
 int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
 	    size_t datum_size, DML_Checksum *checksum,
 	    const LIME_type lime_type){
-  
+
   LRL_RecordWriter *lrl_record_out;
   DML_RecordWriter *dml_record_out;
   int this_node = out->layout->this_node;
   int do_output;
-  int status;
+  int status = 0;
   char myname[] = "QIO_init_write_field";
 
   /* NOTE: we aren't currently returning do_output */
@@ -373,7 +408,7 @@ int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   /* Next we initialize the DML engine */
 
   dml_record_out = DML_partition_open_out(lrl_record_out,
-	  datum_size, 1, out->layout, out->sites, out->volfmt, 
+	  datum_size, 1, out->layout, out->sites, out->volfmt,
 	  out->serpar, checksum);
 
   if(dml_record_out == NULL)
@@ -387,7 +422,7 @@ int QIO_init_write_field(QIO_Writer *out, int msg_begin, int msg_end,
   if(QIO_verbosity() >= QIO_VERB_DEBUG)
     printf("%s(%d): finished\n",myname,this_node);
   return QIO_SUCCESS;
-}  
+}
 
 
 /*------------------------------------------------------------------*/
@@ -671,7 +706,7 @@ QIO_read_sitelist(QIO_Reader *in, LIME_type *lime_type)
   /* Only I/O nodes read and verify the sitelist */
   if((volfmt == QIO_MULTIFILE) || 
           ((volfmt == QIO_PARTFILE || volfmt == QIO_PARTFILE_DIR)
-      && (this_node == in->layout->ionode_a(this_node, in->layout->fs_arg)))){
+      && (this_node == DML_ionode_ext(this_node, in->layout)))){
     /* Time release */
     /* double lapse = 1;
        QIO_wait(this_node*lapse); */
@@ -783,26 +818,32 @@ LRL_RecordReader *QIO_open_read_field(QIO_Reader *in, size_t datum_size,
 
   /* Now check the record size for consistency */
 
-  if( do_read )
-  {
+  if( do_read ) {
     /* Check that the record size matches the expected size of the data */
-    if(recordtype == QIO_GLOBAL)
+    if(recordtype == QIO_GLOBAL) {
       /* Global data */
       expected_rec_size = datum_size;
-    else {
+    } else {
       /* Field data or hypercube data */
-      if(in->serpar == QIO_SERIAL)
+      if(in->serpar == QIO_SERIAL) {
 	/* Serial input. Record size equals the size we actually read */
-	expected_rec_size = ((uint64_t)sites->subset_io_sites) * datum_size; 
-      else
+	expected_rec_size = ((uint64_t)sites->subset_io_sites) * datum_size;
+	if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	  printf("%s(%d): subset_io_sites %lu, datum_size %lu\n",
+		 myname, this_node, sites->subset_io_sites, datum_size);
+      } else {
 	/* Parallel input.  Record size equals the total volume
 	   NOTE: If we later decide to read partitions in parallel,
 	   this has to be changed to the size for the partition. */
 	expected_rec_size = ((uint64_t)in->layout->subsetvolume) * datum_size;
+	if(QIO_verbosity() >= QIO_VERB_DEBUG)
+	  printf("%s(%d): subset volume %lu, datum_size %lu\n",
+		 myname, this_node, in->layout->subsetvolume, datum_size);
+      }
     }
     if (announced_rec_size != expected_rec_size){
       printf("%s(%d): rec_size mismatch: found %llu expected %llu\n",
-	     myname, this_node, (unsigned long long)announced_rec_size, 
+	     myname, this_node, (unsigned long long)announced_rec_size,
 	     (unsigned long long)expected_rec_size);
       open_fail = 1;
     }
@@ -1014,3 +1055,39 @@ int QIO_read_field(QIO_Reader *in,
   return status;
 }
 
+/* wrappers for QIO site-node functions */
+int
+QIO_node_number_ext(const int coords[], QIO_Layout *layout)
+{
+  if (NULL != layout->node_number) 
+    return layout->node_number(coords);
+  else 
+    return layout->node_number_ext(coords, layout->arg);
+}
+
+QIO_Index
+QIO_node_index_ext(const int coords[], QIO_Layout *layout)
+{
+  if (NULL != layout->node_index)
+    return layout->node_index(coords);
+  else 
+    return layout->node_index_ext(coords, layout->arg);
+}
+
+void
+QIO_get_coords_ext(int coords[], int node, QIO_Index index, QIO_Layout *layout)
+{
+  if (NULL != layout->get_coords)
+    layout->get_coords(coords, node, index);
+  else
+    layout->get_coords_ext(coords, node, index, layout->arg);
+}
+
+QIO_Index
+QIO_num_sites_ext(int node, QIO_Layout *layout)
+{
+  if (NULL != layout->num_sites)
+    return layout->num_sites(node);
+  else
+    return layout->num_sites_ext(node, layout->arg);
+}

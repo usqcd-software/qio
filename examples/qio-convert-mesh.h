@@ -5,10 +5,10 @@
 
 /* layout_hyper_mesh */
 int setup_layout(int len[], int nd, int nsquares2[], int ndim2);
-int node_number_a(const int x[], void *arg);
-int node_index_a(const int x[], void *arg);
-void get_coords_a(int x[], int node, int index, void *arg);
-int num_sites_a(int node, void *arg);
+int node_number_ext(const int x[], void *arg);
+QIO_Index node_index_ext(const int x[], void *arg);
+void get_coords_ext(int x[], int node, QIO_Index index, void *arg);
+QIO_Index num_sites_ext(int node, void *arg);
 
 typedef struct
 {

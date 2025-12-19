@@ -266,7 +266,7 @@ char *QIO_get_datatype(QIO_RecordInfo *record_info);
 char *QIO_get_precision(QIO_RecordInfo *record_info);
 int QIO_get_colors(QIO_RecordInfo *record_info);
 int QIO_get_spins(QIO_RecordInfo *record_info);
-int QIO_get_typesize(QIO_RecordInfo *record_info);
+size_t QIO_get_typesize(QIO_RecordInfo *record_info);
 int QIO_get_datacount(QIO_RecordInfo *record_info);
 
 void QIO_set_recordtype(QIO_RecordInfo *record_info, int recordtype);

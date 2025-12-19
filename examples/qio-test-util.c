@@ -38,7 +38,7 @@ void vfill_m(suN_matrix *a, int coords[], int rank)
 void vset_M(suN_matrix *field[], int count)
 {
   int x[4];
-  int index,i;
+  QIO_Index index,i;
 
   for(i = 0; i < count; i++)
     for(x[3] = 0; x[3] < lattice_size[3]; x[3]++)
@@ -46,8 +46,8 @@ void vset_M(suN_matrix *field[], int count)
 	for(x[1] = 0; x[1] < lattice_size[1]; x[1]++)
 	  for(x[0] = 0; x[0] < lattice_size[0]; x[0]++)
 	    {
-	      if(node_number_a(x, NULL) == this_node){
-		index = node_index_a(x, NULL);
+	      if(node_number_ext(x, NULL) == this_node){
+		index = node_index_ext(x, NULL);
 		vfill_m(field[i] + index, x, i);
 	      }
 	    }
@@ -58,7 +58,7 @@ int vcreate_M(suN_matrix *field[], int count)
   int i;
   /* Create an output field */
   for(i = 0; i < count; i++){
-    field[i] = (suN_matrix *)malloc(sizeof(suN_matrix)*num_sites_a(this_node, NULL));
+    field[i] = (suN_matrix *)malloc(sizeof(suN_matrix)*num_sites_ext(this_node, NULL));
     if(field[i] == NULL){
       printf("vcreate_M(%d): Can't malloc field\n",this_node);
       return 1;
@@ -79,11 +79,11 @@ void vdestroy_M (suN_matrix *field[], int count)
 
 float vcompare_M (suN_matrix *fielda[], suN_matrix *fieldb[], int count)
 {
-  int i,j,k,m;
+  int i,j,k;
   float diff;
   float sum2 = 0;
   
-  for(k = 0; k < count; k++)for(m = 0; m < num_sites_a(this_node, NULL); m++)
+  for(k = 0; k < count; k++)for(QIO_Index m = 0; m < num_sites_ext(this_node, NULL); m++)
     {
       for ( j=0; j< NCLR; j++)
 	for ( i=0; i< NCLR; i++)
@@ -100,7 +100,7 @@ float vcompare_M (suN_matrix *fielda[], suN_matrix *fieldb[], int count)
   return sum2;
 }
 
-void vput_M(char *s1, size_t index, int count, void *s2)
+void vput_M(char *s1, QIO_Index index, int count, void *s2)
 {
   suN_matrix **field = (suN_matrix **)s2;
   suN_matrix *dest;
@@ -117,7 +117,7 @@ void vput_M(char *s1, size_t index, int count, void *s2)
     }
 }
 
-void vget_M(char *s1, size_t index, int count, void *s2)
+void vget_M(char *s1, QIO_Index index, int count, void *s2)
 {
   suN_matrix **field = (suN_matrix **)s2;
   suN_matrix *src;
@@ -135,7 +135,7 @@ void vget_M(char *s1, size_t index, int count, void *s2)
 
 
 /* Internal factory function for array of real field data */
-void vput_R(char *buf, size_t index, int count, void *qfin)
+void vput_R(char *buf, QIO_Index index, int count, void *qfin)
 {
   float **field = (float **)qfin;
   float *dest;
@@ -152,7 +152,7 @@ void vput_R(char *buf, size_t index, int count, void *qfin)
 }
 
 /* Internal factory function for array of real field data */
-void vget_R(char *buf, size_t index, int count, void *qfin)
+void vget_R(char *buf, QIO_Index index, int count, void *qfin)
 {
   float **field = (float **)qfin;
   float *src;
@@ -170,6 +170,7 @@ void vget_R(char *buf, size_t index, int count, void *qfin)
 /* Internal factory function for array of real global data */
 void vput_r(char *buf, size_t index, int count, void *qfin)
 {
+  _QIO_UNUSED_ARGUMENT(index);
   float *array = (float *)qfin;
   float *src = (float *)buf;
   int i;
@@ -183,6 +184,8 @@ void vput_r(char *buf, size_t index, int count, void *qfin)
 /* Internal factory function for array of real global data */
 void vget_r(char *buf, size_t index, int count, void *qfin)
 {
+
+   _QIO_UNUSED_ARGUMENT(index);
   float *array = (float *)qfin;
   float *dest = (float *)buf;
   int i;
@@ -203,15 +206,15 @@ void vfill_r(float *r, int coords[],int rank){
 
 void vset_R(float *field[], int count){
   int x[4];
-  int index,i;
+  QIO_Index index,i;
   for(i = 0; i < count; i++)
     for(x[3] = 0; x[3] < lattice_size[3]; x[3]++)
       for(x[2] = 0; x[2] < lattice_size[2]; x[2]++)
 	for(x[1] = 0; x[1] < lattice_size[1]; x[1]++)
 	  for(x[0] = 0; x[0] < lattice_size[0]; x[0]++)
 	    {
-	      if(node_number_a(x, NULL) == this_node){
-		index = node_index_a(x, NULL);
+	      if(node_number_ext(x, NULL) == this_node){
+		index = node_index_ext(x, NULL);
 		vfill_r(field[i] + index, x, i);
 	      }
 	    }
@@ -236,10 +239,10 @@ int inside_subset(int x[], int lower[], int upper[])
 void vsubset_R(float *out[], float *in[], int lower[], int upper[], int count)
 {
   int x[4];
-  int index,i;
+  QIO_Index index,i;
 
-  for(index = 0; index < num_sites_a(this_node, NULL); index++){
-    get_coords_a(x, this_node, index, NULL);
+  for(index = 0; index < num_sites_ext(this_node, NULL); index++){
+    get_coords_ext(x, this_node, index, NULL);
     if(inside_subset(x, lower, upper)){
       for(i = 0; i < count; i++)
 	out[i][index] = in[i][index];
@@ -253,12 +256,12 @@ int vcreate_R(float *field[], int count){
   int i;
   /* Create an output field */
   for(i = 0; i < count; i++){
-    field[i] = (float *)malloc(sizeof(float)*num_sites_a(this_node, NULL));
+    field[i] = (float *)malloc(sizeof(float)*num_sites_ext(this_node, NULL));
     if(field[i] == NULL){
       printf("vcreate_R(%d): Can't malloc field\n",this_node);
       return 1;
     }
-    memset(field[i], 0, sizeof(float)*num_sites_a(this_node, NULL));
+    memset(field[i], 0, sizeof(float)*num_sites_ext(this_node, NULL));
   }
 
   return 0;
@@ -278,7 +281,7 @@ float vcompare_R(float *fielda[], float *fieldb[], int count){
   float sum2 = 0;
 
   for(i = 0; i < count; i++)
-    for(j = 0; j < num_sites_a(this_node, NULL); j++){
+    for(j = 0; j < num_sites_ext(this_node, NULL); j++){
       diff = fielda[i][j] - fieldb[i][j];
       sum2 += diff*diff;
     }

@@ -12,8 +12,8 @@
 /* Answer is the last node number in the family "io_node_rank" whose
    node_index offset is greater than or equal to the given node_index
    "seek" */
-int QIO_offset_lookup(size_t seek, int io_node_rank, QIO_host_utils_s *hu){
-  int k,ans,del;
+int QIO_offset_lookup(QIO_Index seek, int io_node_rank, QIO_host_utils_s *hu){
+  QIO_Index k,ans,del;
   int *nodelist = hu->QIO_io_family[io_node_rank].node_number;
   int n = hu->QIO_io_family[io_node_rank].n;
 
@@ -62,7 +62,7 @@ void QIO_init_mpp_fs(QIO_Filesystem *fs, QIO_host_utils_s *hu){
    
    Otherwise we create an "ionode" layout.  The nodes are grouped into
    IO families.  Each family shares one I/O node.  Family membership
-   is determined by the user-supplied "my_io_node_a" function.  The
+   is determined by the user-supplied "my_io_node_ext" function.  The
    table QIO_io_family lists family membership.  (The list of nodes in
    a family happens to be in ascending numerical order.)  The fake
    node_number function assigns all sites in an IO family to the IO
@@ -75,42 +75,42 @@ void QIO_init_mpp_fs(QIO_Filesystem *fs, QIO_host_utils_s *hu){
 */
 
 /* Map coordinates to fake node (the IO node) */
-int QIO_ionode_node_number_a(const int coords[], void *arg)
+int QIO_ionode_node_number_ext(const int coords[], void *arg)
 {
   QIO_host_utils_s *hu = (QIO_host_utils_s *)arg;
-  return hu->QIO_mpp_fs.my_io_node_a(
-                hu->QIO_mpp_layout.node_number_a(
+  return hu->QIO_mpp_fs.my_io_node_ext(
+                hu->QIO_mpp_layout.node_number_ext(
                         coords, hu->QIO_mpp_layout.arg), 
                 hu->QIO_mpp_fs.arg);
 }
 
 /* Map coordinates to fake node index */
-int QIO_ionode_node_index_a(const int coords[], void *arg)
+QIO_Index QIO_ionode_node_index_ext(const int coords[], void *arg)
 {
   QIO_host_utils_s *hu = (QIO_host_utils_s *)arg;
   /* The actual node that will receive these coordinates */
-  int node = hu->QIO_mpp_layout.node_number_a(coords, hu->QIO_mpp_layout.arg);
+  int node = hu->QIO_mpp_layout.node_number_ext(coords, hu->QIO_mpp_layout.arg);
 
   /* The fake node_index offset for this node */
-  int offset = hu->QIO_node_index_offset[node];
+  QIO_Index offset = hu->QIO_node_index_offset[node];
   /* Add the compute node site index to an offset for "this_node" being
    processed */
-  return offset + hu->QIO_mpp_layout.node_index_a(coords, hu->QIO_mpp_layout.arg);
+  return offset + hu->QIO_mpp_layout.node_index_ext(coords, hu->QIO_mpp_layout.arg);
 }
 
 /* An ionode pretends it owns all the sites belonging to its
    partition.  The fake index for these sites runs over the total
    number of sites on the partition. */
 /* Map fake index and node to coordinates */
-void QIO_ionode_get_coords_a(int coords[], int ionode_node, int ionode_index, void *arg){
+void QIO_ionode_get_coords_ext(int coords[], int ionode_node, QIO_Index ionode_index, void *arg){
   QIO_host_utils_s *hu = (QIO_host_utils_s *)arg;
   char myname[] = "QIO_ionode_get_coords";
   int k;
-  int index,node;
+  QIO_Index index, node;
 
   /* If we are not using the ionode layout, use the mpp layout */
   if(!hu->QIO_fake_ionode_layout){
-    hu->QIO_mpp_layout.get_coords_a(coords, ionode_node, ionode_index, hu->QIO_mpp_layout.arg);
+    QIO_get_coords_ext(coords, ionode_node, ionode_index, &hu->QIO_mpp_layout);
     return;
   }
 
@@ -132,11 +132,11 @@ void QIO_ionode_get_coords_a(int coords[], int ionode_node, int ionode_index, vo
   index = ionode_index - hu->QIO_node_index_offset[node];
 
   /* Set coordinates from true node and index */
-  hu->QIO_mpp_layout.get_coords_a(coords, node, index, hu->QIO_mpp_layout.arg);
+  QIO_get_coords_ext(coords, node, index, &hu->QIO_mpp_layout);
 }
 
 /* The fake number of sites on the given node. */
-int QIO_ionode_num_sites_a(int node, void *arg)
+QIO_Index QIO_ionode_num_sites_ext(int node, void *arg)
 {
   QIO_host_utils_s *hu = (QIO_host_utils_s *)arg;
   int k = hu->QIO_ionode_to_rank[node];
@@ -155,7 +155,7 @@ int QIO_create_io_node_table(QIO_host_utils_s *hu){
   int i,j,k,maxinit,io_node;
   int number_of_nodes = hu->QIO_mpp_layout.number_of_nodes;
   int number_io_nodes = hu->QIO_mpp_fs.number_io_nodes;
-  size_t next,sum;
+  QIO_Index next,sum;
 #if 0
   int latdim = QIO_mpp_layout.latdim;
   int *latsize = QIO_mpp_layout.latsize;
@@ -165,7 +165,7 @@ int QIO_create_io_node_table(QIO_host_utils_s *hu){
 #endif
 
   /* Create array for the inverse of the fs->io_node table */
-  hu->QIO_ionode_to_rank = (int *)calloc(number_of_nodes, sizeof(int));
+  hu->QIO_ionode_to_rank = (int *)calloc(number_of_nodes, sizeof(hu->QIO_ionode_to_rank[0]));
   if(!hu->QIO_ionode_to_rank){
     printf("%s Can't malloc QIO_ionode_to_rank\n",myname);
     return 1;
@@ -181,7 +181,7 @@ int QIO_create_io_node_table(QIO_host_utils_s *hu){
   }
 
   /* Create table of node offsets */
-  hu->QIO_node_index_offset = (size_t *)calloc(number_of_nodes, sizeof(size_t));
+  hu->QIO_node_index_offset = calloc(number_of_nodes, sizeof(hu->QIO_node_index_offset[0]));
   if(!hu->QIO_node_index_offset){
     printf("%s Can't malloc QIO_node_index_offset\n",myname);
     return 1;
@@ -193,7 +193,7 @@ int QIO_create_io_node_table(QIO_host_utils_s *hu){
 
   /* Create the table of IO family membership */
   hu->QIO_io_family = (QIO_IOFamilyMember *)calloc(number_io_nodes, 
-			    sizeof(QIO_IOFamilyMember));
+			    sizeof(hu->QIO_io_family[0]));
   if(!hu->QIO_io_family){
     printf("%s Can't malloc QIO_io_family\n",myname);
     return 1;
@@ -213,7 +213,7 @@ int QIO_create_io_node_table(QIO_host_utils_s *hu){
   for(k = 0; k < number_io_nodes; k++){
     hu->QIO_io_family[k].n = 0;
     hu->QIO_io_family[k].max = maxinit;
-    hu->QIO_io_family[k].node_number = (int *)calloc(maxinit, sizeof(int));
+    hu->QIO_io_family[k].node_number = calloc(maxinit, sizeof(hu->QIO_io_family[k].node_number[0]));
     if(!hu->QIO_io_family[k].node_number){
       printf("%s Can't malloc QIO_io_family[k].node_number\n",myname);
       return 1;
@@ -222,9 +222,9 @@ int QIO_create_io_node_table(QIO_host_utils_s *hu){
 
   /* Build table listing the nodes assigned to each I/O node */
   for(i = 0; i < number_of_nodes; i++){
-    io_node = hu->QIO_mpp_fs.my_io_node_a(i, hu->QIO_mpp_fs.arg);
+    io_node = hu->QIO_mpp_fs.my_io_node_ext(i, hu->QIO_mpp_fs.arg);
     if(io_node >= number_of_nodes){
-      printf("%s my_io_node_a function returns %d >= %d number_of_nodes\n",
+      printf("%s my_io_node_ext function returns %d >= %d number_of_nodes\n",
 	     myname,io_node,number_of_nodes);
       return 1;
     }
@@ -239,8 +239,8 @@ int QIO_create_io_node_table(QIO_host_utils_s *hu){
       /* Make space for one more entry */
       hu->QIO_io_family[k].max = hu->QIO_io_family[k].n;
       hu->QIO_io_family[k].node_number 
-	= (int *)realloc(hu->QIO_io_family[k].node_number,
-			 hu->QIO_io_family[k].max*sizeof(int));
+	= realloc(hu->QIO_io_family[k].node_number,
+			 hu->QIO_io_family[k].max*sizeof(hu->QIO_io_family[k].node_number[0]));
     }
     hu->QIO_io_family[k].node_number[hu->QIO_io_family[k].n-1] = i;
   }
@@ -248,14 +248,14 @@ int QIO_create_io_node_table(QIO_host_utils_s *hu){
   /* Build table of node_index offsets for each node */
   /* Start by counting sites per node */
   for(i = 0; i < hu->QIO_mpp_layout.number_of_nodes; i++)
-    hu->QIO_node_index_offset[i] = hu->QIO_mpp_layout.num_sites_a(i, hu->QIO_mpp_layout.arg);
+    hu->QIO_node_index_offset[i] = hu->QIO_mpp_layout.num_sites_ext(i, hu->QIO_mpp_layout.arg);
 
 #if 0
   coords = DML_allocate_coords(latdim,myname,0);
   if(!coords)return 1;
   for(site_rank = 0; site_rank < volume; site_rank++){
     DML_lex_coords(coords,latdim,latsize,site_rank);
-    i = hu->QIO_mpp_layout.node_number_a(coords, hu->QIO_mpp_layout.arg);
+    i = hu->QIO_mpp_layout.node_number_ext(coords, hu->QIO_mpp_layout.arg);
     hu->QIO_node_index_offset[i]++;
   }
   free(coords);
@@ -309,7 +309,7 @@ QIO_Layout *QIO_create_ionode_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO
   hu->QIO_fake_ionode_layout = 0; /* default value in previously global variable */
 
   /* Allocate and fill the layout structure */
-  ionode_layout = (QIO_Layout *)malloc(sizeof(QIO_Layout));
+  ionode_layout = malloc(sizeof(ionode_layout[0]));
   if(!ionode_layout){
     printf("%s: Can't malloc ionode_layout\n",myname);
     return NULL;
@@ -326,10 +326,14 @@ QIO_Layout *QIO_create_ionode_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO
 
   /* Otherwise we are using a fake ionode layout */
   hu->QIO_fake_ionode_layout = 1;
-  ionode_layout->node_number_a  = QIO_ionode_node_number_a;
-  ionode_layout->node_index_a   = QIO_ionode_node_index_a;
-  ionode_layout->get_coords_a   = QIO_ionode_get_coords_a;
-  ionode_layout->num_sites_a    = QIO_ionode_num_sites_a;
+  ionode_layout->node_number    = NULL;
+  ionode_layout->node_index     = NULL;
+  ionode_layout->get_coords     = NULL;
+  ionode_layout->num_sites      = NULL;
+  ionode_layout->node_number_ext  = QIO_ionode_node_number_ext;
+  ionode_layout->node_index_ext   = QIO_ionode_node_index_ext;
+  ionode_layout->get_coords_ext   = QIO_ionode_get_coords_ext;
+  ionode_layout->num_sites_ext    = QIO_ionode_num_sites_ext;
   ionode_layout->arg            = (void *)hu;
   /* Create tables */
   if(QIO_create_io_node_table(hu)){
@@ -363,7 +367,10 @@ void QIO_delete_ionode_layout(QIO_Layout *layout, QIO_host_utils_s *hu){
 
 /* The fake scalar layout structure */
 /* All sites are stored in lexicographic order on the host, "node 0" */
-int QIO_scalar_node_number_a(const int coords[], void *arg){
+int 
+QIO_scalar_node_number_ext(const int coords[], void *arg)
+{
+  _QIO_UNUSED_ARGUMENT(coords);
   return 0;
 }
 
@@ -371,48 +378,55 @@ int QIO_scalar_node_number_a(const int coords[], void *arg){
 /* This is not the standard hypercube layout for a scalar
    machine, but it is fine for file conversion */
 /* CAUTION: conversion from DML_SiteRank type to int */
-int QIO_scalar_node_index_a(const int coords[], void *arg){
+QIO_Index
+QIO_scalar_node_index_ext(const int coords[], void *arg)
+{
   QIO_host_utils_s *hu = (QIO_host_utils_s *)arg;
-  int index = DML_lex_rank(coords, hu->QIO_mpp_layout.latdim, hu->QIO_mpp_layout.latsize);
-  return index;
+  return DML_lex_rank(coords, hu->QIO_mpp_layout.latdim, hu->QIO_mpp_layout.latsize);
 }
 
-void QIO_scalar_get_coords_a(int coords[], int node, int index, void *arg){
+void 
+QIO_scalar_get_coords_ext(int coords[], int node, QIO_Index index, void *arg)
+{
+  _QIO_UNUSED_ARGUMENT(node);
   QIO_host_utils_s *hu = (QIO_host_utils_s *)arg;
   int latdim = hu->QIO_mpp_layout.latdim;
   int *latsize = hu->QIO_mpp_layout.latsize;
   DML_lex_coords(coords, latdim, latsize, (DML_SiteRank)index);
 }
 
-int QIO_scalar_num_sites_a(int node, void *arg){
+QIO_Index
+QIO_scalar_num_sites_ext(int node, void *arg)
+{
+  _QIO_UNUSED_ARGUMENT(node);
   QIO_host_utils_s *hu = (QIO_host_utils_s *)arg;
   return hu->QIO_mpp_layout.volume;
 }
 
 /* Convert node index from ionode layout to scalar layout */
 /* This would be unnecessary if get/put used coordinates */
-int QIO_ionode_to_scalar_index(int ionode_node, int ionode_index, QIO_host_utils_s *hu){
+QIO_Index QIO_ionode_to_scalar_index(int ionode_node, QIO_Index ionode_index, QIO_host_utils_s *hu){
   int latdim = hu->QIO_mpp_layout.latdim;
-  int *coords = (int *)calloc(latdim, sizeof(int));
-  int scalar_index;
+  int *coords = (int *)calloc(latdim, sizeof(coords[0]));
+  QIO_Index scalar_index;
 
   /* Conversion goes through coordinates */
-  QIO_ionode_get_coords_a(coords,ionode_node,ionode_index,hu);
-  scalar_index = QIO_scalar_node_index_a(coords, hu);
+  QIO_ionode_get_coords_ext(coords,ionode_node,ionode_index,hu);
+  scalar_index = QIO_scalar_node_index_ext(coords, hu);
   free(coords);
   return scalar_index;
 }
 
 /* Convert node index from scalar layout to ionode layout */
 /* This would be unnecessary if get/put used coordinates */
-int QIO_scalar_to_ionode_index(int scalar_node, int scalar_index, QIO_host_utils_s *hu){
+QIO_Index QIO_scalar_to_ionode_index(int scalar_node, QIO_Index scalar_index, QIO_host_utils_s *hu){
   int latdim = hu->QIO_mpp_layout.latdim;
-  int *coords = (int *)calloc(latdim, sizeof(int));
-  int ionode_index;
+  int *coords = (int *)calloc(latdim, sizeof(coords[0]));
+  QIO_Index ionode_index;
 
   /* Conversion goes through coordinates */
-  QIO_scalar_get_coords_a(coords,scalar_node,scalar_index,hu);
-  ionode_index = QIO_ionode_node_index_a(coords,hu);
+  QIO_scalar_get_coords_ext(coords,scalar_node,scalar_index,hu);
+  ionode_index = QIO_ionode_node_index_ext(coords,hu);
   free(coords);
   return ionode_index;
 }
@@ -420,12 +434,15 @@ int QIO_scalar_to_ionode_index(int scalar_node, int scalar_index, QIO_host_utils
 /* Create scalar layout structure that puts the entire lattice on one node 
    with sites in lexicographic order */
 /* We really don't need the fs parameter */
-QIO_Layout *QIO_create_scalar_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO_host_utils_s *hu){
+QIO_Layout *
+QIO_create_scalar_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO_host_utils_s *hu)
+{
+  _QIO_UNUSED_ARGUMENT(fs);
   QIO_Layout *scalar_layout;
   char myname[] = "QIO_create_scalar_layout";
 
   /* Allocate and fill the layout structure */
-  scalar_layout = (QIO_Layout *)malloc(sizeof(QIO_Layout));
+  scalar_layout = (QIO_Layout *)malloc(sizeof(scalar_layout[0]));
   if(!scalar_layout){
     printf("%s: Can't malloc scalar_layout\n",myname);
     return NULL;
@@ -435,10 +452,14 @@ QIO_Layout *QIO_create_scalar_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO
   *scalar_layout = *layout;
 
   /* Make adjustments */
-  scalar_layout->node_number_a  = QIO_scalar_node_number_a;
-  scalar_layout->node_index_a   = QIO_scalar_node_index_a;
-  scalar_layout->get_coords_a   = QIO_scalar_get_coords_a;
-  scalar_layout->num_sites_a    = QIO_scalar_num_sites_a;
+  scalar_layout->node_number    = NULL;
+  scalar_layout->node_index     = NULL;
+  scalar_layout->get_coords     = NULL;
+  scalar_layout->num_sites      = NULL;
+  scalar_layout->node_number_ext  = QIO_scalar_node_number_ext;
+  scalar_layout->node_index_ext   = QIO_scalar_node_index_ext;
+  scalar_layout->get_coords_ext   = QIO_scalar_get_coords_ext;
+  scalar_layout->num_sites_ext    = QIO_scalar_num_sites_ext;
   scalar_layout->arg            = hu;
   scalar_layout->this_node      = 0;
   scalar_layout->this_volume    = 0;

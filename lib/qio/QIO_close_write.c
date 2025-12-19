@@ -22,7 +22,7 @@ int QIO_close_write(QIO_Writer *out)
     free(out->layout);
   }
   DML_free_sitelist(out->sites);
-  if(out->ildgLFN != NULL) QIO_string_destroy(out->ildgLFN); 
+  if(out->ildgLFN != NULL) QIO_string_destroy(out->ildgLFN);
   free(out);
   if(status != LRL_SUCCESS) return QIO_ERR_CLOSE;
   return QIO_SUCCESS;

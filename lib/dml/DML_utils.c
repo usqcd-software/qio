@@ -1,6 +1,5 @@
 /* DML_utils.c */
 /* Utilities for DML */
-
 #include <qio_config.h>
 #include <qio.h>
 #include <lrl.h>
@@ -16,20 +15,45 @@
 #include <sys/types.h>
 #include <qio_stdint.h>
 #include <sys/time.h>
-//#include <qmp.h>
-
+#include <stdint.h>
+#include <limits.h>
 #undef DML_DEBUG
+
+/* wrappers for DML site-node functions */
+int DML_node_number_ext(const int coords[], DML_Layout *layout);
+DML_Index DML_node_index_ext(const int coords[], DML_Layout *layout);
+void DML_get_coords_ext(int coords[], int node, DML_Index index, DML_Layout *layout);
+DML_Index DML_num_sites_ext(int node, DML_Layout *layout);
 
 // duplicate hack to avoid XLC bug
 double QIO_time2 (void)
 {
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  //if(node==0) printf("QIO_time %g %g\n", (double)tv.tv_sec, (double)tv.tv_usec);
   return (double)tv.tv_sec + 1e-6*(double)tv.tv_usec;
+  //struct timespec ts;
+  //clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+  //return (double)ts.tv_sec + 1e-9*(double)ts.tv_nsec;
+  //clock_t t = clock();
+  //return (double)t/(double)CLOCKS_PER_SEC;
+  //uint64_t tsc = __rdtsc();
+  //return 1e-9*(double)tsc;
 }
+
+#if defined(__x86_64__) && !defined(__NVCOMPILER)
+#include <x86intrin.h>
+int64_t tics(void)
+{
+  return __rdtsc();
+}
+#else
+#define tics() QIO_time2()
+#endif
+
 #define timestart(t) { double dt = QIO_time2(); /*if(this_node==0) printf("start " #t " %g\n", dt);*/ t-=dt; }
 #define timestop(t) { double dt = QIO_time2(); /*if(this_node==0) printf("stop " #t " %g\n", dt);*/ t+=dt; }
+#define timestart2(t) { double dt = tics(); /*if(this_node==0) printf("start " #t " %g\n", dt);*/ t-=dt; }
+#define timestop2(t) { double dt = tics(); /*if(this_node==0) printf("stop " #t " %g\n", dt);*/ t+=dt; }
 
 /* Iterators for lexicographic order */
 
@@ -121,6 +145,7 @@ char *DML_allocate_msg(size_t size, char *myname, int this_node){
 /*------------------------------------------------------------------*/
 /* Accessor: Pointer to datum member of msg */
 char *DML_msg_datum(char *msg, size_t size){
+  _QIO_UNUSED_ARGUMENT(size);
   return msg;
 }
 
@@ -139,8 +164,8 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   int node;
   int this_node = layout->this_node;
   int number_of_nodes = layout->number_of_nodes;
-  int my_io_node = layout->ionode_a(this_node, layout->fs_arg);
-  size_t number_of_io_sites;
+  int my_io_node = DML_ionode_ext(this_node, layout);
+  QIO_Index number_of_io_sites;
   int number_of_my_ionodes;
   char myname[] = "DML_count_partition_sitelist";
 #if 0
@@ -159,11 +184,11 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   number_of_my_ionodes = 0;
   number_of_io_sites = 0;
   for(node = 0; node < number_of_nodes; node++){
-    if(layout->ionode_a(node, layout->fs_arg) == my_io_node){
+    if(DML_ionode_ext(node, layout) == my_io_node){
       /* ( If we are discovering the lattice dimensions, we won't know
 	 the number of sites on any node ) */
       if(layout->latdim != 0)
-	number_of_io_sites += layout->num_sites_a(node, layout->arg);
+	number_of_io_sites += DML_num_sites_ext(node, layout);
       number_of_my_ionodes++;
     }
   }
@@ -178,8 +203,8 @@ int DML_count_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
       /* Convert rank index to coordinates */
       DML_lex_coords(coords, latdim, latsize, rank);
       /* The node containing these coordinates */
-      send_node = layout->node_number_a(coords, layout->arg);
-      if(layout->ionode_a(send_node, layout->fs_arg) == my_io_node)
+      send_node = DML_node_number_ext(coords, layout);
+      if(layout->DML_ionode_ext(send_node, layout) == my_io_node)
 	number_of_io_sites++;
     }
 #endif
@@ -298,7 +323,7 @@ int DML_fill_multifile_sitelist(DML_Layout *layout, DML_SiteList *sites){
   /* Iterate over sites in storage order on this node */
   for(index = 0; index < layout->sites_on_node; index++){
     /* Convert storage order to coordinates */
-    layout->get_coords_a(coords,this_node,index, layout->arg);
+    DML_get_coords_ext(coords,this_node,index, layout);
     /* Convert coordinate to lexicographic rank */
     sites->list[index] = DML_lex_rank(coords,latdim,latsize);
   }
@@ -316,7 +341,7 @@ int DML_fill_partition_sitelist_try(DML_Layout *layout, DML_SiteList *sites){
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
   int this_node = layout->this_node;
-  int my_io_node = layout->ionode_a(this_node, layout->fs_arg);
+  int my_io_node = DML_ionode_ext(this_node, layout);
   size_t number_of_io_sites = sites->number_of_io_sites;
   DML_SiteRank *list        = sites->list;
   size_t index;
@@ -337,8 +362,7 @@ int DML_fill_partition_sitelist_try(DML_Layout *layout, DML_SiteList *sites){
     DML_lex_coords(coords, latdim, latsize, rank);
     /* If we have this site, add it to the list */
     /* (find the node that has the coords to node and then its I/O node) */
-    if(layout->ionode_a(layout->node_number_a(
-                    coords, layout->arg), layout->fs_arg) == my_io_node){
+    if(DML_ionode_ext(DML_node_number_ext(coords, layout), layout) == my_io_node){
       list[index] = rank;
       index++;
       if(index >= number_of_io_sites)break;  /* memory protection */
@@ -407,9 +431,9 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
   int node;
-  int node_sites;
+  DML_Index node_sites;
   int this_node = layout->this_node;
-  int my_io_node = layout->ionode_a(this_node, layout->fs_arg);
+  int my_io_node = DML_ionode_ext(this_node, layout);
   int number_of_nodes = layout->number_of_nodes;
   size_t number_of_io_sites = sites->number_of_io_sites;
   DML_SiteRank *list        = sites->list;
@@ -428,10 +452,10 @@ int DML_fill_partition_sitelist(DML_Layout *layout, DML_SiteList *sites){
   index = 0;
   for(node = 0; node < number_of_nodes; node++){
     /* Find the nodes on my partition */
-    if(layout->ionode_a(node, layout->fs_arg) == my_io_node){
-      node_sites = layout->num_sites_a(node, layout->arg);
+    if(DML_ionode_ext(node, layout) == my_io_node){
+      node_sites = DML_num_sites_ext(node, layout);
       for(node_index = 0; node_index < node_sites; node_index++){
-	layout->get_coords_a(coords,node,node_index, layout->arg);
+	DML_get_coords_ext(coords,node,node_index, layout);
 	list[index] = DML_lex_rank(coords,latdim,latsize);
 	index++;
       }
@@ -485,7 +509,6 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
 	   myname, this_node, volfmt);
     return 1;
   }
-  return 0;
 }
 
 /*------------------------------------------------------------------*/
@@ -494,7 +517,10 @@ int DML_fill_sitelist(DML_SiteList *sites, int volfmt, int serpar,
 int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
 		      int volfmt, DML_Layout *layout,
 		      LIME_type *lime_type){
-  uint64_t check, announced_rec_size;
+
+  _QIO_UNUSED_ARGUMENT(volfmt);
+
+  uint64_t check, check32, announced_rec_size;
   int this_node = layout->this_node;
   LRL_RecordReader *lrl_record_in;
   DML_SiteRank *inputlist;
@@ -505,14 +531,15 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
   if(sites->use_list == 0)return 0;
 
   /* Open sitelist record */
-  lrl_record_in = LRL_open_read_record(lrl_file_in, &announced_rec_size, 
+  lrl_record_in = LRL_open_read_record(lrl_file_in, &announced_rec_size,
 				       lime_type, &status);
   if(!lrl_record_in)return 1;
 
   /* Require that the record size matches expectations */
+  check32 = sites->number_of_io_sites * sizeof(DML_SiteRank32);
   check = sites->number_of_io_sites * sizeof(DML_SiteRank);
   /* Ignore a mismatch if we are trying to discover the lattice dimension */
-  if(!layout->discover_dims_mode && announced_rec_size != check){
+  if(!layout->discover_dims_mode && announced_rec_size != check && announced_rec_size != check32) {
     printf("%s(%d): sitelist size mismatch: found %lu expected %lu lime type %s\n",
 	   myname, this_node, (unsigned long)announced_rec_size,
 	   (unsigned long)check, *lime_type);
@@ -521,44 +548,53 @@ int DML_read_sitelist(DML_SiteList *sites, LRL_FileReader *lrl_file_in,
   }
 
   /* Allocate check list according to record size */
-  
   inputlist = (DML_SiteRank *)malloc(announced_rec_size);
   if(inputlist == NULL)return 1;
-  
+
   /* Read the site list and close the record */
   check = LRL_read_bytes(lrl_record_in, (char *)inputlist, announced_rec_size);
-  
   LRL_close_read_record(lrl_record_in);
-    
+
 #ifdef DML_DEBUG
   printf("%s(%d) sitelist record was read with %lu bytes\n",myname,
 	 layout->this_node,(unsigned long)check);
 #endif
- 
+
   /* Check bytes read */
-  if(check != announced_rec_size){
+  if(check != announced_rec_size) {
     printf("%s(%d): bytes read %lu != expected rec_size %lu\n",
-	   myname, this_node, (unsigned long)check, 
+	   myname, this_node, (unsigned long)check,
 	   (unsigned long)announced_rec_size);
     free(inputlist); return 1;
   }
- 
-  /* Byte reordering for entire sitelist */
-  if (! DML_big_endian())
-    DML_byterevn((char *)inputlist, announced_rec_size, sizeof(DML_SiteRank));
-  
+
+  if(check == check32) {  // sitelist is 32bit
+    DML_SiteRank32 *ilist32 = (DML_SiteRank32 *)inputlist;
+    if (! DML_big_endian())
+      DML_byterevn(ilist32, announced_rec_size, sizeof(DML_SiteRank32));
+    size_t n = announced_rec_size / sizeof(DML_SiteRank32);
+    inputlist = (DML_SiteRank *)malloc(n*sizeof(DML_SiteRank));
+    for(size_t i=0; i<n; i++) {
+      inputlist[i] = ilist32[i];
+    }
+    free(ilist32);
+  } else {
+    /* Byte reordering for entire sitelist */
+    if (! DML_big_endian())
+      DML_byterevn(inputlist, announced_rec_size, sizeof(DML_SiteRank));
+  }
+
   /* All input sitelists must agree exactly with what we expect */
   /* Unless we are reading in discovery mode */
-  if(!layout->discover_dims_mode){
-    not_ok = DML_compare_sitelists(sites->list, inputlist, 
+  if(!layout->discover_dims_mode) {
+    not_ok = DML_compare_sitelists(sites->list, inputlist,
 				   sites->number_of_io_sites);
-    
     if(not_ok)
       printf("%s(%d): sitelist does not conform to I/O layout.\n",
 	     myname,this_node);
 
     /* Return 1 if not OK and 0 if OK */
-    free(inputlist); 
+    free(inputlist);
     return not_ok;
   }
   else
@@ -697,7 +733,7 @@ int DML_rank_inside_subset(DML_SiteRank rank, DML_Layout *layout){
 
   status = DML_coord_inside_subset(coords, layout);
 
-  free(coords); 
+  free(coords);
   return status;
 }
 
@@ -706,10 +742,10 @@ int DML_rank_inside_subset(DML_SiteRank rank, DML_Layout *layout){
 /* Table lookup for sorted table.  Return index if found and -1 if not
    found. Binary search for exact match. */
 
-int DML_table_lookup(DML_SiteRank list[], size_t n, DML_SiteRank r)
+int64_t DML_table_lookup(DML_SiteRank list[], size_t n, DML_SiteRank r)
 {
-  int ju,jm,jl;
-  
+  int64_t ju,jm,jl;
+
   if ( n == 0) return -1;
   if ( r < list[0] || r > list[n-1] ) return -1;
   if ( r == list[0] ) return 0;
@@ -732,24 +768,22 @@ int DML_table_lookup(DML_SiteRank list[], size_t n, DML_SiteRank r)
 /* Find the physical location in the record of the site with
    lexicographic index "rank".  Returns 1 on error.  0 for success. */
 
-int DML_lookup_subset_rank(DML_SiteRank *seek, DML_SiteRank rank, 
+int DML_lookup_subset_rank(DML_SiteRank *seek, DML_SiteRank rank,
 			   DML_SiteList *sites)
 {
-  int current_index;
-  int status;
+  DML_SiteRank current_index;
 
-  if(sites->use_list){
-    current_index = DML_table_lookup(sites->list, sites->number_of_io_sites, 
+  if(sites->use_list) {
+    current_index = DML_table_lookup(sites->list, sites->number_of_io_sites,
 				     rank);
     if(current_index < 0)
       return 1;
-  }
-  else{
+  } else {
     current_index = rank;
   }
 
-  if(sites->use_subset){
-    status = sites->subset_rank[current_index];
+  if(sites->use_subset) {
+    DML_SiteRank status = sites->subset_rank[current_index];
     if(status < 0)return 1;
     *seek = status;
   } else {
@@ -773,15 +807,14 @@ int DML_next_subset_site(DML_SiteRank *rank, DML_SiteList *sites)
 
   return status;
 }
- 
+
 /*------------------------------------------------------------------*/
 /* Return position of site in record - same as subset rank          */
 /* Note: this routine is used only in conjunction with the
    DML_next_subset_site iterator.  */
-int
+DML_SiteRank
 DML_subset_rank(DML_SiteRank rank, DML_SiteList *sites)
 {
-  //printf("node %i rank %i\n", QMP_get_node_number(), rank);
   if(sites->use_subset)
     return sites->subset_rank[sites->current_index];
   else
@@ -799,19 +832,20 @@ int DML_init_subset_site_loop(DML_SiteRank *rank, DML_SiteList *sites){
   /* If we are doing a subset and our first site is not in that
      subset, scan forward to find the first site in the subset */
   if(sites->use_subset)
-    if(sites->subset_rank[sites->current_index] < 0)
-      return DML_next_subset_site(rank, sites);
+    if(sites->subset_rank[sites->current_index] < 0) {
+      int status = DML_next_subset_site(rank, sites);
+      return status;
+    }
   return 1;
 }
 
 /*------------------------------------------------------------------*/
 /* Search an ordered table of site ranks for a given rank.  Return the
    index of the match, if found, or -1 if not found */
-
-int DML_lookup_site_rank(DML_SiteRank *t, int n, DML_SiteRank r){
-  int s1 = 0;
-  int s2 = n-1;
-  int snew;
+int64_t DML_lookup_site_rank(DML_SiteRank *t, int64_t n, DML_SiteRank r){
+  int64_t s1 = 0;
+  int64_t s2 = n-1;
+  int64_t snew;
 
   if(t[s1] > r || t[s2] < r)return -1;
   if(t[s1] == r)return s1;
@@ -825,6 +859,7 @@ int DML_lookup_site_rank(DML_SiteRank *t, int n, DML_SiteRank r){
   }
   return -1;
 }
+
 /*------------------------------------------------------------------*/
 /* Create the subset rank list for single-file parallel I/O.        */
 /* See DML_create_subset_rank below for a definition of this list   */
@@ -848,18 +883,18 @@ int DML_create_subset_rank_parallel(DML_SiteList *sites, DML_Layout *layout){
   int this_node = layout->this_node;
   int *upper = layout->hyperupper;
   int *lower = layout->hyperlower;
-  DML_SiteRank r, *ranklist;
+  DML_SiteRank r, *ranklist, s, t;
   int *coords,*ubound;
-  int d,s,t, dim;
+  int d, dim;
   char myname[] = "DML_create_subset_rank_parallel";
 
   sites->use_subset = 1;
 
-  sites->subset_rank = 
-    (int *)malloc(sizeof(int)*sites->number_of_io_sites); /* Could be less */
+  sites->subset_rank = (DML_SiteRank *)
+    malloc(sizeof(DML_SiteRank)*sites->number_of_io_sites); /* Could be less */
   if(sites->subset_rank == NULL)return 1;
 
-  ranklist = 
+  ranklist =
     (DML_SiteRank *)malloc(sizeof(DML_SiteRank)*sites->number_of_io_sites);
   if(ranklist == NULL)return 1;
 
@@ -900,7 +935,7 @@ int DML_create_subset_rank_parallel(DML_SiteList *sites, DML_Layout *layout){
       sites->subset_rank[s] = t;
     t++;
   } while(DML_lex_next(&dim, coords, latdim, lower, ubound));
-	  
+
   free(coords);
   free(ubound);
   free(ranklist);
@@ -915,12 +950,11 @@ int DML_create_subset_rank_parallel(DML_SiteList *sites, DML_Layout *layout){
 /* Return value 0 for success and 1 for malloc failure */
 int DML_create_subset_rank_serial(DML_SiteList *sites, DML_Layout *layout){
 
-  DML_SiteRank r;
-  int s;
+  DML_SiteRank r, s;
 
   sites->use_subset = 1;
-  sites->subset_rank = 
-    (int *)malloc(sizeof(int)*sites->number_of_io_sites);  /* Could be less */
+  sites->subset_rank = (DML_SiteRank *)
+    malloc(sizeof(DML_SiteRank)*sites->number_of_io_sites);  /* Could be less */
   if(sites->subset_rank == NULL)return 1;
   r = DML_init_site_loop(sites);
   s = 0;
@@ -970,6 +1004,27 @@ void DML_destroy_subset_rank(DML_SiteList *sites){
    rank-based bit rotations and XORs on the resulting crc32
    checksum */
 
+/* A safe and nearly constant time bitwise rotate which
+ * avoids Undefined Behaviour.
+ *
+ * This implementation follows this Wikipedia entry:
+ * https://en.wikipedia.org/wiki/Circular_shift#Implementing_circular_shifts
+ *
+ * and is based on the work of:
+ *  John Regehr https://blog.regehr.org/archives/1063
+ * and
+ *  Peter Cordes in his stack overflow answers:
+ *
+ *   https://stackoverflow.com/questions/776508/best-practices-for-circular-shift-rotate-operations-in-c/776523#776523
+ *   https://stackoverflow.com/questions/31387778/near-constant-time-rotate-that-does-not-violate-the-standards/31488147#31488147
+ */
+uint32_t DML_rank_rotl32(uint32_t work, DML_SiteRank rank)
+{
+    const unsigned int mask =  CHAR_BIT * sizeof(work) - 1;
+    rank  &= mask;
+    return (work << rank) | (work >> (-rank & mask));
+}
+
 /* Initialize checksums */
 void DML_checksum_init(DML_Checksum *checksum){
   checksum->suma = 0;
@@ -986,8 +1041,12 @@ void DML_checksum_accum(DML_Checksum *checksum, DML_SiteRank rank,
 
   rank29 %= 29; rank31 %= 31;
 
-  checksum->suma ^= work<<rank29 | work>>(32-rank29);
-  checksum->sumb ^= work<<rank31 | work>>(32-rank31);
+ /*
+    checksum->suma ^= work<<rank29 | work>>(32-rank29);
+    checksum->sumb ^= work<<rank31 | work>>(32-rank31);
+  */
+  checksum->suma ^= DML_rank_rotl32(work, rank29);
+  checksum->sumb ^= DML_rank_rotl32(work, rank31);
 }
 
 /* Combine checksums over all nodes */
@@ -1060,7 +1119,7 @@ void DML_byterevn64(uint32_t w[], size_t n)
    each word consisting of word_size bytes 
    word_size = 1, 4 or 8 are the only choices. */
 
-void DML_byterevn(char *buf, size_t size, int word_size)
+void DML_byterevn(void *buf, size_t size, int word_size)
 {
   if(word_size == 1) {
     /* NOP */
@@ -1086,7 +1145,7 @@ size_t DML_max_buf_sites(size_t size, int factor){
 }
 
 /*------------------------------------------------------------------*/
-char *
+void *
 DML_allocate_buf(size_t size, size_t *max_buf_sites)
 {
   char *lbuf = NULL;
@@ -1101,14 +1160,15 @@ DML_allocate_buf(size_t size, size_t *max_buf_sites)
 /*------------------------------------------------------------------*/
 /* Write buffer to the current position in the file */
 
-int DML_write_buf_current(LRL_RecordWriter *lrl_record_out, 
-			  char *lbuf, size_t buf_sites, size_t size, 
-			  uint64_t *nbytes, char *myname, 
+int DML_write_buf_current(LRL_RecordWriter *lrl_record_out,
+			  char *lbuf, size_t buf_sites, size_t size,
+			  uint64_t *nbytes, char *myname,
 			  int this_node){
 
-  if(LRL_write_bytes(lrl_record_out, lbuf, buf_sites*size)
-     != buf_sites*size){
-    printf("%s(%d) write error\n",myname,this_node);
+  uint64_t wrote = LRL_write_bytes(lrl_record_out, lbuf, buf_sites*size);
+  if(wrote != buf_sites*size){
+    printf("%s(%d) write error: wrote %lu bytes but wanted %lu\n",
+	   myname,this_node,wrote,buf_sites*size);
     return 1;
   }
   *nbytes += buf_sites*size;
@@ -1123,15 +1183,16 @@ int DML_write_buf_current(LRL_RecordWriter *lrl_record_out,
    sites are in the correct order for writing to the requested point
    in the file */
 
-int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out, 
-		       DML_SiteRank seeksite, 
+int DML_write_buf_seek(LRL_RecordWriter *lrl_record_out,
+		       DML_SiteRank seeksite,
 		       char *lbuf, size_t buf_sites, size_t size,
 		       uint64_t *nbytes, char *myname, int this_node){
 
   /* Seek to the appropriate position */
   if(LRL_seek_write_record(lrl_record_out,(off_t)size*seeksite)
      != LRL_SUCCESS){
-    printf("%s(%d) seek error\n",myname,this_node);
+    printf("%s(%d) error while seeking to %lu\n",
+	   myname,this_node,size*seeksite);
     return 1;
   }
 
@@ -1146,7 +1207,6 @@ int
 DML_read_buf(LRL_RecordReader *lrl_record_in, char *buf,
 	     DML_SiteRank firstrank, size_t size, int num, int doseek)
 {
-  //printf("node %i firstrank %i size %li num %i doseek %i\n", QMP_get_node_number(), firstrank, size, num, doseek);
   if(doseek) {
     if(LRL_seek_read_record(lrl_record_in,(off_t)size*firstrank)
        != LRL_SUCCESS) {
@@ -1249,13 +1309,13 @@ int DML_my_ionode(int volfmt, int serpar, DML_Layout *layout){
     if(serpar == DML_SERIAL)
       return layout->master_io_node;
     else
-      return layout->ionode_a(layout->this_node, layout->fs_arg);
+      return DML_ionode_ext(layout->this_node, layout);
   }
   else if(volfmt == DML_MULTIFILE){
     return layout->this_node;
   }
   else if(volfmt == DML_PARTFILE || volfmt == DML_PARTFILE_DIR){
-    return layout->ionode_a(layout->this_node, layout->fs_arg);
+    return DML_ionode_ext(layout->this_node, layout);
   }
   else {
     printf("DML_my_ionode: Bad volfmt code %d\n",volfmt);
@@ -1411,7 +1471,7 @@ int DML_partition_subset_sitedata_out(DML_RecordWriter *dml_record_out,
   DML_lex_coords(coords, latdim, latsize, snd_coords);
   
   /* Node that has this data and sends it to my_io_node */
-  new_node = layout->node_number_a(coords, layout->arg);
+  new_node = DML_node_number_ext(coords, layout);
   
   /* Send nodes must wait for a ready signal from the I/O node
      to prevent message pileups on the I/O node */
@@ -1426,7 +1486,7 @@ int DML_partition_subset_sitedata_out(DML_RecordWriter *dml_record_out,
   if(this_node == current_node){
     /* Fetch directly to the buffer */
     buf = outbuf + size*buf_sites;
-    get(buf,layout->node_index_a(coords, layout->arg),count,arg);
+    get(buf,DML_node_index_ext(coords, layout),count,arg);
     buf_sites++;
   }
   
@@ -1489,7 +1549,7 @@ int DML_partition_subset_sitedata_out(DML_RecordWriter *dml_record_out,
 
   return 0;
 }
-  
+
 /*------------------------------------------------------------------*/
 /* Write one site's worth of data with lexicographic rank snd_coords */
 
@@ -1504,7 +1564,7 @@ int DML_partition_sitedata_out(DML_RecordWriter *dml_record_out,
   /* Convert lexicographic index for this partition to the physical
      rank in the record */
   if(DML_lookup_subset_rank(&subset_rank, snd_coords, sites)!= 0){
-    printf("%s(%d) Request to write a site %d not planned for the record.\n",
+    printf("%s(%d) Request to write a site %ld not planned for the record.\n",
 	   myname, this_node, snd_coords);
     return 1;
   }
@@ -1616,13 +1676,13 @@ static void DML_flush_tbuf_to_outbuf(size_t size,
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
    PARTFILE/PARTFILE_DIR modes. */
 
-uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out, 
+uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	   void (*get)(char *buf, size_t index, int count, void *arg),
-	   int count, size_t size, int word_size, void *arg, 
-	   DML_Layout *layout, DML_SiteList *sites, int volfmt, 
+	   int count, size_t size, int word_size, void *arg,
+	   DML_Layout *layout, DML_SiteList *sites, int volfmt,
 	   int serpar, DML_Checksum *checksum)
 {
-  double dtall=0, dtwrite=0, dtsend=0;
+  double dtall=0, dtall2=0, dtwrite2=0, dtsend2=0, dtproc2=0, dtcalc2=0;
   char *buf,*outbuf = NULL,*tbuf = NULL, *scratch_buf;
   int current_node, new_node;
   int *coords;
@@ -1638,6 +1698,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   char myname[] = "DML_partition_out";
 
   timestart(dtall);
+  timestart2(dtall2);
 
   /* Get my I/O node */
   my_io_node = DML_my_ionode(volfmt, serpar, layout);
@@ -1694,29 +1755,34 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 
   /* Allocate lattice coordinate */
   coords = DML_allocate_coords(latdim, myname, this_node);
-  if(!coords){free(outbuf);free(tbuf);free(scratch_buf);return 0;}
-  
+  if(!coords){
+    printf("%s(%d) can't allocate coords\n",myname,this_node);
+    free(outbuf);free(tbuf);free(scratch_buf);
+    return 0;
+  }
+
   /* Initialize checksum */
   DML_checksum_init(checksum);
-  
+
 #ifdef DML_DEBUG
   if (! DML_big_endian())
     printf("%s(%d): byte reversing %d\n",myname,this_node,word_size);
 #endif
-  
+
   /* Maximum number of sites to be processed */
   //max_dest_sites = sites->subset_io_sites;
   isite = 0;  /* Running count of all sites */
-  
+
   current_node = my_io_node;
-  
+
   /* Loop over the sending coordinates */
   buf = outbuf;
   buf_sites = 0;   /* Count of sites in the output buffer */
   tbuf_sites = 0;  /* Count of sites in the message tbuf */
 
   if(DML_init_subset_site_loop(&snd_coords, sites) == 0){
-    free(outbuf); free(tbuf); free(scratch_buf); free(coords); 
+    printf("%s(%d): DML_init_subset_site_loop returned 0\n",myname,this_node);
+    free(outbuf); free(tbuf); free(scratch_buf); free(coords);
     return 0;
   }
 
@@ -1727,27 +1793,34 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
   outbuf_coords = snd_coords;
   /* The subset_rank locates the datum for outbuf_coords in the
      record our I/O partition is writing */
-  subset_rank = (DML_SiteRank)DML_subset_rank(outbuf_coords, sites);
+  subset_rank = DML_subset_rank(outbuf_coords, sites);
+  if(subset_rank<0) {
+    printf("%s(%d): Output rank %lu unexpectedly missing from subset list\n",
+	   myname,this_node,outbuf_coords);
+    return 0;
+  }
 
   do {
+    timestart2(dtcalc2);
     /* Convert lexicographic rank to coordinates */
     DML_lex_coords(coords, latdim, latsize, snd_coords);
 
     /* Node that sends data */
-    new_node = layout->node_number_a(coords, layout->arg);
+    new_node = DML_node_number_ext(coords, layout);
+    timestop2(dtcalc2);
 
     /* A node sends its message buffer to the io_node when changing
        nodes or when its message buffer is full or when the
        lexicographic order is broken */
-    if(new_node != current_node || 
+    if(new_node != current_node ||
        tbuf_sites >= max_tbuf_sites ||
        snd_coords != prev_coords + 1){
       if(tbuf_sites > 0){
 	/* Node with data sends its message buffer to the I/O node's tbuf */
 	if(current_node != my_io_node) {
-	  timestart(dtsend);
+	  timestart2(dtsend2);
 	  DML_route_bytes(tbuf,size*tbuf_sites,current_node,my_io_node);
-	  timestop(dtsend);
+	  timestop2(dtsend2);
 	}
 	/* The I/O node flushes its tbuf and accumulates the checksum */
 	if(this_node == my_io_node){
@@ -1757,43 +1830,56 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	     lexicographic order is broken */
 	  if(buf_sites > max_buf_sites - max_tbuf_sites ||
 	     snd_coords != prev_coords + 1){
-	    timestart(dtwrite);
-	    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank, 
+	    timestart2(dtwrite2);
+	    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
 			     outbuf, buf_sites, size, &nbytes, this_node);
-	    timestop(dtwrite);
-	    buf_sites = 0;
-	    outbuf_coords = snd_coords;
-	    subset_rank = (DML_SiteRank)DML_subset_rank(outbuf_coords, sites);
 	    if(status != 0) {
-	      free(outbuf); free(tbuf); free(scratch_buf); free(coords); 
+	      printf("%s(%d): DML_flush_outbuf returned status %i\n",
+		     myname,this_node,status);
+	      free(outbuf); free(tbuf); free(scratch_buf); free(coords);
 	      return 0;
 	    }
+	    timestop2(dtwrite2);
+	    timestart2(dtcalc2);
+	    buf_sites = 0;
+	    outbuf_coords = snd_coords;
+	    subset_rank = DML_subset_rank(outbuf_coords, sites);
+	    if(subset_rank<0) {
+	      printf("%s(%d): Output rank %lu unexpectedly missing from subset list\n",
+		     myname,this_node,outbuf_coords);
+	      free(outbuf); free(tbuf); free(scratch_buf); free(coords);
+	      return 0;
+	    }
+	    timestop2(dtcalc2);
 	  }
 	}
 	tbuf_sites = 0;
       }
-      
+
       /* Send nodes must wait for a ready signal from the I/O node
 	 to prevent message pileups on the I/O node */
-      
+
       /* CTS only if changing data source node */
+      timestart2(dtsend2);
       if(new_node != current_node){
-	timestart(dtsend);
 	DML_clear_to_send(scratch_buf,4,my_io_node,new_node);
-	timestop(dtsend);
 	current_node = new_node;
       }
+      timestop2(dtsend2);
     } /* current_node != newnode || tbuf_sites >= max_tbuf_sites */
 
     /* The node with the data just appends it to its message buffer */
     if(this_node == current_node){
+      timestart2(dtproc2);
       /* Fetch to the message buffer */
       buf = tbuf + size*tbuf_sites;
-      get(buf,layout->node_index_a(coords, layout->arg),count,arg);
+      DML_Index ni = DML_node_index_ext(coords,layout);
+      get(buf,ni,count,arg);
 
       /* Do byte reordering and update checksum */
       if (! DML_big_endian()) DML_byterevn(buf, size, word_size);
       DML_checksum_accum(checksum, snd_coords, buf, size);
+      timestop2(dtproc2);
     }
 
     /* The I/O node and current node count sites together */
@@ -1807,33 +1893,46 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 
   if(tbuf_sites > 0){
     if(current_node != my_io_node) {
-      timestart(dtsend);
+      timestart2(dtsend2);
       DML_route_bytes(tbuf,size*tbuf_sites,current_node,my_io_node);
-      timestop(dtsend);
+      timestop2(dtsend2);
     }
   }
 
   if(this_node == my_io_node){
+    timestart2(dtwrite2);
     DML_flush_tbuf_to_outbuf(size, outbuf, buf_sites, tbuf, tbuf_sites);
     buf_sites += tbuf_sites;
     tbuf_sites = 0;
-    timestart(dtwrite);
-    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank, 
+    status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
 			      outbuf, buf_sites, size, &nbytes, this_node);
-    timestop(dtwrite);
     buf_sites = 0;
     if(status !=  0) nbytes = 0;
+    timestop2(dtwrite2);
   }
 
   free(coords);
   free(scratch_buf);
   free(outbuf);
   free(tbuf);
-
   timestop(dtall);
-  if(QIO_verbosity()>=QIO_VERB_LOW && this_node==layout->master_io_node) {
-    printf("%s times: write %.2f  send %.2f  total %.2f\n",
-	   myname, dtwrite, dtsend, dtall);
+  timestop2(dtall2);
+
+  if(QIO_verbosity()>=QIO_VERB_LOW) {
+    double s = dtall/dtall2;
+    dtcalc2 *= s;
+    dtwrite2 *= s;
+    dtsend2 *= s;
+    dtproc2 *= s;
+#if 1
+    if(this_node==layout->master_io_node) {
+      printf("%s times: calc %.2f  write %.2f  send %.2f  process %.2f  total %.2f\n",
+	     myname, dtcalc2, dtwrite2, dtsend2, dtproc2, dtall);
+    }
+#else
+    printf("%i: %s times: calc %.2f  write %.2f  send %.2f  process %.2f  total %.2f\n",
+           this_node, myname, dtcalc2, dtwrite2, dtsend2, dtproc2, dtall);
+#endif
   }
   /* Number of bytes written by this node only */
   return nbytes;
@@ -1931,7 +2030,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     DML_lex_coords(coords, latdim, latsize, snd_coords);
 
     /* Node that sends data */
-    new_node = layout->node_number_a(coords, layout->arg);
+    new_node = DML_node_number_ext(coords, layout);
 
     /* Send nodes must wait for a ready signal from the I/O node
        to prevent message pileups on the I/O node */
@@ -1946,7 +2045,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     if(this_node == current_node){
       /* Fetch directly to the buffer */
       buf = outbuf + size*buf_sites;
-      get(buf,layout->node_index_a(coords, layout->arg),count,arg);
+      get(buf,DML_node_index_ext(coords,layout),count,arg);
       buf_sites++;
     }
 
@@ -1968,7 +2067,7 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
 	DML_get_bytes(buf,size,current_node);
 	buf_sites++;
       }
-    
+
       /* All other nodes send the data */
       if(this_node == current_node){
 	DML_send_bytes(buf,size,my_io_node);
@@ -1978,32 +2077,35 @@ uint64_t DML_partition_out(LRL_RecordWriter *lrl_record_out,
     }
 
     /* Now write data */
-    if(this_node == my_io_node)
-    {
+    if(this_node == my_io_node) {
       /* Do byte reordering before checksum */
       if (! DML_big_endian())
 	DML_byterevn(buf, size, word_size);
-      
+
       /* Update checksum */
       DML_checksum_accum(checksum, snd_coords, buf, size);
-      
-      /* Write the buffer when full */
 
-      if( (buf_sites >= max_buf_sites) || (isite == max_dest_sites-1) )
-	{
-	  /* The subset_rank locates the datum for snd_coords in the
-	     record that our I/O partition is writing */
-	  subset_rank = (DML_SiteRank)DML_subset_rank(snd_coords, sites);
-	  status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
-				   outbuf, buf_sites, size, &nbytes, 
-				   this_node);
-	  buf_sites = 0;
-	  if(status != 0) {free(outbuf); free(coords); return 0;}
+      /* Write the buffer when full */
+      if( (buf_sites >= max_buf_sites) || (isite == max_dest_sites-1) ) {
+	/* The subset_rank locates the datum for snd_coords in the
+	   record that our I/O partition is writing */
+	subset_rank = DML_subset_rank(snd_coords, sites);
+	if(subset_rank<0) {
+	  printf("%s(%d): Output rank %ld unexpectedly missing from subset list\n",
+		 myname,this_node,snd_coords);
+	  free(outbuf); free(coords);
+	  return 0;
 	}
+	status = DML_flush_outbuf(lrl_record_out, serpar, subset_rank,
+				  outbuf, buf_sites, size, &nbytes,
+				  this_node);
+	buf_sites = 0;
+	if(status != 0) {free(outbuf); free(coords); return 0;}
+      }
     }
     isite++;
   } while(DML_next_subset_site(&snd_coords, sites));
-  
+
   free(coords);
   free(scratch_buf);
   free(outbuf);
@@ -2024,6 +2126,8 @@ size_t DML_global_out(LRL_RecordWriter *lrl_record_out,
            DML_Layout *layout, int volfmt, 
 	   DML_Checksum *checksum)
 {
+  _QIO_UNUSED_ARGUMENT(volfmt);
+
   char *buf;
   int this_node = layout->this_node;
   size_t nbytes = 0;
@@ -2114,7 +2218,7 @@ uint64_t DML_multifile_out(LRL_RecordWriter *lrl_record_out,
   for(isite = 0; isite < max_dest_sites; isite++){
 
     /* The coordinates of this site */
-    layout->get_coords_a(coords, this_node, isite, layout->arg);
+    DML_get_coords_ext(coords, this_node, isite, layout);
 
     /* The lexicographic rank of this site */
     rank = DML_lex_rank(coords, layout->latdim, layout->latsize);
@@ -2163,6 +2267,8 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
 	     int count, size_t size, int word_size, void *arg, 
 	     DML_Layout *layout, DML_Checksum *checksum)
 {
+  _QIO_UNUSED_ARGUMENT(sitelist);
+
   size_t buf_sites, buf_extract, max_buf_sites;
   size_t isite, max_send_sites;
   uint64_t nbytes = 0;
@@ -2194,7 +2300,7 @@ uint64_t DML_multifile_in(LRL_RecordReader *lrl_record_in,
   for(isite = 0; isite < max_send_sites; isite++){
 
     /* The coordinates of this site */
-    layout->get_coords_a(coords, this_node, isite, layout->arg);
+    DML_get_coords_ext(coords, this_node, isite, layout);
 
     /* The lexicographic rank of this site */
     rank = DML_lex_rank(coords, layout->latdim, layout->latsize);
@@ -2296,18 +2402,16 @@ DML_RecordReader *DML_partition_open_in(LRL_RecordReader *lrl_record_in,
   else
     max_buf_sites = 1;
 
- 
   inbuf = DML_allocate_buf(size, &max_buf_sites);
   if(!inbuf){
     printf("%s(%d) can't malloc inbuf\n",myname,this_node);
     return 0;
   }
- 
 
   /* Allocate coordinate counter */
   coords = DML_allocate_coords(latdim, myname, this_node);
   if(!coords){free(inbuf); return 0;}
-  
+
   /* Initialize checksum */
   DML_checksum_init(checksum);
 
@@ -2370,7 +2474,7 @@ int DML_partition_subset_sitedata_in(DML_RecordReader *dml_record_in,
   DML_lex_coords(coords, latdim, latsize, rcv_coords);
   
   /* The node that gets the next datum */
-  dest_node = layout->node_number_a(coords, layout->arg);
+  dest_node = DML_node_number_ext(coords, layout);
   
   if(this_node == my_io_node){
     /* I/O node reads the next value */
@@ -2418,7 +2522,7 @@ int DML_partition_subset_sitedata_in(DML_RecordReader *dml_record_in,
       DML_byterevn(buf, size, word_size);
     
     /* Store the data */
-    put(buf,layout->node_index_a(coords, layout->arg),count,arg);
+    put(buf,DML_node_index_ext(coords,layout),count,arg);
   }
   
   buf_extract++;
@@ -2448,7 +2552,7 @@ int DML_partition_sitedata_in(DML_RecordReader *dml_record_in,
   /* Convert lexicographic index for this partition to the physical
      rank in the record */
   if(DML_lookup_subset_rank(&subset_rank, rcv_coords, sites)!= 0){
-    printf("%s(%d) Request for a site %d not found in the record.\n",
+    printf("%s(%d) Request for a site %ld not found in the record.\n",
 	   myname, this_node, rcv_coords);
   return 1;
   }
@@ -2469,7 +2573,8 @@ int DML_partition_allsitedata_in(DML_RecordReader *dml_record_in,
 	  DML_Layout *layout, DML_SiteList *sites, int volfmt,
 	  DML_Checksum *checksum)
 {
-
+  _QIO_UNUSED_ARGUMENT(volfmt);
+  _QIO_UNUSED_ARGUMENT(checksum);
   DML_SiteRank rcv_coords;
 
   if(DML_init_subset_site_loop(&rcv_coords, sites) == 0)
@@ -2514,22 +2619,25 @@ uint64_t DML_partition_close_in(DML_RecordReader *dml_record_in)
    algorithm is intended for SINGLEFILE/SERIAL, MULTIFILE, and
    PARTFILE/PARTFILE_DIR modes. */
 uint64_t
-DML_partition_in(LRL_RecordReader *lrl_record_in, 
+DML_partition_in(LRL_RecordReader *lrl_record_in,
 		 void (*put)(char *buf, size_t index, int count, void *arg),
-		 int count, size_t size, int word_size, void *arg, 
+		 int count, size_t size, int word_size, void *arg,
 		 DML_Layout *layout, DML_SiteList *sites, int volfmt,
 		 int serpar, DML_Checksum *checksum)
 {
-  double dtall=0, dtread=0, dtsend=0;
+  double dtall=0, dtall2=0, dtread2=0, dtsend2=0, dtproc2=0, dtcalc2=0;
   char *buf, *inbuf;
   int my_io_node;
   int *coords;
   int this_node = layout->this_node;
   int latdim = layout->latdim;
   int *latsize = layout->latsize;
-  size_t nbytes=0, max_buf_sites=1;
+  size_t nbytes=0;
+  size_t max_buf_sites=1;
+  char myname[] = "DML_partition_in";
 
   timestart(dtall);
+  timestart2(dtall2);
 
   /* Get my I/O node */
   my_io_node = DML_my_ionode(volfmt, serpar, layout);
@@ -2564,37 +2672,45 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
     return 0;
   }
 
-  DML_SiteRank rcoords[max_buf_sites];
+  DML_SiteRank *rcoords = DML_allocate_buf(sizeof(*rcoords),&max_buf_sites);
   DML_SiteRank firstrank=0, nextrank=0;
-  int dest_node[max_buf_sites];
-  int node_index[max_buf_sites];
+  int *dest_node = DML_allocate_buf(sizeof(*dest_node),&max_buf_sites);
+  DML_Index *node_index = DML_allocate_buf(sizeof(*node_index),&max_buf_sites);
   int notdone = 1;
   while(notdone) {
-    int k = 0;
+    timestart2(dtcalc2);
+    size_t k = 0;
     do { // get list of file contiguous sites
       /* The subset_rank locates the datum for rcv_coords in the
 	 record our I/O partition is reading */
       DML_SiteRank subset_rank = nextrank;
-      if(serpar == DML_PARALLEL)
+      if(serpar == DML_PARALLEL) {
 	subset_rank = (DML_SiteRank) DML_subset_rank(rcv_coords, sites);
+	if(subset_rank<0){
+	  printf("%s(%d): Input rank %ld unexpectedly missing from subset list\n",
+		 myname,this_node,rcv_coords);
+	  return 0;
+	}
+      }
       if(k==0) firstrank = subset_rank;
-      else if(subset_rank!=firstrank+k) break;
+      else if(subset_rank!=firstrank+(DML_SiteRank)k) break;
       /* Convert lexicographic rank to coordinates */
       DML_lex_coords(coords, latdim, latsize, rcv_coords);
       rcoords[k] = rcv_coords;
       /* The node that gets the next datum */
-      dest_node[k] = layout->node_number_a(coords, layout->arg);
-      node_index[k] = layout->node_index_a(coords, layout->arg);
+      dest_node[k] = DML_node_number_ext(coords, layout);
+      node_index[k] = DML_node_index_ext(coords, layout);
       k++;
       notdone = DML_next_subset_site(&rcv_coords, sites);
     } while(k<max_buf_sites && notdone);
+    timestop2(dtcalc2);
 
     /* I/O node reads the next value */
     if(this_node == my_io_node) {
       int doseek = (nextrank != firstrank);
-      timestart(dtread);
+      timestart2(dtread2);
       int err = DML_read_buf(lrl_record_in, inbuf, firstrank, size, k, doseek);
-      timestop(dtread);
+      timestop2(dtread2);
       nbytes += k*size;
 
       if(err < 0) {
@@ -2605,29 +2721,46 @@ DML_partition_in(LRL_RecordReader *lrl_record_in,
     }
     nextrank = firstrank + k;
 
-    for(int i=0; i<k; i++) {
+    for(size_t i=0; i<k; i++) {
       buf = inbuf + i*size;
       /* Send result to destination node. Avoid I/O node sending to itself. */
       if (dest_node[i] != my_io_node) {
-	timestart(dtsend);
+	timestart2(dtsend2);
 	DML_route_bytes(buf, size, my_io_node, dest_node[i]);
-	timestop(dtsend);
+	timestop2(dtsend2);
       }
       /* Process data before inserting */
       if(this_node == dest_node[i]) {
+	timestart2(dtproc2);
 	/* Accumulate checksum */
 	DML_checksum_accum(checksum, rcoords[i], buf, size);
 	/* Do byte reversal if necessary */
 	if (! DML_big_endian()) DML_byterevn(buf, size, word_size);
 	/* Store the data */
 	put(buf, node_index[i], count, arg);
+	timestop2(dtproc2);
       }
     }
   }
-  free(inbuf); free(coords);
+  free(dest_node);
+  free(node_index);
+  free(rcoords);
+  free(coords);
+  free(inbuf);
 
   timestop(dtall);
-  if(this_node==0) printf("%s times: read %.2f  send %.2f  total %.2f\n", __func__, dtread, dtsend, dtall);
+  timestop2(dtall2);
+  if(QIO_verbosity()>=QIO_VERB_LOW) {
+    double s = dtall/dtall2;
+    dtcalc2 *= s;
+    dtread2 *= s;
+    dtsend2 *= s;
+    dtproc2 *= s;
+    if(this_node==layout->master_io_node) {
+      printf("%s times: calc %.2f  read %.2f  send %.2f  process %.2f  total %.2f\n",
+	     __func__, dtcalc2, dtread2, dtsend2, dtproc2, dtall);
+    }
+  }
   /* return the number of bytes read by this node only */
   return nbytes;
 }
@@ -2644,6 +2777,7 @@ size_t DML_global_in(LRL_RecordReader *lrl_record_in,
           DML_Layout* layout, int volfmt, int broadcast_globaldata,
 	  DML_Checksum *checksum)
 {
+  _QIO_UNUSED_ARGUMENT(volfmt);
   char *buf;
   int this_node = layout->this_node;
   size_t nbytes = 0;
@@ -2693,3 +2827,47 @@ size_t DML_global_in(LRL_RecordReader *lrl_record_in,
   return nbytes;
 }
 
+/* wrappers for DML site-node functions */
+int
+DML_node_number_ext(const int coords[], DML_Layout *layout)
+{
+  if (NULL != layout->node_number) 
+    return layout->node_number(coords);
+  else 
+    return layout->node_number_ext(coords, layout->arg);
+}
+DML_Index
+DML_node_index_ext(const int coords[], DML_Layout *layout)
+{
+  if (NULL != layout->node_index)
+    return layout->node_index(coords);
+  else 
+    return layout->node_index_ext(coords, layout->arg);
+}
+
+void
+DML_get_coords_ext(int coords[], int node, DML_Index index, DML_Layout *layout)
+{
+  if (NULL != layout->get_coords)
+    layout->get_coords(coords, node, index);
+  else
+    layout->get_coords_ext(coords, node, index, layout->arg);
+}
+
+DML_Index
+DML_num_sites_ext(int node, DML_Layout *layout)
+{
+  if (NULL != layout->num_sites)
+    return layout->num_sites(node);
+  else
+    return layout->num_sites_ext(node, layout->arg);
+}
+
+int 
+DML_ionode_ext(int node, DML_Layout *layout)
+{
+//    if (NULL != layout->ionode)
+//      return layout->ionode(node);
+//    else 
+      return layout->ionode_ext(node, layout->fs_arg);
+}

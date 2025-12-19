@@ -130,11 +130,10 @@ QCDheader * qcdhdr_get_hdr(FILE *in)
   char *p, *q;
 
   /* Begin reading, and check for "BEGIN_HEADER" token */
-  fgets(line,MAX_LINE_LENGTH,in);
-  /*
-  if (strcmp(line,"BEGIN_HEADER\n")!=0)
-    error_exit("qcdhdr_get_hdr: Missing \"BEGIN_HEADER\"; punting \n");
-  */
+  if( fgets(line,MAX_LINE_LENGTH,in) == NULL ){
+    fprintf(stderr,"Error reading header\n");
+    return NULL;
+  }
   /* Allocate space for QCDheader and its pointers */
   tokens = (char **) malloc(MAX_TOKENS*sizeof(char *));
   values = (char **) malloc(MAX_TOKENS*sizeof(char *));
@@ -150,7 +149,10 @@ QCDheader * qcdhdr_get_hdr(FILE *in)
   n = 0;
   printf("Archive header:\n");
   while (1) {
-    fgets(line,MAX_LINE_LENGTH,in);
+    if( fgets(line,MAX_LINE_LENGTH,in) == NULL ) {
+      fprintf(stderr,"Error reading archive header\n");
+      return NULL;
+    }
     printf("%s", line);
 
     if (strcmp(line,"END_HEADER\n")==0) break;
@@ -494,17 +496,20 @@ void setup_layout(){
 /*------------------------------------------------------------------*/
 /* Layout utilities */
 /*------------------------------------------------------------------*/
-int node_number_a(const int coords[], void *a) {
+int node_number_ext(const int coords[], void *a) {
+  _QIO_UNUSED_ARGUMENT(a);
   return 0;
 }
 
 /*------------------------------------------------------------------*/
-int node_index_a(const int coords[], void *a) {
+QIO_Index node_index_ext(const int coords[], void *a) {
+  _QIO_UNUSED_ARGUMENT(a);
   return lex_rank(coords,4,squaresize);
 }
 
 /*------------------------------------------------------------------*/
-int num_sites_a(int node, void *a) {
+QIO_Index num_sites_ext(int node, void *a) {
+  _QIO_UNUSED_ARGUMENT(a);
   return  sites_on_node;
 }
 
@@ -512,13 +517,14 @@ int num_sites_a(int node, void *a) {
 /* Map node number and index to coordinates  */
 /* (The inverse of node_number and node_index) */
 
-void get_coords_a(int coords[], int node, const int index, void *a){
+void get_coords_ext(int coords[], int node, QIO_Index index, void *a){
+  _QIO_UNUSED_ARGUMENT(a);
   assert(node == 0);
   lex_coords(coords, LATDIM, squaresize, index);
 }
 
 /*------------------------------------------------------------------*/
-int io_node_a(int node, void *a){
+int io_node_ext(int node, void *a){
   return node;
 }
 
@@ -622,7 +628,7 @@ void r_serial_reader(char *buf, size_t index, int count, void *arg)
       if(dataformat == ARCHIVE_3x2) complete_U(U);
 
       state->crc = 
-	DML_crc32(state->crc, (char *)U, 18*sizeof(float));
+	DML_crc32(state->crc, (unsigned char *)U, 18*sizeof(float));
 
       memcpy(buf + mu*18*sizeof(float), U, 18*sizeof(float));
 
@@ -649,7 +655,7 @@ void r_serial_reader(char *buf, size_t index, int count, void *arg)
       if(dataformat == ARCHIVE_3x2) complete_Ud(Ud);
       
       state->crc = 
-	DML_crc32(state->crc, (char *)Ud, 18*sizeof(double));
+	DML_crc32(state->crc, (unsigned char *)Ud, 18*sizeof(double));
 
       memcpy(buf + mu*18*sizeof(double), Ud, 18*sizeof(double));
     }
@@ -678,10 +684,14 @@ void build_qio_layout(QIO_Layout *layout){
   lattice_size[2] = nz;
   lattice_size[3] = nt;
 
-  layout->node_number_a = node_number_a;
-  layout->node_index_a  = node_index_a;
-  layout->get_coords_a  = get_coords_a;
-  layout->num_sites_a   = num_sites_a;
+  layout->node_number   = NULL;
+  layout->node_index    = NULL;
+  layout->get_coords    = NULL;
+  layout->num_sites     = NULL;
+  layout->node_number_ext = node_number_ext;
+  layout->node_index_ext  = node_index_ext;
+  layout->get_coords_ext  = get_coords_ext;
+  layout->num_sites_ext   = num_sites_ext;
   layout->arg           = NULL;
   layout->latsize       = lattice_size;
   layout->latdim        = LATDIM;
@@ -696,8 +706,8 @@ void build_qio_layout(QIO_Layout *layout){
 void build_qio_filesystem(QIO_Filesystem *fs){
   fs->number_io_nodes   = 0;
   fs->type              = QIO_SINGLE_PATH;
-  fs->my_io_node_a      = io_node_a;   /* Partfile I/O uses io_node from layout*.c */
-  fs->master_io_node_a  = NULL;  /* Serial I/O uses default: node 0 */
+  fs->my_io_node_ext    = io_node_ext;   /* Partfile I/O uses io_node from layout*.c */
+  fs->master_io_node_ext= NULL;  /* Serial I/O uses default: node 0 */
   fs->arg               = NULL;
   fs->io_node = NULL;
   fs->node_path = NULL;
@@ -867,7 +877,7 @@ int main(int argc, char *argv[])
   printf("SciDAC checksums %x %x\n",
 	 QIO_get_writer_last_checksuma(outfile),
 	 QIO_get_writer_last_checksumb(outfile));
-  printf("ILDG crc32 checksum %lu\n",state.crc);
+  printf("ILDG crc32 checksum %u\n",state.crc);
 
   /* Close the SciDAC file */
   QIO_close_write(outfile);

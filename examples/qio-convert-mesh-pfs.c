@@ -1,12 +1,13 @@
 /* Host file conversion for grid machines.  FOR SINGLE PROCESSOR ONLY! */
 /* Converts from SINGLEFILE to PARTFILE format. */
 /* Here we treat the simplest case that each node reads its own file
-   from its own directory path */
+   from its own directory path.  For the case that a group of nodes
+   share a part file, use qio-convert-mesh-ppfs */
 
 /* Usage
 
    qio-convert-mesh-pfs <part_sing> <filename> [<ildgLFN>]< layoutfile
- 
+
     where
 
       <part_sing> = 0 to convert single to partition format
@@ -21,11 +22,14 @@
       line 1: machdim            Number of machine dimensions allocated
       line 2: mx my mz ...       Dimensions of the allocated machine
 
+      NOTE: These values are known to the MILC code as node_geom, which
+      must be equivalent to ionode_geom for this application.
+
          The remaining lines specify the host path to the file system
          for each logical node.  The first value is the logical node
          number and the second is the path.
 
-      line 3: 0 /pfs/r22c0/R22/C0/B0/M0/D0/A0  
+      line 3: 0 /pfs/r22c0/R22/C0/B0/M0/D0/A0
       line 4: 1 /pfs/r22c0/R22/C0/B0/M0/D0/A1
       line 5:       etc
 
@@ -44,9 +48,9 @@
 #define	BASE_DIRMODE	0775
 
 /* One-to-one */
-static int self_io_node_a(int node, void *arg){return node;}
+static int self_io_node_ext(int node, void *arg){return node;}
 
-static int zero_master_io_node_a(void *arg){return 0;}
+static int zero_master_io_node_ext(void *arg){return 0;}
 
 static char *errmsg(void)
 {
@@ -57,7 +61,7 @@ static char *errmsg(void)
 static QIO_Filesystem *create_multi_pfs(int numnodes){
   QIO_Filesystem *fs;
   int i, k;
-  struct stat dir_stat;
+  //struct stat dir_stat;
   mode_t dir_mode = BASE_DIRMODE;
 
   /* Build the QIO file system structure */
@@ -68,8 +72,8 @@ static QIO_Filesystem *create_multi_pfs(int numnodes){
   }
   fs->number_io_nodes = numnodes;
   fs->type = QIO_MULTI_PATH;
-  fs->my_io_node_a = self_io_node_a;
-  fs->master_io_node_a = zero_master_io_node_a;
+  fs->my_io_node_ext = self_io_node_ext;
+  fs->master_io_node_ext = zero_master_io_node_ext;
   fs->arg = NULL;
   fs->io_node = NULL;
   fs->node_path = NULL;
@@ -80,7 +84,7 @@ static QIO_Filesystem *create_multi_pfs(int numnodes){
     printf("Path table malloc failed\n");
     return NULL;
   }
-  
+
   for(i = 0; i < numnodes; i++){
     fs->node_path[i] = (char *)calloc(PATHLENGTH, sizeof(char));
     if(!fs->node_path[i]){
@@ -99,12 +103,15 @@ static QIO_Filesystem *create_multi_pfs(int numnodes){
       return NULL;
     }
     /* Read and create the corresponding directory path if need be */
-    scanf("%s",fs->node_path[k]);
-    if( mkdir(fs->node_path[k], dir_mode) < 0){
-      if( errno != EEXIST ){
-	printf("Can't make %s: %s\n", fs->node_path[k], errmsg());
-	return NULL;
+    if( scanf("%s",fs->node_path[k]) == 1 ){
+      if( mkdir(fs->node_path[k], dir_mode) < 0){
+	if( errno != EEXIST ){
+	  printf("Can't make %s: %s\n", fs->node_path[k], errmsg());
+	  return NULL;
+	}
       }
+    } else {
+      return NULL;
     }
   }
 
@@ -139,7 +146,7 @@ int main(int argc, char *argv[]){
   QIO_Filesystem *fs;
   int status;
   QIO_Mesh_Topology *mesh;
-  
+
   /* Check arguments and process layout parameters */
 
   if(argc < 3){

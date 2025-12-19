@@ -6,11 +6,21 @@
 #include <qio_string.h>
 #include <lrl.h>
 #include <dml.h>
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <lime.h>
 
+#ifdef __cplusplus
+}
+#endif
+
 #define QIO_UNKNOWN    DML_UNKNOWN
-#define QIO_SINGLEFILE DML_SINGLEFILE 
-#define QIO_MULTIFILE  DML_MULTIFILE  
+#define QIO_SINGLEFILE DML_SINGLEFILE
+#define QIO_MULTIFILE  DML_MULTIFILE
 #define QIO_PARTFILE   DML_PARTFILE
 #define QIO_PARTFILE_DIR    DML_PARTFILE_DIR
 
@@ -75,18 +85,30 @@
 #define QIO_LIMETYPE_ILDG_BINARY_DATA   "ildg-binary-data"
 #define QIO_LIMETYPE_ILDG_DATA_LFN      "ildg-data-lfn"
 
+#define QIO_MAX_FILENAME_LENGTH   512
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-  
+
+#define QIO_HAS_EXTENDED_LAYOUT
+typedef DML_Index QIO_Index;
+
 /* For collecting and passing layout information */
 typedef struct {
-  int (*node_number_a)(const int coords[], void *arg);
-  int (*node_index_a)(const int coords[], void *arg);
-  void (*get_coords_a)(int coords[], int node, int index, void *arg);
-  int (*num_sites_a)(int node, void *arg);
-  void *arg;
+  /* old site-node index functions: given priority if not NULL for backward compat  
+   * set to NULL to use new site-node index functions */
+  int (*node_number)(const int coords[]);
+  int (*node_index)(const int coords[]);
+  void (*get_coords)(int coords[], int node, int index);
+  int (*num_sites)(int node);
+  /* new site-node index functions: allow multi-lattice, no global-var dependence */
+  int (*node_number_ext)(const int coords[], void *arg);
+  QIO_Index (*node_index_ext)(const int coords[], void *arg);
+  void (*get_coords_ext)(int coords[], int node, QIO_Index index, void *arg);
+  QIO_Index (*num_sites_ext)(int node, void *arg);
+  void *arg;        /* argument for new site-node index functions (e.g. lattice layout) */
+  /* end extended fields */
   int *latsize;
   int latdim;
   size_t volume;
@@ -151,8 +173,13 @@ typedef struct {
 typedef struct {
   int number_io_nodes;
   int type;                                 /* Is node_path specified? */
-  DML_io_node_a_t my_io_node_a;             /* Mapping as on compute nodes, +arg */
-  DML_master_io_node_a_t master_io_node_a;  /* As on compute nodes, +arg */
+  /* old node-vol index functions: given priority if not NULL for backward compat  
+   * set to NULL to use new node-vol index functions */
+  //DML_io_node_t my_io_node;             /* Mapping as on compute nodes */
+  //DML_master_io_node_t master_io_node;  /* As on compute nodes */
+  /* new node-vol index functions: allow multi-lattice, no global-var dependence */
+  DML_io_node_ext_t my_io_node_ext;             /* Mapping as on compute nodes, +arg */
+  DML_master_io_node_ext_t master_io_node_ext;  /* As on compute nodes, +arg */
   void *arg;
   int *io_node;                             /* Only if number_io_nodes !=
                                                number_of_nodes */
@@ -164,7 +191,7 @@ typedef struct {
   int *node_number;
   int n;
   int max;
-  int num_sites;
+  QIO_Index num_sites;
 } QIO_IOFamilyMember;
 typedef struct {
   /* Local copy of layout as it appears on compute nodes */
@@ -179,7 +206,7 @@ typedef struct {
 
   /* Table of size "number_of_nodes" maps node to node_index offset 
      needed for the fake ionode layout functions */
-  size_t *QIO_node_index_offset;
+  QIO_Index *QIO_node_index_offset;
 
   /* Table of size "number_io_nodes" maps io_node rank to list of node
      members */
@@ -196,8 +223,8 @@ QIO_Layout *QIO_create_scalar_layout(QIO_Layout *layout, QIO_Filesystem *fs, QIO
 void QIO_delete_scalar_layout(QIO_Layout *layout);
 int QIO_ionode_io_node(int node, QIO_host_utils_s *hu);
 int QIO_get_io_node_rank(int node, QIO_host_utils_s *hu);
-int QIO_ionode_to_scalar_index(int ionode_node, int ionode_index, QIO_host_utils_s *hu);
-int QIO_scalar_to_ionode_index(int scalar_node, int scalar_index, QIO_host_utils_s *hu);
+QIO_Index QIO_ionode_to_scalar_index(int ionode_node, QIO_Index ionode_index, QIO_host_utils_s *hu);
+QIO_Index QIO_scalar_to_ionode_index(int scalar_node, QIO_Index scalar_index, QIO_host_utils_s *hu);
 
 /* Verbosity */
 int QIO_verbose(int level);
@@ -289,8 +316,8 @@ void QIO_wait(double sec);
 void QIO_suppress_global_broadcast(QIO_Reader *qio_in);
 
 QIO_Reader *QIO_open_read_master(const char *filename, QIO_Layout *layout, 
-                                 QIO_Iflag *iflag, DML_io_node_a_t io_node_a, 
-                                 DML_master_io_node_a_t master_io_node_a,
+                                 QIO_Iflag *iflag, DML_io_node_ext_t io_node_ext, 
+                                 DML_master_io_node_ext_t master_io_node_ext,
                                  void *fs_arg);
 int QIO_open_read_nonmaster(QIO_Reader *qio_in, const char *filename,
                             QIO_Iflag *iflag);
@@ -299,8 +326,8 @@ int QIO_read_user_file_xml(QIO_String *xml_file, QIO_Reader *qio_in);
 QIO_Writer *QIO_generic_open_write(const char *filename, 
                                   int volfmt, QIO_Layout *layout, 
                                   QIO_Oflag *oflag, 
-                                  DML_io_node_a_t io_node_a, 
-                                  DML_master_io_node_a_t master_io_node_a, 
+                                  DML_io_node_ext_t io_node_a, 
+                                  DML_master_io_node_ext_t master_io_node_ext, 
                                   void *fs_arg);
 int QIO_reader_insert_hypercube_data(QIO_Reader *in, 
                                      QIO_RecordInfo *record_info);
@@ -376,8 +403,16 @@ int QIO_write_field(QIO_Writer *out, int msg_begin, int msg_end,
             int count, size_t datum_size, int word_size, void *arg, 
             DML_Checksum *checksum, uint64_t *nbytes,
             const LIME_type lime_type);
+int QIO_node_number_ext(const int coords[], QIO_Layout *layout);
+QIO_Index QIO_node_index_ext(const int coords[], QIO_Layout *layout);
+void QIO_get_coords_ext(int coords[], int node, QIO_Index index, QIO_Layout *layout);
+QIO_Index QIO_num_sites_ext(int node, QIO_Layout *layout);
 #ifdef __cplusplus
 }
+#endif
+
+#ifndef _QIO_UNUSED_ARGUMENT
+#define _QIO_UNUSED_ARGUMENT(x) ((void)(x))
 #endif
 
 #endif /* QIO_H */

@@ -11,14 +11,14 @@
 /* The API:
 
    setup_layout()  sets up layout
-   node_number_a() returns the node number on which a site lives
-   node_index_a()  returns the index of the site on the node
-   get_coords_a()  gives lattice coords from node & index
+   node_number_ext() returns the node number on which a site lives
+   node_index_ext()  returns the index of the site on the node
+   get_coords_ext(int coords[], int node, DML_Index index, void *arg)  gives lattice coords from node & index
 */
 
 #include <stdlib.h>
 #include <stdio.h>
-
+#include <qio.h>
 static int sites_on_node;
 static int *squaresize;   /* dimensions of hypercubes */
 static int *nsquares;     /* number of hypercubes in each direction */
@@ -79,8 +79,9 @@ setup_layout(
 }
 
 int
-node_number_a(const int x[], void *a)
+node_number_ext(const int x[], void *a)
 {
+  _QIO_UNUSED_ARGUMENT(a);
   int i; 
   int *m;
   int rank;
@@ -105,9 +106,10 @@ node_number_a(const int x[], void *a)
   return rank;
 }
 
-int
-node_index_a(const int x[], void *a)
+QIO_Index
+node_index_ext(const int x[], void *a)
 {
+  _QIO_UNUSED_ARGUMENT(a);
   int i, r=0, p=0;
 
   for(i=ndim-1; i>=0; --i) {
@@ -124,8 +126,9 @@ node_index_a(const int x[], void *a)
 }
 
 void
-get_coords_a(int x[], int node, int index, void *a)
+get_coords_ext(int x[], int node, QIO_Index index, void *a)
 {
+  _QIO_UNUSED_ARGUMENT(a);
   int i, s, si;
   int *m = (int *)malloc(ndim*sizeof(int));
   int pos;
@@ -168,7 +171,7 @@ get_coords_a(int x[], int node, int index, void *a)
 
   free(m);
 
-  if(node_index_a(x, NULL)!=si) {
+  if(node_index_ext(x, NULL)!=si) {
     fprintf(stderr,"layout_hyper_mesh: error in layout!\n");
     for(i=0; i<ndim; i++) {
       fprintf(stderr,"%i\t%i\t%i\n", size1[0][i], size1[1][i], size2[i]);
@@ -182,6 +185,8 @@ get_coords_a(int x[], int node, int index, void *a)
 
 
 /* The number of sites on the specified node */
-int num_sites_a(int node, void *a){
+QIO_Index num_sites_ext(int node, void *a){
+  _QIO_UNUSED_ARGUMENT(a);
+  _QIO_UNUSED_ARGUMENT(node);
   return sites_on_node;
 }

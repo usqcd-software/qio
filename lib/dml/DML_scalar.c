@@ -49,11 +49,11 @@ void DML_global_xor(uint32_t *x){}
 void DML_sync(void){}
 
 /* I/O layout */
-int DML_io_node_a(const int node, void *arg){
+int DML_default_ionode_a(const int node, void *arg){
   return 0;
 }
 
-int DML_master_io_node_a(void *arg){
+int DML_default_master_ionode_a(void *arg){
   return 0;
 }
 

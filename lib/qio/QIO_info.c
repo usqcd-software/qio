@@ -239,7 +239,7 @@ void QIO_decode_as_intlist(char *tag, char *value_string,
   if(strcmp(tag,tag_value->tag)==0){
     for(s = strtok(value_string," "), i = 0; 
 	s && *s && i < QIO_MAXINTARRAY; 
-	s = strtok('\0'," "),i++)
+	s = strtok(NULL," "),i++)
       tag_value->value[i] = atoi(s);
     
     tag_value->n = i;

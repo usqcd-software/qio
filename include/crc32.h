@@ -25,10 +25,19 @@
 
 #include <qio_stdint.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 typedef uint32_t uLong;            /* At least 32 bits */
 
 #define Z_NULL  0  
 
 uLong crc32(uLong crc, char const * buf, size_t len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

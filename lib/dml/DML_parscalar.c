@@ -13,17 +13,10 @@
 
 /* Sum a uint64_t over all nodes (for 64 bit byte counts) */
 
-void DML_peq_uint64_t(uint64_t *subtotal, uint64_t *addend)
-{
-  *subtotal += *addend;
-}
 
 void DML_sum_uint64_t(uint64_t *ipt)
 {
-  uint64_t work = *ipt;
-  QMP_binary_reduction((void *)(&work), sizeof(work), 
-		       (QMP_binary_func)DML_peq_uint64_t);
-  *ipt = work;
+  QMP_sum_uint64_t(ipt);
 }
 
 /* Sum an int over all nodes (16 or 32 bit) */
@@ -150,10 +143,10 @@ DML_sync(void)
 
 /* I/O layout */
 /* Default choices.  Otherwise, set by user.  See QIO_Filesystem */
-int DML_io_node_a(const int node, void *arg){
+int DML_default_ionode_ext(const int node, void *arg){
   return QMP_io_node(node);
 }
 
-int DML_master_io_node_a(void *arg){
+int DML_default_master_ionode_ext(void *arg){
   return QMP_master_io_node();
 }

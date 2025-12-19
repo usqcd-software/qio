@@ -128,14 +128,14 @@ int QIO_bytes_of_word(char *type)
 }
 
 
-/* my_io_node_a function for host should be called only for node 0 */
-int QIO_host_my_io_node_a(int node, void *arg)
+/* my_io_node_ext function for host should be called only for node 0 */
+int QIO_host_my_io_node_ext(int node, void *arg)
 {
   return node;
 }
 
 /* master I/O node for host */
-int QIO_host_master_io_node_a(void *arg)
+int QIO_host_master_io_node_ext(void *arg)
 {
   return 0;
 }
@@ -146,6 +146,10 @@ int QIO_host_master_io_node_a(void *arg)
    to the field */
 void QIO_scalar_put( char *s1 , size_t scalar_index, int count, void *s2 )
 {
+
+  _QIO_UNUSED_ARGUMENT(scalar_index);
+  _QIO_UNUSED_ARGUMENT(count);
+
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   size_t datum_size = field->datum_size;
@@ -162,6 +166,9 @@ void QIO_scalar_put( char *s1 , size_t scalar_index, int count, void *s2 )
 void QIO_scalar_put_global( char *s1 , size_t scalar_index, 
 			    int count, void *s2 )
 {
+
+  _QIO_UNUSED_ARGUMENT(scalar_index);
+  _QIO_UNUSED_ARGUMENT(count);
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
 
@@ -175,7 +182,7 @@ void QIO_scalar_put_global( char *s1 , size_t scalar_index,
 
 /* Seek and read one site's worth of data from the input file and copy
    it to the output buffer */
-void QIO_scalar_get( char *s1, size_t ionode_index, int count, void *s2 )
+void QIO_scalar_get( char *s1, QIO_Index ionode_index, int count, void *s2 )
 {
   read_seek_arg *arg_seek = (read_seek_arg *)s2;
   get_put_arg *arg   = arg_seek->arg;    /* The arg for input */
@@ -185,7 +192,7 @@ void QIO_scalar_get( char *s1, size_t ionode_index, int count, void *s2 )
   size_t datum_size = field_in->datum_size;
   char *src         = field_in->data;
   int word_size     = field_in->word_size;
-  int scalar_index;
+  QIO_Index scalar_index;
   int status;
 
   /* Convert site rank ionode_index to scalar_index */
@@ -207,9 +214,13 @@ void QIO_scalar_get( char *s1, size_t ionode_index, int count, void *s2 )
 
 /* Copy the global data of length "datum_size" from the field to the
    output buffer */
-void QIO_scalar_get_global( char *s1 , size_t ionode_index, 
+void QIO_scalar_get_global( char *s1 , QIO_Index ionode_index, 
 			    int count, void *s2 )
 {
+
+  _QIO_UNUSED_ARGUMENT(ionode_index);
+  _QIO_UNUSED_ARGUMENT(count);
+
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field     = arg->field;
   int node           = arg->node;
@@ -222,8 +233,12 @@ void QIO_scalar_get_global( char *s1 , size_t ionode_index,
     memcpy(s1,src,datum_size);
 }
 
-void QIO_part_get( char *s1 , size_t scalar_index, int count, void *s2 )
+void QIO_part_get( char *s1 , QIO_Index scalar_index, int count, void *s2 )
 {
+
+  _QIO_UNUSED_ARGUMENT(scalar_index);
+  _QIO_UNUSED_ARGUMENT(count);
+
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   size_t datum_size = field->datum_size;
@@ -237,7 +252,7 @@ void QIO_part_get( char *s1 , size_t scalar_index, int count, void *s2 )
 
 /* Copy a chunk of data of length "datum_size" from the input buffer
    and seek and write it to the single file */
-void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
+void QIO_part_put( char *s1 , QIO_Index ionode_index, int count, void *s2 )
 {
   write_seek_arg *arg_seek = (write_seek_arg *)s2;
   get_put_arg *arg         = arg_seek->arg;
@@ -247,7 +262,7 @@ void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
   size_t datum_size        = field_in->datum_size;
   char *dest               = field_in->data;
   int word_size            = field_in->word_size;
-  int scalar_index;
+  QIO_Index scalar_index;
   int status;
 
   /* Copy the input buffer to field_in */
@@ -271,8 +286,11 @@ void QIO_part_put( char *s1 , size_t ionode_index, int count, void *s2 )
 
 /* Copy a chunk of global data of length "datum_size" from the input buffer
    to the field */
-void QIO_part_put_global( char *s1 , size_t ionode_index, int count, void *s2 )
+void QIO_part_put_global( char *s1, QIO_Index ionode_index, int count, void *s2 )
 {
+
+  _QIO_UNUSED_ARGUMENT(ionode_index);
+  _QIO_UNUSED_ARGUMENT(count);
   get_put_arg *arg = (get_put_arg *)s2;
   s_field *field = arg->field;
   int node = arg->node;
@@ -295,37 +313,39 @@ int QIO_set_this_node(QIO_Filesystem *fs, const QIO_Layout *layout, int node)
 }
 
 /* Append the file name to a possibly node-dependent directory path */
-char *QIO_set_filepath(QIO_Filesystem *fs, 
-		  const char * const filename, int node)
-{
-  char *path, *newfilename=NULL;
-  int fnlength = strlen(filename);
-  int drlength;
-  
-  if (fs->type == QIO_MULTI_PATH)
-    {
-      path = fs->node_path[node];
-      drlength = strlen(path);
-      newfilename = (char *) malloc(fnlength+drlength+2);
-      if(!newfilename){
-	printf("QIO_set_filepath: Can't malloc newfilename\n");
-	return NULL;
-      }
-      newfilename[0] = '\0';
-      if(drlength > 0){
-	strncpy(newfilename, path, drlength+1);
-	strncat(newfilename, "/", 2);
-      }
-      strncat(newfilename, filename, fnlength+1);
-    }
-  else if (fs->type == QIO_SINGLE_PATH)
-    {
-      newfilename = (char *) malloc(fnlength+1);
-      strncpy(newfilename,filename,fnlength+1);
-    }
-  
-  return newfilename;
-}
+	char *QIO_set_filepath(QIO_Filesystem *fs, 
+			  const char * const filename, int node)
+	{
+	  char *path, *newfilename=NULL;
+	  size_t fnlength = strlen(filename);
+	  size_t drlength;
+	  
+		if (fs->type == QIO_MULTI_PATH) {
+		  path = fs->node_path[node];
+		  drlength = strlen(path);
+		  newfilename = (char *) malloc(fnlength+drlength+2);
+	    if(!newfilename) {
+			  printf("QIO_set_filepath: Can't malloc newfilename\n");
+			  return NULL;
+		  }
+		  newfilename[0] = '\0';
+		  if(drlength > 0){
+			  strncpy(newfilename, path, drlength+1);
+			  strncat(newfilename, "/", 2);
+		  }
+		  strcat(newfilename, filename);
+		}
+	  else if (fs->type == QIO_SINGLE_PATH) {
+	    newfilename = (char *) malloc(fnlength+1);
+	    if(!newfilename){
+	      printf("QIO_set_filepath: Can't malloc newfilename\n");
+	      return NULL;
+	    }
+		  strcpy(newfilename,filename);
+	  }
+	  
+	  return newfilename;
+	}
 
 
 /* Open a partition file for reading and read the file header and sitelist */
@@ -352,7 +372,7 @@ static QIO_Reader *QIO_open_read_partfile(int io_node_rank, QIO_Iflag *iflag,
   
   /* Open master ionode file to read */
   infile = QIO_open_read_master(newfilename,ionode_layout,
-				iflag,fs->my_io_node_a,fs->master_io_node_a, fs->arg);
+				iflag,fs->my_io_node_ext,fs->master_io_node_ext, fs->arg);
   if(infile == NULL)return NULL;
 
   /* Check the volume format */
@@ -398,7 +418,7 @@ static QIO_Writer *QIO_open_write_partfile(int io_node_rank, QIO_Oflag *oflag,
   /* Open to write by appending or with truncation if the file exists */
   outfile = QIO_generic_open_write(newfilename,volfmt,
 				   ionode_layout,oflag,
-				   fs->my_io_node_a,fs->master_io_node_a, fs->arg);
+				   fs->my_io_node_ext,fs->master_io_node_ext, fs->arg);
   return outfile;
 }
 
@@ -423,7 +443,7 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
   int *msg_begin, *msg_end;
   int i,status,master_io_node_rank;
   int number_io_nodes = fs->number_io_nodes;
-  int master_io_node = fs->master_io_node_a(fs->arg);
+  int master_io_node = fs->master_io_node_ext(fs->arg);
   uint64_t total_bytes;
   size_t datum_size;
   int typesize,datacount,recordtype,word_size;
@@ -470,8 +490,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 
   /* Open the input master file for reading */
   infile = QIO_open_read_master(filename, scalar_layout, NULL,
-				QIO_host_my_io_node_a,
-				QIO_host_master_io_node_a,
+				QIO_host_my_io_node_ext,
+				QIO_host_master_io_node_ext,
                                 NULL);
   if(infile == NULL)return QIO_ERR_OPEN_READ;
   
@@ -606,8 +626,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 	if(status != QIO_SUCCESS)return status;
 
 	/* Prepare to read */
-	QIO_init_get_put_arg(&arg, &field_in, QIO_host_my_io_node_a(0, NULL),
-			     QIO_host_master_io_node_a(NULL));
+	QIO_init_get_put_arg(&arg, &field_in, QIO_host_my_io_node_ext(0, NULL),
+			     QIO_host_master_io_node_ext(NULL));
 	/* Read the data from the host file */
 	QIO_suppress_global_broadcast(infile);  /* Scalar operation here */
 	status = 
@@ -654,8 +674,8 @@ int QIO_single_to_part( const char filename[], QIO_Filesystem *fs,
 	
 	/* Prepare to read */
 	QIO_init_get_put_arg(&arg, &field_in, 
-			     QIO_host_my_io_node_a(0, NULL),
-			     QIO_host_master_io_node_a(NULL));
+			     QIO_host_my_io_node_ext(0, NULL),
+			     QIO_host_master_io_node_ext(NULL));
 	
 	/* Expected total for the entire field */
 	total_bytes = ((uint64_t)infile->layout->subsetvolume) * datum_size;
@@ -823,7 +843,7 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
   int msg_begin, msg_end;
   int i,status,master_io_node_rank;
   int number_io_nodes = fs->number_io_nodes;
-  int master_io_node = fs->master_io_node_a(fs->arg);
+  int master_io_node = fs->master_io_node_ext(fs->arg);
   size_t datum_size;
   int typesize,datacount,recordtype,word_size;
   int ntypes = 2;
@@ -927,8 +947,8 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 
   outfile =  QIO_generic_open_write(filename,QIO_SINGLEFILE,
 				    scalar_layout, &oflag,
-				    QIO_host_my_io_node_a,
-				    QIO_host_master_io_node_a, 
+				    QIO_host_my_io_node_ext,
+				    QIO_host_master_io_node_ext, 
                                     NULL);
   
   if(outfile == NULL)return QIO_ERR_OPEN_WRITE;
@@ -1039,8 +1059,8 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 	  totnbytes_in = nbytes_in;
 	  
 	  /* Write the global data to the host single file */
-	  QIO_init_get_put_arg(&arg, &field_in, QIO_host_my_io_node_a(0, NULL),
-			       QIO_host_master_io_node_a(NULL));
+	  QIO_init_get_put_arg(&arg, &field_in, QIO_host_my_io_node_ext(0, NULL),
+			       QIO_host_master_io_node_ext(NULL));
 
 	  status = QIO_write_record_data(outfile, &rec_info_in,
 					 QIO_scalar_get_global, 
@@ -1076,7 +1096,8 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
 
 	  /* Copy LIME type */
 	  lime_type_out = (char *)malloc(strlen(lime_type_in)+1);
-	  strncpy(lime_type_out,lime_type_in,strlen(lime_type_in)+1);
+	  if( lime_type_out == NULL ) return QIO_BAD_ARG;
+	  strcpy(lime_type_out,lime_type_in);
 
 	  /* Now close the master ionode file.  We will reread the
 	     private and user file xml later */
@@ -1101,8 +1122,8 @@ int QIO_part_to_single( const char filename[], int ildgstyle,
       
 	  /* Prepare to write */
 	  QIO_init_get_put_arg(&arg, &field_in, 
-			       QIO_host_my_io_node_a(0, NULL),
-			       QIO_host_master_io_node_a(NULL));
+			       QIO_host_my_io_node_ext(0, NULL),
+			       QIO_host_master_io_node_ext(NULL));
 	
 	  /* Cycle through all the partition files, reading and
 	     copying one site at a time.  The factory "put" function

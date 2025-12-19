@@ -37,11 +37,15 @@ QIO_Layout *create_mpp_layout(int numnodes, int *latsize_in, int latdim){
   for(i = 0; i < latdim; i++)
     volume *= latsize[i];
 
-  layout->node_number_a = node_number_a;
-  layout->node_index_a  = node_index_a;
-  layout->get_coords_a  = get_coords_a;
-  layout->num_sites_a   = num_sites_a;
-  layout->arg           = NULL;
+  layout->node_number       = NULL;
+  layout->node_index        = NULL;
+  layout->get_coords        = NULL;
+  layout->num_sites         = NULL;
+  layout->node_number_ext   = node_number_ext;
+  layout->node_index_ext    = node_index_ext;
+  layout->get_coords_ext    = get_coords_ext;
+  layout->num_sites_ext     = num_sites_ext;
+  layout->arg               = NULL;
   layout->latsize = latsize;
   layout->latdim = latdim;
   layout->volume = volume;
@@ -108,17 +112,17 @@ int qio_mesh_convert(QIO_Filesystem *fs, QIO_Mesh_Topology *mesh,
   if(part_to_single == 0){
     /* If we are converting single to partfile the input master file is
        the current single file */
-    qio_in = QIO_open_read_master(filename, mpp_layout, 0, fs->my_io_node_a,
-				  fs->master_io_node_a, fs->arg);
+    qio_in = QIO_open_read_master(filename, mpp_layout, 0, fs->my_io_node_ext,
+				  fs->master_io_node_ext, fs->arg);
   }
   else{
     /* Otherwise the input master file is a partfile */
     /* Set input path for file according to MULTI/SINGLE PATH flag */
-    newfilename = QIO_set_filepath(fs,filename,fs->master_io_node_a(fs->arg));
+    newfilename = QIO_set_filepath(fs,filename,fs->master_io_node_ext(fs->arg));
     
     /* Get lattice dimensions from file */
-    qio_in = QIO_open_read_master(newfilename, mpp_layout, 0, fs->my_io_node_a,
-				  fs->master_io_node_a, fs->arg);
+    qio_in = QIO_open_read_master(newfilename, mpp_layout, 0, fs->my_io_node_ext,
+				  fs->master_io_node_ext, fs->arg);
     free(newfilename);
     if(!qio_in)return 1;
   }

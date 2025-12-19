@@ -39,6 +39,11 @@
 
 /* stdint not found. Try other ways */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /* n_uint_16_t */
 #if ( SIZEOF_UNSIGNED_CHAR == 2 )
 typedef unsigned char uint16_t;
@@ -82,6 +87,10 @@ typedef unsigned long  uint64_t;
 typedef unsigned long long uint64_t;
 #else
 #error "Could not find unsigned type of length 4 bytes = 32 bits"
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* ifdef ( HAVE_STDINT_H || HAVE_INTTYPES_H ) */
